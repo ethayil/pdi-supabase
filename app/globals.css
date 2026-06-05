@@ -134,7 +134,6 @@
   }
 }
 
-
   /* Chrome, Edge, and Safari */
   *::-webkit-scrollbar {
     padding: 0 20px;
@@ -153,7 +152,6 @@
     );
     border-radius: 5px;
   }
-
 
 .lds-ripple {
   display: inline-block;
