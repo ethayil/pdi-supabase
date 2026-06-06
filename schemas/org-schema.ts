@@ -1,0 +1,21 @@
+import { z } from "zod";
+export const createOrgSchema = z.object({
+  id: z.string(),
+  name: z.string().min(2).max(50),
+  prefix: z.optional(z.string()),
+  logo: z.optional(z.string()),
+  isActive: z.boolean(),
+  supportEmail: z.optional(z.array(z.string().email())),
+  supportPhone: z.optional(z.array(z.string())),
+  address1: z.optional(z.string()),
+  address2: z.optional(z.string()),
+  town: z.optional(z.string()),
+  city: z.optional(z.string()),
+  postcode: z.optional(z.string()),
+  country: z.optional(z.string()),
+  primaryColor: z.optional(z.string()),
+  secondaryColor: z.optional(z.string()),
+  fontFamily: z.optional(z.string()),
+  welcomeMessage: z.optional(z.string()),
+  lowStockThreshold: z.optional(z.number().min(1).max(10000)),
+});
