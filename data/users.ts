@@ -1,0 +1,266 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import type { User } from "@/app/generated/prisma/client";
+import type {
+  UserUpdateInput,
+  UserWhereInput,
+} from "@/app/generated/prisma/models";
+import { getSession } from "@/lib/get-session";
+import prisma from "@/lib/prisma";
+
+interface GetUsersArgs {
+  orgId: string;
+  currentPage?: number;
+  entriesPerPage?: number;
+  userType?: string;
+}
+
+export type UserWMember = User & {
+  orgId: string;
+  organizationName: string;
+};
+
+export async function getUsers({
+  orgId,
+  currentPage = 1,
+  entriesPerPage = 20,
+  userType = "org",
+}: GetUsersArgs) {
+  try {
+    const { user } = await getSession();
+    if (!user) {
+      throw new Error("Unauthorized: Access Denied");
+    }
+
+    if (user.role !== "superAdmin") {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    let whereClause: UserWhereInput = {};
+
+    if (userType === "org") {
+      whereClause = {
+        members: {
+          some: {
+            organizationId: orgId,
+          },
+        },
+      };
+    } else if (userType === "unlinked") {
+      whereClause = {
+        members: {
+          none: {},
+        },
+      };
+    } else if (userType === "superadmin") {
+      whereClause = {
+        role: "superAdmin",
+      };
+    }
+
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
+
+    // 🏎️ Optimization: Run the count and data fetch concurrently
+    const [totalCount, users] = await Promise.all([
+      prisma.user.count({ where: whereClause }),
+      prisma.user.findMany({
+        where: whereClause,
+        take: take,
+        skip: skip,
+        orderBy: { id: "asc" },
+        include: {
+          members: {
+            include: {
+              organization: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    // Calculate Total Pages
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    const mappedUsers: UserWMember[] = users.map((u) => ({
+      ...u,
+      orgId: u.members?.[0]?.organizationId ?? "none",
+      organizationName: u.members?.[0]?.organization?.name ?? "none",
+    }));
+
+    return {
+      success: true,
+      data: mappedUsers,
+      totalPages,
+      totalCount,
+    };
+  } catch (error) {
+    console.error("Database error in getUsers:", error);
+
+    return {
+      success: false,
+      data: [],
+      totalPages: 0,
+      totalCount: 0,
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    };
+  }
+}
+
+export async function getUserById({ id }: { id: string }): Promise<{
+  success: boolean;
+  user: UserWMember | null;
+  error?: string;
+}> {
+  try {
+    const { user } = await getSession();
+    if (!user) {
+      throw new Error("Unauthorized: Access Denied");
+    }
+
+    if (user.role !== "superAdmin") {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        members: {
+          select: {
+            organization: true,
+            organizationId: true,
+          },
+        },
+      },
+    });
+
+    if (!dbUser) {
+      throw new Error("User Not Found");
+    }
+
+    return {
+      success: true,
+      user: {
+        ...dbUser,
+        orgId: dbUser.members?.[0]?.organizationId ?? "none",
+        organizationName: dbUser.members?.[0]?.organization?.name ?? "none",
+      },
+    };
+  } catch (error) {
+    console.error("Database error in getUserById:", error);
+    return {
+      success: false,
+      user: null,
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    };
+  }
+}
+
+export async function updateUser(data: {
+  id: string;
+  name?: string;
+  role?: string;
+  orgId?: string;
+  image?: string | null;
+  isActive?: boolean;
+  emailVerified?: boolean;
+}) {
+  try {
+    const { user } = await getSession();
+    if (!user) {
+      throw new Error("Unauthorized: Access Denied");
+    }
+
+    if (user.role !== "superAdmin") {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    // Update basic user info
+    const updateData: UserUpdateInput = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.role !== undefined) updateData.role = data.role;
+    if (data.image !== undefined) updateData.image = data.image;
+    if (data.emailVerified !== undefined)
+      updateData.emailVerified = data.emailVerified;
+    if (data.isActive !== undefined) {
+      updateData.banned = !data.isActive;
+      updateData.banReason = !data.isActive
+        ? "Deactivated by administrator"
+        : null;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: data.id },
+      data: updateData,
+    });
+
+    // Handle organization membership if orgId is explicitly provided
+    if (data.orgId !== undefined) {
+      const targetOrgId = data.orgId === "none" ? null : data.orgId;
+
+      if (targetOrgId) {
+        // Find existing membership(s)
+        const existingMembers = await prisma.member.findMany({
+          where: { userId: data.id },
+        });
+
+        // Delete memberships in other organizations
+        const otherMembers = existingMembers.filter(
+          (m) => m.organizationId !== targetOrgId,
+        );
+        if (otherMembers.length > 0) {
+          await prisma.member.deleteMany({
+            where: {
+              id: {
+                in: otherMembers.map((m) => m.id),
+              },
+            },
+          });
+        }
+
+        // Add or update target membership
+        const currentMember = existingMembers.find(
+          (m) => m.organizationId === targetOrgId,
+        );
+
+        if (!currentMember) {
+          const crypto = await import("crypto");
+          const memberId = crypto.randomUUID();
+          const targetRole = data.role === "orgAdmin" ? "admin" : "member";
+          await prisma.member.create({
+            data: {
+              id: memberId,
+              userId: data.id,
+              organizationId: targetOrgId,
+              role: targetRole,
+              createdAt: new Date(),
+            },
+          });
+        } else {
+          const targetRole = data.role === "orgAdmin" ? "admin" : "member";
+          if (currentMember.role !== targetRole) {
+            await prisma.member.update({
+              where: { id: currentMember.id },
+              data: { role: targetRole },
+            });
+          }
+        }
+      } else {
+        // If targetOrgId is null/none, remove them from all organizations
+        await prisma.member.deleteMany({
+          where: { userId: data.id },
+        });
+      }
+    }
+
+    revalidatePath("[orgId]/admin/users");
+
+    return {
+      success: true,
+      user: updatedUser,
+    };
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("Failed to update user");
+  }
+}
