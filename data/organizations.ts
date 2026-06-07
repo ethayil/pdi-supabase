@@ -9,6 +9,7 @@ import type {
 import { auth } from "@/auth";
 import { getSession } from "@/lib/get-session";
 import prisma from "@/lib/prisma";
+import { logActivity } from "./logging";
 
 interface GetOrganizationsArgs {
   currentPage?: number;
@@ -202,6 +203,10 @@ export async function createOrganization(data: CreateOrgData) {
         ...data,
         slug,
         prefix: data.prefix ?? "",
+        description: data.description ?? "",
+        enableInventory: data.enableInventory ?? true,
+        enableInvoices: data.enableInvoices ?? true,
+        updatedAt: data.updatedAt as Date | undefined,
         isActive: data.isActive ?? true,
         address1: data.address1 ?? "",
         address2: data.address2 ?? "",
@@ -222,6 +227,15 @@ export async function createOrganization(data: CreateOrgData) {
     if (!org) {
       throw new Error("Failed to create organization");
     }
+
+    await logActivity({
+      orgId: org.id,
+      userId: user.id,
+      action: "create",
+      entityType: "organization",
+      entityId: org.id,
+      description: `Created organization "${data.name}"`,
+    });
 
     return org.id;
   } catch (error) {
@@ -253,6 +267,13 @@ export async function updateOrganization(data: UpdateOrgData) {
           .replace(/^-+|-+$/g, "")
       : undefined;
 
+    const existingOrg = await prisma.organization.findUnique({
+      where: { id },
+    });
+    if (!existingOrg) {
+      throw new Error("Organization not found");
+    }
+
     const updated = await auth.api.updateOrganization({
       headers: await headers(),
       body: {
@@ -261,6 +282,10 @@ export async function updateOrganization(data: UpdateOrgData) {
           ...rest,
           ...(name ? { name, slug } : {}),
           prefix: data.prefix ?? "",
+          description: data.description ?? "",
+          enableInventory: data.enableInventory ?? true,
+          enableInvoices: data.enableInvoices ?? true,
+          updatedAt: data.updatedAt as Date | undefined,
           isActive: data.isActive ?? true,
           address1: data.address1 ?? "",
           address2: data.address2 ?? "",
@@ -282,6 +307,27 @@ export async function updateOrganization(data: UpdateOrgData) {
     if (!updated) {
       throw new Error("Failed to update organization");
     }
+
+    await logActivity({
+      orgId: id,
+      userId: user.id,
+      action: "update",
+      entityType: "organization",
+      entityId: id,
+      description: `Updated organization "${name || existingOrg.name}"`,
+      changes: {
+        name:
+          name !== undefined ? { from: existingOrg.name, to: name } : undefined,
+        isActive:
+          data.isActive !== undefined
+            ? { from: existingOrg.isActive, to: data.isActive }
+            : undefined,
+        prefix:
+          data.prefix !== undefined
+            ? { from: existingOrg.prefix, to: data.prefix }
+            : undefined,
+      },
+    });
 
     revalidatePath("[orgId]/admin/orgs");
 
@@ -305,6 +351,13 @@ export async function deleteOrganization({ id }: { id: string }) {
       throw new Error("Forbidden: Insufficient Permissions");
     }
 
+    const existingOrg = await prisma.organization.findUnique({
+      where: { id },
+    });
+    if (!existingOrg) {
+      throw new Error("Organization not found");
+    }
+
     const deleted = await auth.api.deleteOrganization({
       headers: await headers(),
       body: {
@@ -315,6 +368,15 @@ export async function deleteOrganization({ id }: { id: string }) {
     if (!deleted) {
       throw new Error("Failed to delete organization");
     }
+
+    await logActivity({
+      orgId: id,
+      userId: user.id,
+      action: "delete",
+      entityType: "organization",
+      entityId: id,
+      description: `Deleted organization "${existingOrg.name}"`,
+    });
 
     return { success: true };
   } catch (error) {

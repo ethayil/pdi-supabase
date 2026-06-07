@@ -8,6 +8,7 @@ import type {
 } from "@/app/generated/prisma/models";
 import { getSession } from "@/lib/get-session";
 import prisma from "@/lib/prisma";
+import { logActivity } from "./logging";
 
 interface GetUsersArgs {
   orgId: string;
@@ -176,6 +177,18 @@ export async function updateUser(data: {
       throw new Error("Forbidden: Insufficient Permissions");
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: { id: data.id },
+      include: {
+        members: {
+          select: { organizationId: true },
+        },
+      },
+    });
+    if (!dbUser) {
+      throw new Error("User not found");
+    }
+
     // Update basic user info
     const updateData: UserUpdateInput = {};
     if (data.name !== undefined) updateData.name = data.name;
@@ -253,6 +266,26 @@ export async function updateUser(data: {
         });
       }
     }
+
+    // Log Activity
+    const loggedOrgId = data.orgId !== undefined && data.orgId !== "none"
+      ? data.orgId
+      : (dbUser.members?.[0]?.organizationId || null);
+
+    await logActivity({
+      orgId: loggedOrgId,
+      userId: user.id,
+      action: "update",
+      entityType: "user",
+      entityId: data.id,
+      description: `Updated user "${dbUser.name || data.id}"`,
+      changes: {
+        name: data.name !== undefined ? { from: dbUser.name, to: data.name } : undefined,
+        role: data.role !== undefined ? { from: dbUser.role, to: data.role } : undefined,
+        orgId: data.orgId !== undefined ? { from: dbUser.members?.[0]?.organizationId ?? "none", to: data.orgId } : undefined,
+        isActive: data.isActive !== undefined ? { from: !dbUser.banned, to: data.isActive } : undefined,
+      },
+    });
 
     revalidatePath("[orgId]/admin/users");
 

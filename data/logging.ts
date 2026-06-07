@@ -1,0 +1,263 @@
+"use server";
+
+import type {
+  ActivityAction,
+  MovementType,
+  OrderChangeType,
+} from "@/app/generated/prisma/client";
+import { getSession } from "@/lib/get-session";
+import prisma from "@/lib/prisma";
+
+interface GetLogsArgs {
+  orgId?: string;
+  currentPage?: number;
+  entriesPerPage?: number;
+  userSearch?: string;
+  messageSearch?: string;
+  entityType?: string;
+  startDate?: number;
+  endDate?: number;
+}
+
+export async function logActivity(params: {
+  orgId?: string | null;
+  userId?: string;
+  systemSource?: string;
+  action: "create" | "update" | "delete";
+  entityType: string;
+  entityId: string;
+  description: string;
+  changes?: any;
+}) {
+  try {
+    const { user } = await getSession();
+    const userId = params.userId || user?.id;
+
+    const log = await prisma.activityLog.create({
+      data: {
+        orgId: params.orgId || null,
+        userId: userId || null,
+        systemSource: params.systemSource || null,
+        action: params.action as ActivityAction,
+        entityType: params.entityType,
+        entityId: params.entityId,
+        description: params.description,
+        changes: params.changes ? (params.changes as any) : undefined,
+      },
+    });
+    return log.id;
+  } catch (error) {
+    console.error("Failed to log activity:", error);
+    return null;
+  }
+}
+
+export async function logProductMovement(params: {
+  orgId: string;
+  productId: string;
+  userId?: string;
+  systemSource?: string;
+  movementType: "initial" | "adjustment" | "sale" | "return";
+  quantityChange: number;
+  quantityBefore: number;
+  quantityAfter: number;
+  reason?: string;
+  relatedOrderId?: string;
+}) {
+  try {
+    const { user } = await getSession();
+    const userId = params.userId || user?.id;
+
+    const movement = await prisma.productMovement.create({
+      data: {
+        orgId: params.orgId,
+        productId: params.productId,
+        userId: userId || null,
+        systemSource: params.systemSource || null,
+        movementType: params.movementType as MovementType,
+        quantityChange: params.quantityChange,
+        quantityBefore: params.quantityBefore,
+        quantityAfter: params.quantityAfter,
+        reason: params.reason || null,
+        relatedOrderId: params.relatedOrderId || null,
+      },
+    });
+    return movement.id;
+  } catch (error) {
+    console.error("Failed to log product movement:", error);
+    return null;
+  }
+}
+
+export async function logOrderChange(params: {
+  orgId: string;
+  orderId: string;
+  userId?: string;
+  systemSource?: string;
+  changeType:
+    | "created"
+    | "status_change"
+    | "address_update"
+    | "items_added"
+    | "items_updated"
+    | "items_removed"
+    | "comments_updated"
+    | "tracking_updated";
+  previousValue?: any;
+  newValue?: any;
+  description: string;
+}) {
+  try {
+    const { user } = await getSession();
+    const userId = params.userId || user?.id;
+
+    const change = await prisma.orderHistory.create({
+      data: {
+        orgId: params.orgId,
+        orderId: params.orderId,
+        userId: userId || null,
+        systemSource: params.systemSource || null,
+        changeType: params.changeType as OrderChangeType,
+        previousValue: params.previousValue
+          ? (params.previousValue as any)
+          : undefined,
+        newValue: params.newValue ? (params.newValue as any) : undefined,
+        description: params.description,
+      },
+    });
+    return change.id;
+  } catch (error) {
+    console.error("Failed to log order change:", error);
+    return null;
+  }
+}
+
+export async function getLogs({
+  orgId,
+  currentPage = 1,
+  entriesPerPage = 20,
+  userSearch,
+  messageSearch,
+  entityType,
+  startDate,
+  endDate,
+}: GetLogsArgs = {}) {
+  try {
+    const { user } = await getSession();
+    if (!user) {
+      throw new Error("Unauthorized: Access Denied");
+    }
+
+    const where: any = {};
+    if (orgId && orgId !== "all") where.orgId = orgId;
+    if (entityType && entityType !== "all") where.entityType = entityType;
+    if (startDate || endDate) {
+      where.timestamp = {};
+      if (startDate) where.timestamp.gte = new Date(startDate);
+      if (endDate) where.timestamp.lte = new Date(endDate);
+    }
+    if (messageSearch) {
+      where.description = {
+        contains: messageSearch,
+        mode: "insensitive",
+      };
+    }
+    if (userSearch) {
+      where.user = {
+        OR: [
+          { name: { contains: userSearch, mode: "insensitive" } },
+          { email: { contains: userSearch, mode: "insensitive" } },
+        ],
+      };
+    }
+
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
+
+    const [totalCount, logs] = await Promise.all([
+      prisma.activityLog.count({ where }),
+      prisma.activityLog.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { timestamp: "desc" },
+        include: {
+          user: {
+            select: { name: true, email: true },
+          },
+          organization: {
+            select: { name: true },
+          },
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    const mappedLogs = logs.map((log) => ({
+      ...log,
+      userName:
+        log.user?.name ?? (log.systemSource ? "System" : "Unknown User"),
+      userEmail:
+        log.user?.email ??
+        (log.systemSource ? `Source: ${log.systemSource}` : "Unknown Email"),
+      orgName: log.organization?.name ?? "System",
+    }));
+
+    return {
+      success: true,
+      data: mappedLogs,
+      totalPages,
+      totalCount,
+    };
+  } catch (error) {
+    console.error("Failed to get logs:", error);
+    return {
+      success: false,
+      data: [],
+      totalPages: 0,
+      totalCount: 0,
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    };
+  }
+}
+
+export async function getProductMovements({
+  productId,
+}: {
+  productId: string;
+}) {
+  try {
+    const { user } = await getSession();
+    if (!user) {
+      throw new Error("Unauthorized: Access Denied");
+    }
+
+    const movements = await prisma.productMovement.findMany({
+      where: { productId },
+      orderBy: { timestamp: "desc" },
+      take: 50,
+      include: {
+        user: {
+          select: { name: true, email: true },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      data: movements.map((m) => ({
+        ...m,
+        userName: m.user?.name ?? null,
+        userEmail: m.user?.email ?? null,
+      })),
+    };
+  } catch (error) {
+    console.error("Failed to get product movements:", error);
+    return {
+      success: false,
+      data: [],
+      error: error instanceof Error ? error.message : "Internal Server Error",
+    };
+  }
+}
