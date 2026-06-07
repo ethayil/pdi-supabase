@@ -9,7 +9,7 @@ import { DropdownMenuGroup, DropdownMenuItem } from "./ui/dropdown-menu";
 export function ThemeToggle({ type }: { type: "sidebar" | "auth" }) {
   const { theme, setTheme } = useTheme();
 
-  const buttonRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<any>(null);
 
   const toggleTheme = useCallback(async () => {
     if (!buttonRef.current) return;
