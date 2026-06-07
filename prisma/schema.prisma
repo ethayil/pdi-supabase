@@ -27,6 +27,17 @@ model User {
   members     Member[]
   invitations Invitation[]
 
+  // Relations
+  orders              Order[]
+  addresses           Address[]
+  cartItems           CartItem[]
+  passwordResetTokens PasswordResetToken[]
+  activityLogs        ActivityLog[]
+  productMovements    ProductMovement[]
+  orderHistory        OrderHistory[]
+  notifications       Notification[]
+  banners             Banner[]
+
   @@unique([email])
   @@map("user")
 }
@@ -110,7 +121,27 @@ model Organization {
   postcode String?
   country  String?
 
+  // Relations
+  categories       Category[]
+  products         Product[]
+  orders           Order[]
+  orderItems       OrderItem[]
+  addresses        Address[]
+  invoices         Invoice[]
+  invoiceCharges   InvoiceCharge[]
+  cartItems        CartItem[]
+  activityLogs     ActivityLog[]
+  productMovements ProductMovement[]
+  orderHistory     OrderHistory[]
+  notifications    Notification[]
+
+  description     String?
+  enableInvoices  Boolean?  @default(false)
+  enableInventory Boolean?  @default(false)
+  updatedAt       DateTime? @updatedAt
+
   @@unique([slug])
+  @@index([prefix])
   @@map("organization")
 }
 
@@ -143,4 +174,440 @@ model Invitation {
   @@index([organizationId])
   @@index([email])
   @@map("invitation")
+}
+
+// ENUMS
+
+enum OrderStatus {
+  pending
+  processing
+  shipped
+  on_the_way
+  delay
+  exception
+  delivered
+  cancelled
+  returned
+  collected
+}
+
+enum TrackingStatus {
+  on_the_way
+  delay
+  exception
+  cancelled
+  returned
+  pending
+  processing
+  shipped
+  delivered
+  collected
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+  overdue
+  cancelled
+}
+
+enum ChargeType {
+  ddp
+  address_update
+  redirect
+  refund
+  other
+}
+
+enum ActivityAction {
+  create
+  update
+  delete
+}
+
+enum MovementType {
+  initial
+  adjustment
+  sale
+  return
+}
+
+enum OrderChangeType {
+  created
+  status_change
+  address_update
+  items_added
+  items_updated
+  items_removed
+  comments_updated
+  tracking_updated
+}
+
+enum NotificationType {
+  order_placed
+  order_status_update
+  low_stock_alert
+  custom_message
+}
+
+enum BannerTargetType {
+  all
+  organization
+  user
+}
+
+// MODELS
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  isActive  Boolean   @default(true)
+  orgId     String?
+  updatedAt DateTime? @updatedAt
+  createdAt DateTime  @default(now())
+
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  products     Product[]
+
+  @@index([orgId, name])
+  @@map("category")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  orgId       String
+  categoryId  String
+  createdById String
+  sku         String
+  name        String
+  description String?
+  weight      Float
+  quantity    Int
+  imgUrl      String?
+  isActive    Boolean   @default(true)
+  updatedAt   DateTime? @updatedAt
+  createdAt   DateTime  @default(now())
+
+  organization Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  category     Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems   OrderItem[]
+  cartItems    CartItem[]
+  movements    ProductMovement[]
+
+  @@index([sku])
+  @@index([orgId])
+  @@index([categoryId])
+  @@index([orgId, sku])
+  @@index([orgId, isActive])
+  @@map("product")
+}
+
+model Order {
+  id               String          @id @default(cuid())
+  userId           String
+  orgId            String
+  addressId        String?
+  invoiceId        String?
+  fullname         String
+  company          String?
+  address1         String
+  address2         String?
+  town             String
+  city             String?
+  postcode         String
+  country          String
+  email            String
+  phone            String
+  reference        String
+  poRef            String?
+  externalRef      String?
+  comments         String?
+  status           OrderStatus
+  weight           Float
+  deliveryDate     DateTime
+  sendDate         DateTime?
+  courier          String?
+  service          String?
+  trackingNumber   String?
+  trackingStatus   TrackingStatus?
+  totalPackages    Int?
+  courierCost      Float?
+  courierVAT       Float?
+  invoiceCost      Float?
+  externalComments String?
+  signedBy         String?
+  deliveredAt      DateTime?
+  trackingMessage  String?
+  searchAll        String?
+  updatedAt        DateTime?       @updatedAt
+  createdAt        DateTime        @default(now())
+
+  user         User              @relation(fields: [userId], references: [id])
+  organization Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  address      Address?          @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  invoice      Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  items        OrderItem[]
+  charges      InvoiceCharge[]
+  history      OrderHistory[]
+  movements    ProductMovement[]
+
+  @@index([invoiceId])
+  @@index([addressId])
+  @@index([orgId])
+  @@map("order")
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+  orgId     String
+  quantity  Int
+
+  order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([orgId])
+  @@map("order_item")
+}
+
+model Address {
+  id        String    @id @default(cuid())
+  userId    String
+  orgId     String
+  fullname  String
+  company   String?
+  address1  String
+  address2  String?
+  town      String
+  city      String?
+  postcode  String
+  country   String
+  email     String
+  phone     String
+  updatedAt DateTime? @updatedAt
+  createdAt DateTime  @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orders       Order[]
+
+  @@index([userId])
+  @@index([orgId])
+  @@map("address")
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  orgId         String
+  reference     String
+  poNumber      String?
+  status        InvoiceStatus
+  invoiceDate   DateTime
+  paidDate      DateTime?
+  dueDate       DateTime?
+  subtotalCost  Float
+  vatCost       Float
+  totalCost     Float
+  totalWeight   Float
+  totalPackages Int
+  internalNotes String?
+  invoiceNotes  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime?     @updatedAt
+
+  organization Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orders       Order[]
+  charges      InvoiceCharge[]
+
+  @@index([orgId])
+  @@index([status])
+  @@index([orgId, status])
+  @@map("invoice")
+}
+
+model InvoiceCharge {
+  id          String     @id @default(cuid())
+  invoiceId   String
+  orderId     String?
+  orgId       String
+  chargeType  ChargeType
+  description String
+  cost        Float
+  vat         Float
+  chargeDate  DateTime
+  createdAt   DateTime   @default(now())
+
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  order        Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([orderId])
+  @@index([orgId])
+  @@map("invoice_charge")
+}
+
+model SystemCounter {
+  id           String @id @default(cuid())
+  counterName  String @unique
+  currentValue Int
+
+  @@map("system_counter")
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  userId    String
+  orgId     String
+  productId String
+  quantity  Int
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId, orgId])
+  @@map("cart_item")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("password_reset_token")
+}
+
+model ActivityLog {
+  id           String         @id @default(cuid())
+  orgId        String?
+  userId       String?
+  systemSource String?
+  action       ActivityAction
+  entityType   String
+  entityId     String
+  description  String
+  changes      Json?
+  timestamp    DateTime       @default(now())
+
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@map("activity_log")
+}
+
+model ProductMovement {
+  id             String       @id @default(cuid())
+  orgId          String
+  productId      String
+  userId         String?
+  systemSource   String?
+  movementType   MovementType
+  quantityChange Int
+  quantityBefore Int
+  quantityAfter  Int
+  reason         String?
+  relatedOrderId String?
+  timestamp      DateTime     @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order        Order?       @relation(fields: [relatedOrderId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([orgId])
+  @@map("product_movement")
+}
+
+model OrderHistory {
+  id            String          @id @default(cuid())
+  orgId         String
+  orderId       String
+  userId        String?
+  systemSource  String?
+  changeType    OrderChangeType
+  previousValue Json?
+  newValue      Json?
+  description   String
+  timestamp     DateTime        @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([orgId])
+  @@map("order_history")
+}
+
+model Notification {
+  id              String           @id @default(cuid())
+  userId          String
+  orgId           String
+  systemSource    String?
+  type            NotificationType
+  title           String
+  message         String
+  linkUrl         String?
+  relatedEntityId String?
+  isRead          Boolean          @default(false)
+  timestamp       DateTime         @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([orgId])
+  @@map("notification")
+}
+
+model Banner {
+  id          String           @id @default(cuid())
+  content     String
+  isActive    Boolean          @default(true)
+  variant     String
+  gradient    String?
+  expiresAt   DateTime?
+  dismissible Boolean          @default(true)
+  targetType  BannerTargetType
+  targetId    String?
+  updatedAt   DateTime         @updatedAt
+  createdAt   DateTime         @default(now())
+  createdById String
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@index([targetType, isActive])
+  @@map("banner")
+}
+
+model LinnworksIntegration {
+  id                  String    @id @default(cuid())
+  authorizationToken  String    @unique
+  linnworksIdentifier String
+  email               String
+  channelName         String
+  isActive            Boolean   @default(true)
+  config              Json?
+  lastSyncAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([authorizationToken])
+  @@map("linnworks_integration")
 }

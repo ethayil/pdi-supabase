@@ -83,6 +83,24 @@ export const auth = betterAuth({
               required: false,
               defaultValue: 50,
             },
+            description: {
+              type: "string",
+              required: false,
+            },
+            enableInvoices: {
+              type: "boolean",
+              required: false,
+              defaultValue: false,
+            },
+            enableInventory: {
+              type: "boolean",
+              required: false,
+              defaultValue: false,
+            },
+            updatedAt: {
+              type: "date",
+              required: false,
+            },
           },
         },
       },
