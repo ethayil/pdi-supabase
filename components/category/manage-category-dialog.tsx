@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
-import type { Category } from "@/app/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -21,15 +20,15 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import LoadingButton from "@/components/ui/loading-button";
-import { useRegisterAction } from "@/hooks/use-command-actions";
-import { useGlobalParams } from "@/lib/nuqs/global-params";
-import { categorySchema } from "@/schemas/category-schema";
 import {
   createCategory,
   deleteCategory,
   getCategoryById,
   updateCategory,
 } from "@/data/categories";
+import { useRegisterAction } from "@/hooks/use-command-actions";
+import { useGlobalParams } from "@/lib/nuqs/global-params";
+import { categorySchema } from "@/schemas/category-schema";
 
 export default function ManageCategoryDialog({
   organizationId,
@@ -38,9 +37,6 @@ export default function ManageCategoryDialog({
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null,
-  );
 
   const [{ categoryId }, setParams] = useGlobalParams();
   const isEditing = categoryId && categoryId !== "all";
@@ -69,7 +65,6 @@ export default function ManageCategoryDialog({
       getCategoryById({ id: categoryId })
         .then((cat) => {
           if (cat) {
-            setSelectedCategory(cat);
             form.reset({
               orgId: organizationId,
               name: cat.name,
@@ -89,7 +84,6 @@ export default function ManageCategoryDialog({
           setIsLoading(false);
         });
     } else {
-      setSelectedCategory(null);
       form.reset({
         orgId: organizationId,
         name: "",
