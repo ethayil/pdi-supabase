@@ -1,6 +1,6 @@
 import * as motion from "motion/react-client";
 import type { Metadata } from "next";
-import { createLoader } from "nuqs/server";
+import { createLoader, type SearchParams } from "nuqs/server";
 import { CategoriesTableWrapper } from "@/components/category/categories-table-wrapper";
 import ManageCategoryDialog from "@/components/category/manage-category-dialog";
 import { DashboardHeader } from "@/components/dashboard-header";
@@ -22,10 +22,11 @@ export default async function CategoriesPage({
   searchParams,
 }: {
   params: Params;
-  searchParams: Promise<any>;
+  searchParams: Promise<SearchParams>;
 }) {
   const { orgId } = await params;
-  const { currentPage, entriesPerPage, query } = await loadCategoryParams(searchParams);
+  const { currentPage, entriesPerPage, query } =
+    await loadCategoryParams(searchParams);
 
   const initialData = await getCategories({
     orgId,
