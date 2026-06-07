@@ -16,7 +16,6 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 import { useState } from "react";
 import { CommandDialog } from "@/components/ui/command";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -24,6 +23,7 @@ import {
   useCommandActions,
   useRegisterAction,
 } from "@/hooks/use-command-actions";
+import { useThemeToggle } from "@/hooks/use-theme-toggle";
 
 export function CommandPalette({ role }: { role?: string | null }) {
   const [open, setOpen] = useState(false);
@@ -32,14 +32,12 @@ export function CommandPalette({ role }: { role?: string | null }) {
   const params = useParams();
   const organizationId = (params.orgId ?? params.organizationId) as string;
   const { toggleSidebar } = useSidebar();
-  const { setTheme, theme } = useTheme();
 
   // Toggle palette with '?' or 'h'
   useHotkey("?" as RegisterableHotkey, () => setOpen((prev) => !prev));
   useHotkey("h" as RegisterableHotkey, () => setOpen((prev) => !prev));
 
-  const toggleTheme = () =>
-    theme === "dark" ? setTheme("light") : setTheme("dark");
+  const { toggleTheme } = useThemeToggle();
 
   // Register Global Actions
   useRegisterAction({
