@@ -82,7 +82,7 @@ export function StockMovementHistory({ productId }: { productId: string }) {
           {movements.map((m, i) => (
             <TableRow key={m.id} index={i + 1}>
               <TableCell className="text-xs whitespace-nowrap">
-                {formattedDate(m.timestamp)}
+                {formattedDate(m.createdAt)}
               </TableCell>
               <TableCell>
                 <Badge
