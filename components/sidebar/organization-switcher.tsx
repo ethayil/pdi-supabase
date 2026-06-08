@@ -3,7 +3,8 @@
 import { ChevronsUpDownIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import type { Organization, User } from "@/app/generated/prisma/client";
+import type { Organization } from "@/app/generated/prisma/client";
+import type { User } from "@/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {

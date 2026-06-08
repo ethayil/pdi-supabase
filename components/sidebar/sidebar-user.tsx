@@ -1,6 +1,6 @@
 "use client";
 import { ChevronsUpDown } from "lucide-react";
-import type { User } from "@/app/generated/prisma/client";
+import type { User } from "@/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,

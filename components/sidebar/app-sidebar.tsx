@@ -1,4 +1,5 @@
-import type { Organization, User } from "@/app/generated/prisma/client";
+import type { Organization } from "@/app/generated/prisma/client";
+import type { User } from "@/auth";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
