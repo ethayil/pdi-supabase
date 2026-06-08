@@ -5,7 +5,7 @@ import type React from "react";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-// import { NotificationCenter } from "./notification-center";
+import { NotificationCenter } from "./notification-center";
 import { TextRevealEffect } from "./ui/text-reveal-effects";
 
 interface DashboardHeaderProps {
@@ -68,7 +68,7 @@ export function DashboardHeader({
         )}
         <div className="flex items-center gap-2 ml-auto">
           {children}
-          {/* <NotificationCenter /> */}
+          <NotificationCenter />
         </div>
       </div>
     </motion.header>
