@@ -2,6 +2,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { betterAuth } from "better-auth/minimal";
 import { nextCookies } from "better-auth/next-js";
 import { admin, emailOTP, organization } from "better-auth/plugins";
+import { superAdminPlugin } from "./lib/auth/super-admin-plugin";
 import prisma from "./lib/prisma";
 
 export const auth = betterAuth({
@@ -12,11 +13,6 @@ export const auth = betterAuth({
   plugins: [
     admin(),
     organization({
-      // TODO: Update
-      // allowUserToCreateOrganization: async (user) => {
-      //     const  = await getSession();
-      //     return subscription.plan === "pro";
-      //   },
       schema: {
         organization: {
           additionalFields: {
@@ -116,6 +112,7 @@ export const auth = betterAuth({
         }
       },
     }),
+    superAdminPlugin(),
     nextCookies(),
   ],
   user: {
@@ -129,3 +126,6 @@ export const auth = betterAuth({
     },
   },
 });
+
+export type User = (typeof auth.$Infer.Session)["user"];
+export type Organization = typeof auth.$Infer.Organization;
