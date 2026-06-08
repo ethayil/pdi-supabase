@@ -1,11 +1,11 @@
-import { preloadedQueryResult } from "convex/nextjs";
 import * as motion from "motion/react-client";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { MembersList } from "@/components/members/members-list";
-import { Params } from "@/types/globals";
-import { getPreloadedUser } from "@/utils/get-server-data";
+import { getOrgMembersWithStats } from "@/data/users";
+import { getSession } from "@/lib/auth/get-session";
+import type { Params } from "@/types/globals";
 
 export const metadata: Metadata = {
   title: "Members | PDi",
@@ -13,15 +13,16 @@ export const metadata: Metadata = {
 };
 
 export default async function MembersPage({ params }: { params: Params }) {
-  const { organizationId } = await params;
+  const { orgId } = await params;
 
-  const preloadedUser = await getPreloadedUser();
-  const user = preloadedQueryResult(preloadedUser);
+  const { user } = await getSession();
 
   // Route guard — only admin and superadmin can access
-  if (!user || (user.role !== "admin" && user.role !== "superadmin")) {
-    redirect(`/${organizationId}`);
+  if (!user || (user.role !== "orgAdmin" && user.role !== "superAdmin")) {
+    redirect(`/${orgId}`);
   }
+
+  const members = await getOrgMembersWithStats({ orgId });
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -33,7 +34,7 @@ export default async function MembersPage({ params }: { params: Params }) {
         transition={{ duration: 0.5 }}
         className="flex-1 overflow-auto"
       >
-        <MembersList organizationId={organizationId} />
+        <MembersList organizationId={orgId} members={members} />
       </motion.div>
     </div>
   );

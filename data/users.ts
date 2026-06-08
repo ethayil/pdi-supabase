@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { User } from "@/app/generated/prisma/client";
+import type { Member, Order, User } from "@/app/generated/prisma/client";
 import type {
   UserUpdateInput,
   UserWhereInput,
@@ -346,6 +346,37 @@ export async function getOrgUsers({ orgId }: { orgId: string }) {
     }));
   } catch (error) {
     console.error("Database error in getOrgUsers:", error);
+    return [];
+  }
+}
+
+export type MemberWOrder = Member & {
+  user: User;
+};
+
+export async function getOrgMembersWithStats({ orgId }: { orgId: string }) {
+  try {
+    const { user: loggedInUser } = await getSession();
+    if (!loggedInUser) {
+      throw new Error("Unauthorized: Access Denied");
+    }
+
+    const isAdmin =
+      loggedInUser.role === "superAdmin" || loggedInUser.role === "orgAdmin";
+    if (!isAdmin) {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    const members = await prisma.member.findMany({
+      where: { organizationId: orgId },
+      include: {
+        user: true,
+      },
+    });
+
+    return members;
+  } catch (error) {
+    console.error("Database error in getOrgMembersWithStats:", error);
     return [];
   }
 }
