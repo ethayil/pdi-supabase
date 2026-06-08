@@ -12,7 +12,7 @@ import { TextRevealEffect } from "@/components/ui/text-reveal-effects";
 import { getOrganizations } from "@/data/organizations";
 
 export default async function AdminSetupPage() {
-  const { data: orgs } = await getOrganizations({ limit: 1 });
+  const { data: orgs } = await getOrganizations({ entriesPerPage: 1 });
 
   // If organizations already exist, redirect to the first one's admin panel
   if (orgs && orgs.length > 0) {

@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import VerifyCard from "@/components/auth/verify-card";
-import { getSession } from "@/lib/get-session";
+import { getOrganizations } from "@/data/organizations";
+import { getSession } from "@/lib/auth/get-session";
 
 export default async function VerifyPage() {
   const { user, session } = await getSession();
   const activeOrganization = session?.activeOrganizationId;
-  const orgs = [];
+  const orgsResult = await getOrganizations();
+  const orgs = orgsResult.success ? orgsResult.data : [];
 
   // Not authenticated
   if (!user) {

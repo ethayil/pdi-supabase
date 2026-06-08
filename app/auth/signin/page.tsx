@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TextRevealEffect } from "@/components/ui/text-reveal-effects";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth/auth-client";
 
 export default function SignIn() {
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
