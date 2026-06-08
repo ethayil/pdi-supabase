@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { CategoryWhereInput } from "@/app/generated/prisma/models";
-import { getSession } from "@/lib/get-session";
+import { getSession } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 

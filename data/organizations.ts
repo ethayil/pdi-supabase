@@ -6,8 +6,8 @@ import type {
   OrganizationCreateInput,
   OrganizationWhereInput,
 } from "@/app/generated/prisma/models";
-import { auth } from "@/auth";
-import { getSession } from "@/lib/get-session";
+import { auth, type Organization } from "@/auth";
+import { getSession } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
@@ -164,20 +164,9 @@ export async function getOrganizationById({ id }: { id: string }) {
   }
 }
 
-export type CreateOrgData = Omit<
-  OrganizationCreateInput,
-  "id" | "slug" | "createdAt" | "metadata"
-> & {
-  id?: string;
-  slug?: string;
-  createdAt?: Date | string;
-};
+export type CreateOrgData = OrganizationCreateInput;
 
-export type UpdateOrgData = Partial<CreateOrgData> & {
-  id: string;
-};
-
-export async function createOrganization(data: CreateOrgData) {
+export async function createOrganization(data: Organization) {
   try {
     const { user } = await getSession();
     if (!user) {
@@ -202,25 +191,11 @@ export async function createOrganization(data: CreateOrgData) {
       body: {
         ...data,
         slug,
-        prefix: data.prefix ?? "",
-        description: data.description ?? "",
         enableInventory: data.enableInventory ?? true,
         enableInvoices: data.enableInvoices ?? true,
-        updatedAt: data.updatedAt as Date | undefined,
         isActive: data.isActive ?? true,
-        address1: data.address1 ?? "",
-        address2: data.address2 ?? "",
-        city: data.city ?? "",
-        town: data.town ?? "",
-        postcode: data.postcode ?? "",
-        country: data.country ?? "",
-        fontFamily: data.fontFamily ?? "",
         primaryColor: data.primaryColor ?? "#0056D2",
-        secondaryColor: data.secondaryColor ?? "",
         lowStockThreshold: data.lowStockThreshold ?? 50,
-        welcomeMessage: data.welcomeMessage ?? "",
-        supportEmail: data.supportEmail as string[] | undefined,
-        supportPhone: data.supportPhone as string[] | undefined,
       },
     });
 
@@ -246,7 +221,7 @@ export async function createOrganization(data: CreateOrgData) {
   }
 }
 
-export async function updateOrganization(data: UpdateOrgData) {
+export async function updateOrganization(data: Organization) {
   try {
     const { user } = await getSession();
     if (!user) {
@@ -274,32 +249,13 @@ export async function updateOrganization(data: UpdateOrgData) {
       throw new Error("Organization not found");
     }
 
-    const updated = await auth.api.updateOrganization({
+    const updated = await auth.api.superAdminUpdateOrganization({
       headers: await headers(),
       body: {
         organizationId: id,
         data: {
           ...rest,
           ...(name ? { name, slug } : {}),
-          prefix: data.prefix ?? "",
-          description: data.description ?? "",
-          enableInventory: data.enableInventory ?? true,
-          enableInvoices: data.enableInvoices ?? true,
-          updatedAt: data.updatedAt as Date | undefined,
-          isActive: data.isActive ?? true,
-          address1: data.address1 ?? "",
-          address2: data.address2 ?? "",
-          city: data.city ?? "",
-          town: data.town ?? "",
-          postcode: data.postcode ?? "",
-          country: data.country ?? "",
-          fontFamily: data.fontFamily ?? "",
-          primaryColor: data.primaryColor ?? "#0056D2",
-          secondaryColor: data.secondaryColor ?? "",
-          lowStockThreshold: data.lowStockThreshold ?? 50,
-          welcomeMessage: data.welcomeMessage ?? "",
-          supportEmail: rest.supportEmail as string[] | undefined,
-          supportPhone: rest.supportPhone as string[] | undefined,
         },
       },
     });
@@ -351,14 +307,7 @@ export async function deleteOrganization({ id }: { id: string }) {
       throw new Error("Forbidden: Insufficient Permissions");
     }
 
-    const existingOrg = await prisma.organization.findUnique({
-      where: { id },
-    });
-    if (!existingOrg) {
-      throw new Error("Organization not found");
-    }
-
-    const deleted = await auth.api.deleteOrganization({
+    const deleted = await auth.api.superAdminDeleteOrganization({
       headers: await headers(),
       body: {
         organizationId: id,
@@ -375,7 +324,7 @@ export async function deleteOrganization({ id }: { id: string }) {
       action: "delete",
       entityType: "organization",
       entityId: id,
-      description: `Deleted organization "${existingOrg.name}"`,
+      description: `Deleted organization "${deleted.organization.name}"`,
     });
 
     return { success: true };

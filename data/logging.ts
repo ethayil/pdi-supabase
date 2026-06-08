@@ -5,7 +5,8 @@ import type {
   MovementType,
   OrderChangeType,
 } from "@/app/generated/prisma/client";
-import { getSession } from "@/lib/get-session";
+import type { ActivityLogWhereInput } from "@/app/generated/prisma/models";
+import { getSession } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 
 interface GetLogsArgs {
@@ -148,13 +149,13 @@ export async function getLogs({
       throw new Error("Unauthorized: Access Denied");
     }
 
-    const where: any = {};
+    const where: ActivityLogWhereInput = {};
     if (orgId && orgId !== "all") where.orgId = orgId;
     if (entityType && entityType !== "all") where.entityType = entityType;
     if (startDate || endDate) {
-      where.timestamp = {};
-      if (startDate) where.timestamp.gte = new Date(startDate);
-      if (endDate) where.timestamp.lte = new Date(endDate);
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(startDate);
+      if (endDate) where.createdAt.lte = new Date(endDate);
     }
     if (messageSearch) {
       where.description = {
@@ -180,7 +181,7 @@ export async function getLogs({
         where,
         skip,
         take,
-        orderBy: { timestamp: "desc" },
+        orderBy: { createdAt: "desc" },
         include: {
           user: {
             select: { name: true, email: true },
@@ -235,7 +236,7 @@ export async function getProductMovements({
 
     const movements = await prisma.productMovement.findMany({
       where: { productId },
-      orderBy: { timestamp: "desc" },
+      orderBy: { createdAt: "desc" },
       take: 50,
       include: {
         user: {

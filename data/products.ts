@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/get-session";
+import { getSession } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity, logProductMovement } from "./logging";
 
@@ -219,7 +219,9 @@ export async function createProduct(values: {
     return { success: true, product };
   } catch (error) {
     console.error("Error in createProduct:", error);
-    throw error instanceof Error ? error : new Error("Failed to create product");
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to create product");
   }
 }
 
@@ -324,7 +326,9 @@ export async function updateProduct(values: {
     return { success: true, product };
   } catch (error) {
     console.error("Error in updateProduct:", error);
-    throw error instanceof Error ? error : new Error("Failed to update product");
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update product");
   }
 }
 
@@ -362,7 +366,9 @@ export async function deleteProduct({ id }: { id: string }) {
     return { success: true };
   } catch (error) {
     console.error("Error in deleteProduct:", error);
-    throw error instanceof Error ? error : new Error("Failed to delete product");
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to delete product");
   }
 }
 
@@ -486,7 +492,8 @@ export async function bulkCreateProducts({
           row: rowNum,
           sku: row.sku,
           success: false,
-          error: err instanceof Error ? err.message : "Failed to create product",
+          error:
+            err instanceof Error ? err.message : "Failed to create product",
         });
       }
     }
@@ -572,7 +579,8 @@ export async function bulkUpdateProducts({
         if (categoryId !== undefined) updateData.categoryId = categoryId;
         if (row.weight !== undefined) updateData.weight = row.weight;
         if (row.quantity !== undefined) updateData.quantity = row.quantity;
-        if (row.description !== undefined) updateData.description = row.description;
+        if (row.description !== undefined)
+          updateData.description = row.description;
         if (row.imgUrl !== undefined) updateData.imgUrl = row.imgUrl;
         if (row.isActive !== undefined) updateData.isActive = row.isActive;
 
@@ -617,7 +625,8 @@ export async function bulkUpdateProducts({
           row: rowNum,
           sku: row.sku,
           success: false,
-          error: err instanceof Error ? err.message : "Failed to update product",
+          error:
+            err instanceof Error ? err.message : "Failed to update product",
         });
       }
     }

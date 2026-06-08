@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/get-session";
+import { getSession } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 
 export async function getCartItems({ orgId }: { orgId: string }) {
