@@ -3,8 +3,8 @@ export const getTrackingUrl = ({
   trackingNumber,
   postcode,
 }: {
-  courier: string | undefined;
-  trackingNumber: string | undefined;
+  courier: string | null;
+  trackingNumber: string | null;
   postcode?: string | null;
 }) => {
   if (!courier || !trackingNumber) {
