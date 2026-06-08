@@ -6,7 +6,7 @@ import type {
   UserUpdateInput,
   UserWhereInput,
 } from "@/app/generated/prisma/models";
-import { getSession } from "@/lib/get-session";
+import { getSession } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
@@ -268,9 +268,10 @@ export async function updateUser(data: {
     }
 
     // Log Activity
-    const loggedOrgId = data.orgId !== undefined && data.orgId !== "none"
-      ? data.orgId
-      : (dbUser.members?.[0]?.organizationId || null);
+    const loggedOrgId =
+      data.orgId !== undefined && data.orgId !== "none"
+        ? data.orgId
+        : dbUser.members?.[0]?.organizationId || null;
 
     await logActivity({
       orgId: loggedOrgId,
@@ -280,10 +281,25 @@ export async function updateUser(data: {
       entityId: data.id,
       description: `Updated user "${dbUser.name || data.id}"`,
       changes: {
-        name: data.name !== undefined ? { from: dbUser.name, to: data.name } : undefined,
-        role: data.role !== undefined ? { from: dbUser.role, to: data.role } : undefined,
-        orgId: data.orgId !== undefined ? { from: dbUser.members?.[0]?.organizationId ?? "none", to: data.orgId } : undefined,
-        isActive: data.isActive !== undefined ? { from: !dbUser.banned, to: data.isActive } : undefined,
+        name:
+          data.name !== undefined
+            ? { from: dbUser.name, to: data.name }
+            : undefined,
+        role:
+          data.role !== undefined
+            ? { from: dbUser.role, to: data.role }
+            : undefined,
+        orgId:
+          data.orgId !== undefined
+            ? {
+                from: dbUser.members?.[0]?.organizationId ?? "none",
+                to: data.orgId,
+              }
+            : undefined,
+        isActive:
+          data.isActive !== undefined
+            ? { from: !dbUser.banned, to: data.isActive }
+            : undefined,
       },
     });
 
@@ -295,5 +311,41 @@ export async function updateUser(data: {
     };
   } catch (error) {
     throw error instanceof Error ? error : new Error("Failed to update user");
+  }
+}
+
+export async function getOrgUsers({ orgId }: { orgId: string }) {
+  try {
+    const { user: loggedInUser } = await getSession();
+    if (!loggedInUser) {
+      throw new Error("Unauthorized: Access Denied");
+    }
+
+    const isAdmin =
+      loggedInUser.role === "superAdmin" || loggedInUser.role === "orgAdmin";
+    if (!isAdmin) {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    const members = await prisma.member.findMany({
+      where: { organizationId: orgId },
+      include: {
+        user: true,
+      },
+    });
+
+    return members.map((m) => ({
+      ...m.user,
+      role: m.user.role as
+        | "user"
+        | "orgAdmin"
+        | "superAdmin"
+        | "warehouse"
+        | null
+        | undefined,
+    }));
+  } catch (error) {
+    console.error("Database error in getOrgUsers:", error);
+    return [];
   }
 }

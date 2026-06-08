@@ -29,7 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getOrganizations } from "@/data/organizations";
 import { getUserById, type UserWMember, updateUser } from "@/data/users";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth/auth-client";
 import { useUserParams } from "@/lib/nuqs/user-params";
 import { userSchema } from "@/schemas/user-schema";
 import type { UserRole } from "@/types/globals";
