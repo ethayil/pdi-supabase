@@ -14,12 +14,12 @@ export type LogEntry = ActivityLog & {
 
 export const columns: ColumnDef<LogEntry>[] = [
   {
-    accessorKey: "timestamp",
+    accessorKey: "createdAt",
     header: "Date",
     cell: ({ row }) => {
       return (
         <div className="whitespace-nowrap">
-          {format(row.getValue("timestamp"), "MMM d, yyyy HH:mm:ss")}
+          {format(row.getValue("createdAt"), "MMM d, yyyy HH:mm:ss")}
         </div>
       );
     },
