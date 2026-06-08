@@ -2,6 +2,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { TrackingStatus } from "@/app/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 
 const statusBadgeVariants = cva(
@@ -53,7 +54,7 @@ const statusBadgeVariants = cva(
 export interface StatusBadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof statusBadgeVariants> {
-  status?: string;
+  status: TrackingStatus | null;
 }
 
 function StatusBadge({
