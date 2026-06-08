@@ -497,14 +497,14 @@ model ActivityLog {
   entityId     String
   description  String
   changes      Json?
-  timestamp    DateTime       @default(now())
+  createdAt    DateTime       @default(now())
 
   organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
   user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([orgId])
   @@index([entityType, entityId])
-  @@index([timestamp])
+  @@index([createdAt])
   @@map("activity_log")
 }
 
@@ -520,7 +520,7 @@ model ProductMovement {
   quantityAfter  Int
   reason         String?
   relatedOrderId String?
-  timestamp      DateTime     @default(now())
+  createdAt      DateTime     @default(now())
 
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -542,7 +542,7 @@ model OrderHistory {
   previousValue Json?
   newValue      Json?
   description   String
-  timestamp     DateTime        @default(now())
+  createdAt     DateTime        @default(now())
 
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -564,7 +564,7 @@ model Notification {
   linkUrl         String?
   relatedEntityId String?
   isRead          Boolean          @default(false)
-  timestamp       DateTime         @default(now())
+  createdAt       DateTime         @default(now())
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
