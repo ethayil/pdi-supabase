@@ -191,19 +191,6 @@ enum OrderStatus {
   collected
 }
 
-enum TrackingStatus {
-  on_the_way
-  delay
-  exception
-  cancelled
-  returned
-  pending
-  processing
-  shipped
-  delivered
-  collected
-}
-
 enum InvoiceStatus {
   draft
   sent
@@ -331,7 +318,6 @@ model Order {
   courier          String?
   service          String?
   trackingNumber   String?
-  trackingStatus   TrackingStatus?
   totalPackages    Int?
   courierCost      Float?
   courierVAT       Float?

@@ -17,15 +17,6 @@ export type InvoiceChargeType =
   | "refund"
   | "other";
 
-export type TrackingStatus =
-  | "exception"
-  | "delivered"
-  | "on_the_way"
-  | "delay"
-  | "cancelled"
-  | "collected"
-  | "returned";
-
 export const orderStatuses = [
   "pending",
   "processing",

@@ -207,7 +207,7 @@ export async function createOrder(args: {
           orderId: order.id,
           userId: loggedInUser.id,
           changeType: "tracking_updated",
-          newValue: { trackingStatus: "pending" },
+          newValue: { status: "pending" },
           description: "Initial tracking status: pending",
         },
       });
@@ -442,6 +442,15 @@ export async function updateOrder(args: {
       address,
     } = args;
 
+    const order = await prisma.order.findUnique({
+      where: { id, orgId },
+    });
+    if (!order) throw new Error("Order not found");
+
+    if (order.status !== "pending" && address !== undefined) {
+      throw new Error("Order address can only be updated in pending status");
+    }
+
     const data: Record<string, unknown> = {};
     if (status !== undefined) data.status = status;
     if (externalRef !== undefined) data.externalRef = externalRef;
@@ -646,9 +655,12 @@ export async function updateOrderItem({
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
-      include: { product: true },
+      include: { product: true, order: true },
     });
     if (!item) throw new Error("Order item not found");
+    if (item.order.status !== "pending") {
+      throw new Error("Order items can only be modified in pending status");
+    }
 
     const diff = quantity - item.quantity;
     const newProductQty = item.product.quantity - diff;
@@ -688,6 +700,14 @@ export async function addOrderItem({
     if (!user) throw new Error("Unauthorized");
     const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
     if (!isAdmin) throw new Error("Forbidden");
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order) throw new Error("Order not found");
+    if (order.status !== "pending") {
+      throw new Error("Order items can only be modified in pending status");
+    }
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -729,8 +749,12 @@ export async function removeOrderItem({
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
+      include: { order: true },
     });
     if (!item) throw new Error("Order item not found");
+    if (item.order.status !== "pending") {
+      throw new Error("Order items can only be modified in pending status");
+    }
 
     await prisma.$transaction([
       prisma.orderItem.delete({ where: { id: orderItemId } }),
