@@ -33,7 +33,7 @@
   --sidebar-primary: oklch(0.45 0.16 255);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.95 0.02 260);
-  --sidebar-accent-foreground: oklch(0.45 0.16 255);
+  --sidebar-accent-foreground: oklch(0.58 0.18 250);
   --sidebar-border: oklch(0.92 0.02 255);
   --sidebar-ring: oklch(0.58 0.16 255);
 
@@ -102,7 +102,7 @@
   --sidebar-primary: oklch(0.68 0.17 250);
   --sidebar-primary-foreground: oklch(0.15 0.02 260);
   --sidebar-accent: oklch(0.22 0.014 260);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-accent-foreground: oklch(0.58 0.18 250);
   --sidebar-border: oklch(0.68 0.17 250 / 15%);
   --sidebar-ring: oklch(0.68 0.17 250);
   --radius: 0.5rem;
@@ -660,4 +660,42 @@
 }
 .shadow-focus-glow {
   box-shadow: 0 0 0 1px var(--focus-glow) !important;
+}
+
+/* ─── Premium Glowing Sidebar Active State ─── */
+[data-sidebar="menu-button"][data-active] {
+  position: relative;
+  color: var(--sidebar-accent-foreground);
+  font-weight: 600;
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in oklch, var(--sidebar-accent-foreground) 18%, transparent),
+    color-mix(in oklch, var(--sidebar-accent-foreground) 8%, transparent)
+  );
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Glowing vertical bar on the right */
+[data-sidebar="menu-button"][data-active]::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  bottom: 8px;
+  width: 2.5px;
+  background-color: var(--sidebar-accent-foreground);
+  border-radius: 9999px;
+  box-shadow: 0 0 2px color-mix(in oklch, var(--sidebar-accent-foreground) 60%, transparent);
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+/* Hide vertical bar when collapsed (icon only) */
+[data-state="collapsed"] [data-sidebar="menu-button"][data-active]::after {
+  display: none;
+}
+
+/* Sync icon color */
+[data-sidebar="menu-button"][data-active] svg {
+  color: var(--sidebar-accent-foreground);
 }
