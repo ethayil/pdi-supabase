@@ -2,7 +2,6 @@
 
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
-import { TrackingStatus } from "@/app/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 
 const statusBadgeVariants = cva(
@@ -43,6 +42,13 @@ const statusBadgeVariants = cva(
           "from-orange-300/10 dark:from-black to-amber-500/40 dark:to-amber-300/20 text-amber-600 dark:text-amber-400",
         out_of_stock:
           "from-rose-300/10 dark:from-black to-red-400/40 dark:to-red-300/20 text-red-600 dark:text-red-400",
+        // Actions
+        create:
+          "from-green-300/10 dark:from-black to-green-400/30 dark:to-emerald-200/20 text-green-600 dark:text-green-400",
+        update:
+          "from-blue-300/10 dark:from-black to-blue-500/30 dark:to-blue-300/30 text-blue-600 dark:text-blue-400",
+        delete:
+          "from-rose-300/10 dark:from-black to-red-400/40 dark:to-red-300/20 text-red-600 dark:text-red-400",
       },
     },
     defaultVariants: {
@@ -54,7 +60,7 @@ const statusBadgeVariants = cva(
 export interface StatusBadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof statusBadgeVariants> {
-  status: TrackingStatus | null;
+  status: string | null;
 }
 
 function StatusBadge({

@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import type { ActivityLog } from "@/app/generated/prisma/client";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { LogDetailsDialog } from "./log-details-dialog";
 
 export type LogEntry = ActivityLog & {
@@ -52,20 +52,7 @@ export const columns: ColumnDef<LogEntry>[] = [
     header: "Action",
     cell: ({ row }) => {
       const action = row.getValue("action") as string;
-      return (
-        <Badge
-          variant={
-            action === "create"
-              ? "default"
-              : action === "update"
-                ? "secondary"
-                : "destructive"
-          }
-          className="capitalize"
-        >
-          {action}
-        </Badge>
-      );
+      return <StatusBadge status={action} />;
     },
   },
   {
