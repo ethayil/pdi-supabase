@@ -305,6 +305,7 @@ model Product {
 
 model Order {
   id               String          @id @default(cuid())
+  orderNumber      Int             @default(autoincrement()) @unique
   userId           String
   orgId            String
   addressId        String?

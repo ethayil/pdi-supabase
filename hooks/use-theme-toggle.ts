@@ -2,6 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { useCallback } from "react";
+import { flushSync } from "react-dom";
 
 export function useThemeToggle() {
   const { setTheme, resolvedTheme } = useTheme();
@@ -21,7 +22,9 @@ export function useThemeToggle() {
       );
 
       await document.startViewTransition(() => {
-        setTheme(resolvedTheme === "dark" ? "light" : "dark");
+        flushSync(() => {
+          setTheme(resolvedTheme === "dark" ? "light" : "dark");
+        });
       }).ready;
 
       document.documentElement.animate(

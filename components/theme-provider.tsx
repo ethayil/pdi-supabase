@@ -56,7 +56,7 @@ function ColorThemeProvider({ children }: { children: React.ReactNode }) {
 function applyThemeClass(theme: ColorTheme) {
   const root = document.documentElement;
   // Remove all theme-* classes
-  root.classList.forEach((cls) => {
+  Array.from(root.classList).forEach((cls) => {
     if (cls.startsWith("theme-")) {
       root.classList.remove(cls);
     }

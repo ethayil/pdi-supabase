@@ -8,14 +8,15 @@ import { getSession } from "@/lib/auth/get-session";
 
 export default async function VerifyPage() {
   const { user, session } = await getSession();
-  const activeOrganization = session?.activeOrganizationId;
-  const orgsResult = await getOrganizations();
-  const orgs = orgsResult.success ? orgsResult.data : [];
 
   // Not authenticated
   if (!user) {
     redirect("/auth/signin");
   }
+
+  const activeOrganization = session?.activeOrganizationId;
+  const orgsResult = await getOrganizations();
+  const orgs = orgsResult.success ? orgsResult.data : [];
 
   const isAdmin = user.role === "orgAdmin" || user.role === "superAdmin";
 

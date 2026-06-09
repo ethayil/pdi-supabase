@@ -196,14 +196,14 @@ export async function updateInvoiceStatus({
   status: InvoiceStatus;
   paidDate?: number;
 }) {
-  await prisma.invoice.update({
+  const invoice = await prisma.invoice.update({
     where: { id: invoiceId },
     data: {
       status,
       paidDate: paidDate ? new Date(paidDate) : null,
     },
   });
-  revalidatePath(`/admin/invoices/${invoiceId}`);
+  revalidatePath(`/${invoice.orgId}/admin/invoices/${invoiceId}`);
   return { success: true };
 }
 
@@ -220,7 +220,7 @@ export async function removeInvoiceCharge({ chargeId }: { chargeId: string }) {
     await calculateAndWriteInvoiceTotals(tx, charge.invoiceId);
   });
 
-  revalidatePath(`/admin/invoices/${charge.invoiceId}`);
+  revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
   return { success: true };
 }
 
@@ -231,6 +231,12 @@ export async function addOrderToInvoice({
   invoiceId: string;
   orderId: string;
 }) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { orgId: true },
+  });
+  if (!order) throw new Error("Order not found");
+
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
       where: { id: orderId },
@@ -239,7 +245,7 @@ export async function addOrderToInvoice({
     await calculateAndWriteInvoiceTotals(tx, invoiceId);
   });
 
-  revalidatePath(`/admin/invoices/${invoiceId}`);
+  revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
   return { success: true };
 }
 
@@ -250,6 +256,12 @@ export async function removeOrderFromInvoice({
   invoiceId: string;
   orderId: string;
 }) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { orgId: true },
+  });
+  if (!order) throw new Error("Order not found");
+
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
       where: { id: orderId },
@@ -258,7 +270,7 @@ export async function removeOrderFromInvoice({
     await calculateAndWriteInvoiceTotals(tx, invoiceId);
   });
 
-  revalidatePath(`/admin/invoices/${invoiceId}`);
+  revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
   return { success: true };
 }
 
@@ -285,7 +297,7 @@ export async function updateOrderInvoiceCost({
   });
 
   if (order.invoiceId) {
-    revalidatePath(`/admin/invoices/${order.invoiceId}`);
+    revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
   }
   return { success: true };
 }
@@ -404,7 +416,7 @@ export async function createInvoice(args: {
     return invoice.id;
   });
 
-  revalidatePath(`/admin/invoices`);
+  revalidatePath(`/${args.orgId}/admin/invoices`);
   return invoiceId;
 }
 
@@ -450,7 +462,7 @@ export async function addInvoiceCharge(args: {
     return charge.id;
   });
 
-  revalidatePath(`/admin/invoices/${args.invoiceId}`);
+  revalidatePath(`/${invoice.orgId}/admin/invoices/${args.invoiceId}`);
   return chargeId;
 }
 
@@ -485,6 +497,6 @@ export async function updateInvoiceCharge(args: {
     await calculateAndWriteInvoiceTotals(tx, charge.invoiceId);
   });
 
-  revalidatePath(`/admin/invoices/${charge.invoiceId}`);
+  revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
   return { success: true };
 }

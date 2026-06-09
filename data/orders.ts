@@ -67,15 +67,7 @@ export async function createOrder(args: {
       throw new Error("Organization not found");
     }
 
-    // 1. Generate sequential reference ID
-    const count = await prisma.order.count({
-      where: { orgId: args.orgId },
-    });
-    const nextCounter = count + 1;
-    const formattedCounter = String(nextCounter).padStart(5, "0");
-    const prefix = org.prefix || "ORD";
-    const reference = `${prefix}-${formattedCounter}`;
-
+    let reference = "";
     let finalAddressId = args.addressId;
 
     if (finalAddressId) {
@@ -124,8 +116,8 @@ export async function createOrder(args: {
 
     // Transaction to create order, decrement product stocks, create order items, log product movements, etc.
     const result = await prisma.$transaction(async (tx) => {
-      // 2. Create the order
-      const order = await tx.order.create({
+      // 2. Create the order with a placeholder reference
+      let order = await tx.order.create({
         data: {
           userId,
           orgId: args.orgId,
@@ -140,7 +132,7 @@ export async function createOrder(args: {
           country: args.country,
           email: args.email,
           phone: args.phone,
-          reference,
+          reference: "TEMP",
           externalRef: args.externalRef || null,
           poRef: args.poRef || null,
           comments: args.comments || null,
@@ -148,6 +140,16 @@ export async function createOrder(args: {
           weight: args.weight,
           deliveryDate,
         },
+      });
+
+      // Construct unique reference using the auto-generated orderNumber
+      const prefix = org.prefix || "ORD";
+      reference = `${prefix}-${String(order.orderNumber).padStart(5, "0")}`;
+
+      // Update the reference on the order
+      order = await tx.order.update({
+        where: { id: order.id },
+        data: { reference },
       });
 
       // 3. Create order items and update product quantities

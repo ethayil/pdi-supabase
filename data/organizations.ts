@@ -287,7 +287,7 @@ export async function updateOrganization(
       },
     });
 
-    revalidatePath("[orgId]/admin/orgs");
+    revalidatePath("/[orgId]/admin/orgs");
 
     return { success: true };
   } catch (error) {

@@ -3,7 +3,7 @@
 import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,8 +24,15 @@ export default function SignIn() {
 
   const router = useRouter();
   const { data } = authClient.useSession();
+
+  useEffect(() => {
+    if (data?.user) {
+      router.push("/verify");
+    }
+  }, [data?.user, router]);
+
   if (data?.user) {
-    return router.push("/verify");
+    return null;
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

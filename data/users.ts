@@ -303,7 +303,7 @@ export async function updateUser(data: {
       },
     });
 
-    revalidatePath("[orgId]/admin/users");
+    revalidatePath("/[orgId]/admin/users");
 
     return {
       success: true,
