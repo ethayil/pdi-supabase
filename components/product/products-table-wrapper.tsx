@@ -44,6 +44,7 @@ export const ProductsTableWrapper = ({
           organizationId={organizationId}
           loading={isPending}
           categories={categories}
+          startTransition={startTransition}
         />
       }
       paginationComponent={

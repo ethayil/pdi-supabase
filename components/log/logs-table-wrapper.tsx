@@ -20,14 +20,19 @@ interface LogsTableWrapperProps {
 
 export const LogsTableWrapper = ({ initialData }: LogsTableWrapperProps) => {
   const [isPending, startTransition] = useTransition();
-  const [{ start, end }, setParams] = useLogParams();
+  const [{ start, end }, setParams] = useLogParams({ startTransition });
 
   return (
     <DataTable
       columns={columns}
       data={initialData.data ?? []}
       loading={isPending}
-      headerComponent={<LogsTableToolbar loading={isPending} />}
+      headerComponent={
+        <LogsTableToolbar
+          loading={isPending}
+          startTransition={startTransition}
+        />
+      }
       paginationComponent={
         <DataTablePagination
           totalPages={initialData.totalPages}
@@ -40,11 +45,9 @@ export const LogsTableWrapper = ({ initialData }: LogsTableWrapperProps) => {
               to: end ? new Date(parseInt(end)) : undefined,
             }}
             setDate={(range: DateRange | undefined) => {
-              startTransition(() => {
-                setParams({
-                  start: range?.from ? range.from.getTime().toString() : null,
-                  end: range?.to ? range.to.getTime().toString() : null,
-                });
+              setParams({
+                start: range?.from ? range.from.getTime().toString() : null,
+                end: range?.to ? range.to.getTime().toString() : null,
               });
             }}
           />

@@ -24,8 +24,16 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useRegisterAction } from '@/hooks/use-command-actions'
 import { useLogParams } from '@/lib/nuqs/log-params'
 
-export default function LogsTableToolbar({ loading }: { loading: boolean }) {
-  const [{ user, message, entityType }, setParams] = useLogParams()
+export default function LogsTableToolbar({
+  loading,
+  startTransition,
+}: {
+  loading: boolean
+  startTransition: React.TransitionStartFunction
+}) {
+  const [{ user, message, entityType }, setParams] = useLogParams({
+    startTransition,
+  })
 
   const [isTypeOpen, setIsTypeOpen] = useState(false)
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)

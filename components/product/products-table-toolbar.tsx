@@ -33,12 +33,16 @@ export default function ProductsTableToolbar({
   organizationId,
   loading,
   categories = [],
+  startTransition,
 }: {
   organizationId: string;
   loading: boolean;
   categories: Category[];
+  startTransition: React.TransitionStartFunction;
 }) {
-  const [{ query, categoryId, stockStatus }, setParams] = useProductParams();
+  const [{ query, categoryId, stockStatus }, setParams] = useProductParams({
+    startTransition,
+  });
 
   const [localSearch, setLocalSearch] = useState(query);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
