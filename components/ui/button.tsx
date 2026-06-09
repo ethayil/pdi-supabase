@@ -18,7 +18,7 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
-        hero: "text-primary font-semibold bg-linear-to-b from-foreground to-muted-foreground",
+        hero: "text-secondary font-semibold bg-linear-to-tl dark:bg-linear-to-b from-foreground to-muted-foreground",
         glass:
           "relative overflow-hidden bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-[0_2px_10px_-3px_rgba(59,130,246,0.5)] before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/20 before:to-transparent after:absolute after:inset-px after:rounded-[inherit] after:border-t after:border-white/20 after:pointer-events-none hover:from-blue-600 hover:to-blue-700 hover:shadow-[0_4px_15px_-3px_rgba(59,130,246,0.6)]",
         rainbow:

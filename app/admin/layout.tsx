@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { GridBackgroundPattern } from "@/components/ui/text-reveal-effects";
-import { getSession } from "@/lib/get-session";
+import { getSession } from "@/lib/auth/get-session";
 
 export default async function AdminLayout({
   children,

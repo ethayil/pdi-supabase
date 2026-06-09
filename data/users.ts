@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Member, Order, User } from "@/app/generated/prisma/client";
+import type { Member, User } from "@/app/generated/prisma/client";
 import type {
   UserUpdateInput,
   UserWhereInput,
