@@ -1,6 +1,9 @@
 import { Package } from "lucide-react";
 import { redirect } from "next/navigation";
 import ManageOrganizationDialog from "@/components/organization/manage-organization-dialog";
+
+export const dynamic = "force-dynamic";
+
 import {
   Card,
   CardContent,

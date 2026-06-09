@@ -1,4 +1,7 @@
 import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
+
 import VerifyCard from "@/components/auth/verify-card";
 import { getOrganizations } from "@/data/organizations";
 import { getSession } from "@/lib/auth/get-session";

@@ -24,13 +24,6 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full", "antialiased", "font-sans", montserrat.variable)}
     >
-      <head>
-        {/* <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('color-theme');if(t&&t!=='midnight')document.documentElement.classList.add('theme-'+t)}catch(e){}})()`,
-          }}
-        /> */}
-      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider
           attribute="class"

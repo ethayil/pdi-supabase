@@ -8,14 +8,13 @@ import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getOrganizations } from "@/data/organizations";
 import { getSession } from "@/lib/auth/get-session";
-import type { Params } from "@/types/globals";
 
 export default async function OrganizationLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<Params>;
+  params: Promise<{ orgId: string }>;
 }) {
   const { user, session } = await getSession();
   if (!user) {
@@ -67,8 +66,8 @@ export default async function OrganizationLayout({
     return redirectToUserOrg();
   }
 
-  const settings = selectedOrganization.settings;
-  const primaryColor = settings?.primaryColor;
+  // const settings = selectedOrganization.settings;
+  // const primaryColor = settings?.primaryColor;
 
   // Organization inactive (Lock Screen)
   if (selectedOrganization.isActive === false && user.role !== "superAdmin") {
@@ -87,17 +86,6 @@ export default async function OrganizationLayout({
 
   return (
     <SidebarProvider>
-      {/* {primaryColor && (
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-            :root {
-              --primary: ${primaryColor};
-            }
-          `,
-          }}
-        />
-      )} */}
       <AppSidebar user={user} orgs={orgs} organizationId={orgId} />
       <SidebarInset className="h-svh p-0 flex flex-col overflow-hidden relative">
         <BannerNotification orgId={orgId} />
