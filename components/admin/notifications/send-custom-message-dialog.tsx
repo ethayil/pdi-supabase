@@ -5,7 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { Organization } from "@/app/generated/prisma/client";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { CheckboxCard } from "@/components/ui/checkbox-card";
 import {
   Dialog,
   DialogContent,
@@ -106,50 +106,22 @@ export function SendCustomMessageDialog({
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                className={`flex items-center space-x-3 rounded-lg border p-4 cursor-pointer transition-colors ${
-                  sendInApp ? "bg-primary/5 border-primary" : "bg-background"
-                }`}
-                onClick={() => setSendInApp(!sendInApp)}
-              >
-                <Checkbox
-                  id="send-in-app"
-                  checked={sendInApp}
-                  onCheckedChange={(v) => setSendInApp(!!v)}
-                />
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-muted-foreground" />
-                  <Label
-                    htmlFor="send-in-app"
-                    className="cursor-pointer font-medium"
-                  >
-                    In-App
-                  </Label>
-                </div>
-              </button>
-              <button
-                type="button"
-                className={`flex items-center space-x-3 rounded-lg border p-4 cursor-pointer transition-colors ${
-                  sendEmail ? "bg-primary/5 border-primary" : "bg-background"
-                }`}
-                onClick={() => setSendEmail(!sendEmail)}
-              >
-                <Checkbox
-                  id="send-email"
-                  checked={sendEmail}
-                  onCheckedChange={(v) => setSendEmail(!!v)}
-                />
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <Label
-                    htmlFor="send-email"
-                    className="cursor-pointer font-medium"
-                  >
-                    Email
-                  </Label>
-                </div>
-              </button>
+              <CheckboxCard
+                id="send-in-app"
+                checked={sendInApp}
+                onCheckedChange={(v) => setSendInApp(!!v)}
+                title="In-App"
+                icon={Bell}
+                className="p-4"
+              />
+              <CheckboxCard
+                id="send-email"
+                checked={sendEmail}
+                onCheckedChange={(v) => setSendEmail(!!v)}
+                title="Email"
+                icon={Mail}
+                className="p-4"
+              />
             </div>
 
             <div className="space-y-3 border rounded-lg p-4 bg-muted/20">

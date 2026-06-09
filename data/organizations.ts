@@ -166,7 +166,9 @@ export async function getOrganizationById({ id }: { id: string }) {
 
 export type CreateOrgData = OrganizationCreateInput;
 
-export async function createOrganization(data: Organization) {
+export async function createOrganization(
+  data: Omit<Organization, "id" | "slug" | "createdAt">,
+) {
   try {
     const { user } = await getSession();
     if (!user) {
@@ -177,14 +179,12 @@ export async function createOrganization(data: Organization) {
       throw new Error("Forbidden: Insufficient Permissions");
     }
 
-    const slug =
-      data.slug ||
-      data.name
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, "")
-        .replace(/[\s_-]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+    const slug = data.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
 
     const org = await auth.api.createOrganization({
       headers: await headers(),
@@ -221,7 +221,9 @@ export async function createOrganization(data: Organization) {
   }
 }
 
-export async function updateOrganization(data: Organization) {
+export async function updateOrganization(
+  data: Omit<Organization, "slug" | "createdAt">,
+) {
   try {
     const { user } = await getSession();
     if (!user) {

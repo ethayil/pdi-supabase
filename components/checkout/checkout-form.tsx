@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { CheckboxCard } from "@/components/ui/checkbox-card";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { GlowingIcon } from "@/components/ui/glowing-icon";
 import { Input } from "@/components/ui/input";
@@ -427,14 +427,13 @@ export default function CheckoutForm({
                             orientation="horizontal"
                             data-invalid={fieldState.invalid}
                           >
-                            <FieldLabel className="hover:bg-accent/50 flex items-start gap-3 rounded-lg border p-3 has-aria-checked:border-blue-600 has-aria-checked:bg-blue-50 dark:has-aria-checked:border-blue-900 dark:has-aria-checked:bg-blue-950">
-                              <Checkbox
-                                id="updateSavedAddress"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                              Update my saved address with these changes
-                            </FieldLabel>
+                            <CheckboxCard
+                              id="updateSavedAddress"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              title="Update my saved address with these changes"
+                              disabled={isLoading}
+                            />
                           </Field>
                         )}
                       />

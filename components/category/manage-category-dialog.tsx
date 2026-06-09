@@ -7,7 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { CheckboxCard } from "@/components/ui/checkbox-card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import {
   Dialog,
@@ -206,21 +206,13 @@ export default function ManageCategoryDialog({
             control={form.control}
             render={({ field, fieldState }) => (
               <Field orientation="horizontal" data-invalid={fieldState.invalid}>
-                <FieldLabel className="hover:bg-accent/50 flex items-start gap-3 rounded-lg border p-3 has-aria-checked:border-blue-600 has-aria-checked:bg-blue-50 dark:has-aria-checked:border-blue-900 dark:has-aria-checked:bg-blue-950">
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
-                  />
-                  <div className="grid gap-1.5 font-normal">
-                    <p className="text-sm leading-none font-medium">
-                      Is Active
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      Show or hide category from user
-                    </p>
-                  </div>
-                </FieldLabel>
+                <CheckboxCard
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  title="Is Active"
+                  description="Show or hide category from user"
+                  disabled={isLoading}
+                />
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}

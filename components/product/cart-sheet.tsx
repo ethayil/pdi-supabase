@@ -4,7 +4,6 @@ import { ChevronRightCircle, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { Category, Product } from "@/app/generated/prisma/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -16,6 +15,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useRegisterAction } from "@/hooks/use-command-actions";
+import { cn } from "@/lib/utils";
 import { CartItemCard } from "./cart-item";
 
 type ProductWithCategory = Product & {
@@ -47,14 +47,27 @@ export default function CartSheet({
     category: "Products",
   });
 
+  const itemCount = cartItems.length;
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger className="bg-secondary/50 backdrop-blur p-3 rounded-lg relative cursor-pointer shadow-lg dark:shadow-white/20 border hover:scale-105 transition-transform">
-        <Badge className="absolute -top-5 ">{cartItems.length}</Badge>
-        <ShoppingBag className="size-5 text-primary/80" />
+      <SheetTrigger
+        className={cn(
+          "backdrop-blur p-3 rounded-lg relative cursor-pointer transition-all hover:scale-105 duration-200 border",
+          itemCount > 0
+            ? "bg-primary/10 border-primary/30 text-primary shadow-lg shadow-primary/10"
+            : "bg-secondary/50 border-border text-muted-foreground shadow-md",
+        )}
+      >
+        {itemCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 px-1 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground shadow-xs ring-2 ring-background animate-in zoom-in-50 duration-200">
+            {itemCount}
+          </span>
+        )}
+        <ShoppingBag className="size-5" />
       </SheetTrigger>
       <SheetContent className="w-[90%] sm:w-135">
-        <SheetHeader>
+        <SheetHeader className="border-b px-4 py-5">
           <SheetTitle>Cart</SheetTitle>
           <SheetDescription className="sr-only">Cart Items</SheetDescription>
         </SheetHeader>
@@ -73,7 +86,7 @@ export default function CartSheet({
           ))}
         </div>
         {cartItems.length > 0 && (
-          <SheetFooter>
+          <SheetFooter className="border-t p-2">
             <Link href={`/${organizationId}/checkout`} className="w-full">
               <Button className="group w-full">
                 Checkout
