@@ -167,7 +167,7 @@ export function CommandPalette({ role }: { role?: string | null }) {
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
-      className="bg-card/60 backdrop-blur-md border border-border/40 shadow-2xl max-w-150! p-0! rounded-xl!"
+      className="max-w-150! p-0! rounded-xl!"
     >
       <CommandPrimitive className="flex flex-col overflow-hidden">
         <div

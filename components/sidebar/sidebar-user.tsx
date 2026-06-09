@@ -1,6 +1,7 @@
 "use client";
 import { ChevronsUpDown } from "lucide-react";
 import type { User } from "@/auth";
+import { ThemeColorSwitcher } from "@/components/theme-color-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -51,6 +52,14 @@ export function SidebarUser({ user }: { user: User }) {
 
               <DropdownMenuSeparator />
               <SidebarThemeSwticher />
+
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">
+                Color Theme
+              </DropdownMenuLabel>
+              <div className="px-1.5 py-1">
+                <ThemeColorSwitcher layout="row" />
+              </div>
 
               <DropdownMenuSeparator />
               <LogoutButton />

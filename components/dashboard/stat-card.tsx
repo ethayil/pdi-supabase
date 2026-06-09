@@ -23,7 +23,20 @@ export function StatCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
     >
-      <Card className="shadow-sm h-full">
+      <Card className="shadow-sm h-full relative overflow-hidden">
+        {/* Top accent line */}
+        <div
+          className="absolute top-0 inset-x-0 h-px w-[60%] mx-auto z-10"
+          style={{
+            backgroundImage: `linear-gradient(to right, transparent, ${color}, transparent)`,
+          }}
+        />
+        <div
+          className="absolute top-0 inset-x-0 h-[3px] w-[40%] mx-auto z-10 blur-sm"
+          style={{
+            backgroundImage: `linear-gradient(to right, transparent, ${color}, transparent)`,
+          }}
+        />
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-xs font-semibold uppercase text-muted-foreground tracking-wide">
             {title}

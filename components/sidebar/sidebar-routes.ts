@@ -7,6 +7,7 @@ import {
   Megaphone,
   Notebook,
   Package,
+  Settings,
   ShoppingBag,
   ShoppingCart,
   University,
@@ -33,6 +34,11 @@ export const userRoutes = [
     name: "Orders",
     url: "/orders",
     icon: ShoppingBag,
+  },
+  {
+    name: "Settings",
+    url: "/settings",
+    icon: Settings,
   },
 ];
 
