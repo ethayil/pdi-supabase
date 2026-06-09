@@ -169,7 +169,7 @@ export function NotificationCenter() {
         <Separator />
         <div className="p-2">
           <Link href={`/${orgId}/notifications`}>
-            <Button variant="ghost" size="sm" className="w-full text-xs">
+            <Button size="sm" className="w-full">
               View all notifications
             </Button>
           </Link>

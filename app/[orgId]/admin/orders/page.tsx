@@ -36,17 +36,15 @@ export default async function AdminOrdersPage({
     courier,
   } = await loadOrderParams(searchParams);
 
-  const finalOrgId = paramOrgId === "all" ? orgId : paramOrgId;
-
   // Fetch initial orders with filters
   const initialData = await getAdminOrders({
-    orgId: finalOrgId,
+    orgId: paramOrgId,
     currentPage,
     entriesPerPage,
     status,
     search: query || undefined,
-    startDate: start ? parseInt(start) : undefined,
-    endDate: end ? parseInt(end) : undefined,
+    startDate: start ? parseInt(start, 10) : undefined,
+    endDate: end ? parseInt(end, 10) : undefined,
     courier: courier || undefined,
     reference: ref || undefined,
     fullname: name || undefined,

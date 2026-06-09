@@ -51,8 +51,8 @@ export const InvoicesTableWrapper = ({
         >
           <DatePickerWithRange
             date={{
-              from: start ? new Date(parseInt(start)) : undefined,
-              to: end ? new Date(parseInt(end)) : undefined,
+              from: start ? new Date(parseInt(start, 10)) : undefined,
+              to: end ? new Date(parseInt(end, 10)) : undefined,
             }}
             setDate={(range: DateRange | undefined) => {
               setParams({

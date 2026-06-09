@@ -27,8 +27,8 @@ export default async function AdminInvoicesPage({
   const invoices = await getPaginatedInvoices({
     orgId,
     status,
-    dateFrom: start ? parseInt(start) : undefined,
-    dateTo: end ? parseInt(end) : undefined,
+    dateFrom: start ? parseInt(start, 10) : undefined,
+    dateTo: end ? parseInt(end, 10) : undefined,
     currentPage,
     pageSize: entriesPerPage,
   });
@@ -36,8 +36,8 @@ export default async function AdminInvoicesPage({
   const totalCount = await getInvoiceCount({
     orgId,
     status,
-    dateFrom: start ? parseInt(start) : undefined,
-    dateTo: end ? parseInt(end) : undefined,
+    dateFrom: start ? parseInt(start, 10) : undefined,
+    dateTo: end ? parseInt(end, 10) : undefined,
   });
 
   const totalPages = Math.ceil(totalCount / entriesPerPage);

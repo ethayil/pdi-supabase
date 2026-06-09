@@ -8,7 +8,7 @@ import VerificationEmail from "../emails/VerificationEmail";
 const smtpEmail = process.env.SMTP_EMAIL;
 const smtpPassword = process.env.SMTP_PASSWORD;
 const smtpHost = process.env.SMTP_HOST || "";
-const smtpPort = parseInt(process.env.SMTP_PORT || "465");
+const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
 const siteUrl = process.env.SITE_URL;
 
 const transporter = nodemailer.createTransport({
