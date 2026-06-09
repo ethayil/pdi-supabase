@@ -87,7 +87,7 @@ export default async function OrganizationLayout({
 
   return (
     <SidebarProvider>
-      {primaryColor && (
+      {/* {primaryColor && (
         <style
           dangerouslySetInnerHTML={{
             __html: `
@@ -97,7 +97,7 @@ export default async function OrganizationLayout({
           `,
           }}
         />
-      )}
+      )} */}
       <AppSidebar user={user} orgs={orgs} organizationId={orgId} />
       <SidebarInset className="h-svh p-0 flex flex-col overflow-hidden relative">
         <BannerNotification orgId={orgId} />

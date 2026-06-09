@@ -1,6 +1,12 @@
 "use client";
 
-import { MinusIcon, PlusIcon, ShoppingCart } from "lucide-react";
+import {
+  MinusIcon,
+  Package,
+  PlusIcon,
+  Scale,
+  ShoppingCart,
+} from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +17,11 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ImageZoom } from "@/components/ui/image-zoom";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { addToCart } from "@/data/cart";
 import { cn } from "@/lib/utils";
 import { weightFormat } from "@/utils/weight-format";
@@ -100,42 +111,52 @@ export function ProductCard({
               alt={product.name}
               width={400}
               height={500}
-              className="w-full h-64 object-cover transition-transform scale-105 group-hover:scale-100"
+              className="w-full h-56 object-cover transition-transform scale-105 group-hover:scale-100"
             />
           </ImageZoom>
           <Badge className="absolute top-2 right-2" variant="secondary">
             {product.category?.name || "Unknown"}
           </Badge>
         </div>
-        <div className="space-y-1 px-2">
-          <h3 className={cn("line-clamp-1s", getFontSize(product.name))}>
-            {product.name}
-          </h3>
+        <div className="space-y-1.5 px-3 py-2">
+          <Tooltip>
+            <TooltipTrigger>
+              <h3
+                className={cn(
+                  "truncate font-semibold text-foreground cursor-help",
+                  getFontSize(product.name),
+                )}
+              >
+                {product.name}
+              </h3>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[280px] text-xs leading-normal">
+              {product.name}
+            </TooltipContent>
+          </Tooltip>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              SKU: {product.sku}
-            </span>
-          </div>
-          <div className="flex gap-2 justify-between">
-            <p
-              className={cn(
-                "text-sm",
-                availableQty > 0
-                  ? " text-muted-foreground"
-                  : "text-destructive",
-              )}
-            >
-              {availableQty > 0 ? `${availableQty} available` : "Out of stock"}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Package className="size-3.5 shrink-0" />
+              <span
+                className={cn(
+                  availableQty > 0
+                    ? "text-muted-foreground"
+                    : "text-destructive font-medium",
+                )}
+              >
+                {availableQty > 0 ? `${availableQty} left` : "Out of stock"}
+              </span>
               {quantityInCart > 0 && (
-                <span className="ml-2 text-xs text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground/60">
                   ({quantityInCart} in cart)
                 </span>
               )}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Weight: {weightFormat(product.weight)}
-            </p>
+            </div>
+            <div className="flex items-center gap-1">
+              <Scale className="size-3.5 shrink-0" />
+              <span>{weightFormat(product.weight)}</span>
+            </div>
           </div>
         </div>
       </CardContent>
