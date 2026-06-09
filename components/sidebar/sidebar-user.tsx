@@ -2,6 +2,7 @@
 import { ChevronsUpDown } from "lucide-react";
 import type { User } from "@/auth";
 import { ThemeColorSwitcher } from "@/components/theme-color-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -17,7 +18,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import LogoutButton from "./logout-button";
-import { SidebarThemeSwticher } from "./sidebar-theme-switcher";
 
 export function SidebarUser({ user }: { user: User }) {
   return (
@@ -51,7 +51,7 @@ export function SidebarUser({ user }: { user: User }) {
               </DropdownMenuLabel>
 
               <DropdownMenuSeparator />
-              <SidebarThemeSwticher />
+              <ThemeToggle type="sidebar" />
 
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">

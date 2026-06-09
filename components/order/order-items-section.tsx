@@ -56,7 +56,7 @@ export function OrderItemsSection({
   const isOrderLocked =
     order.status === "cancelled" || order.status === "returned";
   const isItemsLocked =
-    order.status !== "pending" && order.status !== "processing";
+    order.status !== "pending";
 
   const filteredAvailable = availableProducts.filter(
     (p) => !orderItems.some((item) => item.productId === p._id),

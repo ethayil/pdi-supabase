@@ -56,4 +56,4 @@ export const trackingStatuses = [
   { label: "Returned", value: "returned" },
   { label: "Collected", value: "collected" },
   { label: "Delay", value: "delay" },
-];
+] as const;

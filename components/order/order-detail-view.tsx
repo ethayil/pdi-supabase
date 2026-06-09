@@ -20,7 +20,7 @@ import { trackingStatuses } from "@/data/couriers-data";
 import type { OrderWithFullDetails } from "@/data/orders";
 import { updateOrder } from "@/data/orders";
 import type { OrderStatus } from "@/types/globals";
-import { orderStatuses } from "@/types/globals";
+import { orderStatuses, VALID_ORDER_STATUS_TRANSITIONS } from "@/types/globals";
 import { AddressSection } from "./address-section";
 import { BoxLabelsPDF } from "./box-labels-pdf";
 import { EmailNotificationDialog } from "./email-notification-dialog";
@@ -28,64 +28,7 @@ import { GeneralInfoSection } from "./general-info-section";
 import { OrderItemsSection } from "./order-items-section";
 import { OrderNotesSection } from "./order-notes-section";
 import { TrackingSection } from "./tracking-section";
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: [
-    "processing",
-    "shipped",
-    "on_the_way",
-    "delay",
-    "exception",
-    "delivered",
-    "cancelled",
-    "collected",
-  ],
-  processing: [
-    "shipped",
-    "on_the_way",
-    "delay",
-    "exception",
-    "delivered",
-    "cancelled",
-    "collected",
-  ],
-  shipped: [
-    "on_the_way",
-    "delay",
-    "exception",
-    "delivered",
-    "returned",
-    "cancelled",
-  ],
-  on_the_way: [
-    "delay",
-    "exception",
-    "delivered",
-    "returned",
-    "cancelled",
-    "shipped",
-  ],
-  delay: [
-    "on_the_way",
-    "exception",
-    "delivered",
-    "returned",
-    "cancelled",
-    "shipped",
-  ],
-  exception: [
-    "on_the_way",
-    "delay",
-    "delivered",
-    "returned",
-    "cancelled",
-    "shipped",
-  ],
-  delivered: ["returned"],
-  cancelled: [],
-  returned: [],
-  collected: ["returned"],
-};
+import type { ProductOption } from "@/components/ui/product-select";
 
 function isOrderStatus(value: string): value is OrderStatus {
   return (orderStatuses as readonly string[]).includes(value);
@@ -95,15 +38,17 @@ export function OrderDetailView({
   order,
   orgId,
   isAdmin = false,
+  availableProducts = [],
 }: {
   order: OrderWithFullDetails;
   orgId: string;
   isAdmin?: boolean;
+  availableProducts?: ProductOption[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const validNextStates = VALID_TRANSITIONS[order?.status || "pending"] || [];
+  const validNextStates = VALID_ORDER_STATUS_TRANSITIONS[order?.status || "pending"] || [];
 
   if (!order) {
     return (
@@ -261,6 +206,7 @@ export function OrderDetailView({
               order={order}
               orgId={order.orgId}
               isAdmin={isAdmin}
+              availableProducts={availableProducts}
             />
           </motion.div>
 

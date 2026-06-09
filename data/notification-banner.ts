@@ -5,22 +5,14 @@ import type {
   BannerCreateInput,
   BannerUpdateInput,
 } from "@/app/generated/prisma/models";
-import { getSession } from "@/lib/auth/get-session";
+import { getSession, requireSuperAdmin } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 
 export async function createBanner(
   data: Omit<BannerCreateInput, "id" | "createdBy">,
 ) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const banner = await prisma.banner.create({
       data: { ...data, createdById: user.id },
@@ -36,15 +28,7 @@ export async function createBanner(
 
 export async function removeBanner({ id }: { id: string }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     await prisma.banner.delete({
       where: { id },
@@ -66,15 +50,7 @@ export async function toggleBannerActive({
   isActive: boolean;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const banner = await prisma.banner.update({
       where: { id },
@@ -93,15 +69,7 @@ export async function toggleBannerActive({
 
 export async function updateBanner(id: string, data: BannerUpdateInput) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const banner = await prisma.banner.update({
       where: { id },
@@ -149,15 +117,7 @@ export async function getVisibleBanners({ orgId }: { orgId?: string } = {}) {
 
 export async function listAllBanners() {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     return await prisma.banner.findMany({
       orderBy: { createdAt: "desc" },

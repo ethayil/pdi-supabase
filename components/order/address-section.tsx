@@ -56,7 +56,7 @@ export function AddressSection({
   const isOrderLocked =
     order.status === "cancelled" || order.status === "returned";
   const isAddressLocked =
-    order.status !== "pending" && order.status !== "processing";
+    order.status !== "pending";
 
   // const countryItems = useMemo(
   //   () => countriesData.map((c) => ({ value: c.label, label: c.label })),

@@ -21,6 +21,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+function verifySmtpConfig(): boolean {
+  if (!smtpEmail || !smtpPassword) {
+    console.error("SMTP credentials not configured");
+    return false;
+  }
+  return true;
+}
+
 export async function sendVerificationEmail({
   to,
   url,
@@ -28,10 +36,7 @@ export async function sendVerificationEmail({
   to: string;
   url: string;
 }) {
-  if (!smtpEmail || !smtpPassword) {
-    console.error("SMTP credentials not configured");
-    return;
-  }
+  if (!verifySmtpConfig()) return;
 
   const emailHtml = await render(<VerificationEmail url={url} />);
 
@@ -52,10 +57,7 @@ export async function sendPasswordResetEmail({
   to: string;
   otp: string;
 }) {
-  if (!smtpEmail || !smtpPassword) {
-    console.error("SMTP credentials not configured");
-    return;
-  }
+  if (!verifySmtpConfig()) return;
 
   const resetUrl = `${siteUrl}/auth/reset-password?email=${encodeURIComponent(to)}&otp=${encodeURIComponent(otp)}`;
 
@@ -107,10 +109,7 @@ export async function sendOrderEmail(args: {
   exceptionReason?: string;
   orderUrl: string;
 }) {
-  if (!smtpEmail || !smtpPassword) {
-    console.error("SMTP credentials not configured");
-    return;
-  }
+  if (!verifySmtpConfig()) return;
 
   const { to, ...templateProps } = args;
 
@@ -160,10 +159,7 @@ export async function sendCustomEmail(args: {
   linkUrl?: string;
   senderName?: string;
 }) {
-  if (!smtpEmail || !smtpPassword) {
-    console.error("SMTP credentials not configured");
-    return;
-  }
+  if (!verifySmtpConfig()) return;
 
   const { to, ...templateProps } = args;
 

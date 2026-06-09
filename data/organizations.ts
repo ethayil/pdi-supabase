@@ -7,7 +7,7 @@ import type {
   OrganizationWhereInput,
 } from "@/app/generated/prisma/models";
 import { auth, type Organization } from "@/auth";
-import { getSession } from "@/lib/auth/get-session";
+import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
@@ -25,10 +25,7 @@ export async function getOrganizations({
   query,
 }: GetOrganizationsArgs = {}) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireUser();
 
     let totalCount = 0;
     let organizations = [];
@@ -124,14 +121,7 @@ export async function getOrganizations({
 
 export async function getOrganizationById({ id }: { id: string }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    if (user.role !== "superAdmin") {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const organization = await prisma.organization.findUnique({
       where: { id },
@@ -170,14 +160,7 @@ export async function createOrganization(
   data: Omit<Organization, "id" | "slug" | "createdAt">,
 ) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    if (user.role !== "superAdmin") {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const slug = data.name
       .toLowerCase()
@@ -225,14 +208,7 @@ export async function updateOrganization(
   data: Omit<Organization, "slug" | "createdAt">,
 ) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    if (user.role !== "superAdmin") {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const { id, name, ...rest } = data;
     const slug = name
@@ -300,14 +276,7 @@ export async function updateOrganization(
 
 export async function deleteOrganization({ id }: { id: string }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    if (user.role !== "superAdmin") {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const deleted = await auth.api.superAdminDeleteOrganization({
       headers: await headers(),

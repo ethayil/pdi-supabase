@@ -1,14 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/auth/get-session";
+import { requireUser } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
 export async function getAddresses({ orgId }: { orgId: string }) {
   try {
-    const { user } = await getSession();
-    if (!user) return [];
+    const user = await requireUser();
 
     return await prisma.address.findMany({
       where: {
@@ -39,10 +38,7 @@ export async function createAddress(args: {
   phone: string;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireUser();
 
     const address = await prisma.address.create({
       data: {

@@ -6,7 +6,7 @@ import type {
   OrderChangeType,
 } from "@/app/generated/prisma/client";
 import type { ActivityLogWhereInput } from "@/app/generated/prisma/models";
-import { getSession } from "@/lib/auth/get-session";
+import { getSession, requireSuperAdmin } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 
 interface GetLogsArgs {
@@ -20,6 +20,8 @@ interface GetLogsArgs {
   endDate?: number;
 }
 
+export type ActivityChanges = Record<string, { from: any; to: any } | undefined>;
+
 export async function logActivity(params: {
   orgId?: string | null;
   userId?: string;
@@ -28,7 +30,7 @@ export async function logActivity(params: {
   entityType: string;
   entityId: string;
   description: string;
-  changes?: any;
+  changes?: ActivityChanges;
 }) {
   try {
     const { user } = await getSession();
@@ -90,6 +92,7 @@ export async function logProductMovement(params: {
   }
 }
 
+/*
 export async function logOrderChange(params: {
   orgId: string;
   orderId: string;
@@ -132,6 +135,7 @@ export async function logOrderChange(params: {
     return null;
   }
 }
+*/
 
 export async function getLogs({
   orgId,
@@ -144,10 +148,7 @@ export async function getLogs({
   endDate,
 }: GetLogsArgs = {}) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
 
     const where: ActivityLogWhereInput = {};
     if (orgId && orgId !== "all") where.orgId = orgId;
@@ -229,10 +230,7 @@ export async function getProductMovements({
   productId: string;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
 
     const movements = await prisma.productMovement.findMany({
       where: { productId },

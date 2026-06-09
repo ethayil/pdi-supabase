@@ -24,5 +24,5 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
 
   const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
 
-  return <OrderDetailView order={order} orgId={orgId} isAdmin={isAdmin} />;
+  return <OrderDetailView order={order} orgId={orgId} isAdmin={false} />;
 }

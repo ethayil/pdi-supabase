@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/auth/get-session";
+import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity, logProductMovement } from "./logging";
 
@@ -23,10 +23,7 @@ export async function getProducts({
   stockStatus = "all",
 }: GetProductsArgs = {}) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireUser();
 
     if (!orgId || orgId === "all") {
       return {
@@ -118,10 +115,7 @@ export async function getProductById({ id }: { id: string }) {
   try {
     if (!id) return null;
 
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -149,10 +143,7 @@ export async function createProduct(values: {
   isActive: boolean;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
     const userId = user.id;
 
     // Check organization exists
@@ -238,10 +229,7 @@ export async function updateProduct(values: {
   isActive: boolean;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
     const userId = user.id;
 
     // Check organization exists
@@ -334,10 +322,7 @@ export async function updateProduct(values: {
 
 export async function deleteProduct({ id }: { id: string }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
     const userId = user.id;
 
     const product = await prisma.product.findUnique({
@@ -389,10 +374,7 @@ export async function bulkCreateProducts({
   }[];
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
     const userId = user.id;
 
     const results = [];
@@ -524,10 +506,7 @@ export async function bulkUpdateProducts({
   }[];
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
     const userId = user.id;
 
     const results = [];
@@ -637,5 +616,33 @@ export async function bulkUpdateProducts({
   } catch (error) {
     console.error("Error in bulkUpdateProducts:", error);
     throw error;
+  }
+}
+
+export async function getAvailableProducts({ orgId }: { orgId: string }) {
+  try {
+    const user = await requireSuperAdmin();
+
+    const products = await prisma.product.findMany({
+      where: {
+        orgId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        imgUrl: true,
+        quantity: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return products;
+  } catch (error) {
+    console.error("Database error in getAvailableProducts:", error);
+    return [];
   }
 }

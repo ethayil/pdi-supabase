@@ -5,9 +5,9 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import BulkProductUpload from "@/components/product/bulk-product-upload";
 import ManageProductDialog from "@/components/product/manage-product-dialog";
 import { ProductsTableWrapper } from "@/components/product/products-table-wrapper";
+import { getAllCategories } from "@/data/categories";
 import { getProducts } from "@/data/products";
 import { loadProductParams } from "@/lib/nuqs/product-params";
-import prisma from "@/lib/prisma";
 import type { Params } from "@/types/globals";
 
 export const metadata: Metadata = {
@@ -26,7 +26,6 @@ export default async function ProductsPage({
   const { currentPage, entriesPerPage, query, categoryId, stockStatus } =
     await loadProductParams(searchParams);
 
-  // Fetch initial products with filters
   const initialData = await getProducts({
     orgId,
     currentPage,
@@ -36,11 +35,7 @@ export default async function ProductsPage({
     stockStatus,
   });
 
-  // Fetch all categories for filter dropdown & dialog dropdown directly via Prisma
-  const categories = await prisma.category.findMany({
-    where: { orgId },
-    orderBy: { name: "asc" },
-  });
+  const categories = await getAllCategories({ orgId });
 
   return (
     <>

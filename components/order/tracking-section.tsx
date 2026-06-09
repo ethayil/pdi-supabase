@@ -56,6 +56,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { couriersData, trackingStatuses } from "@/data/couriers-data";
+import { VALID_ORDER_STATUS_TRANSITIONS } from "@/types/globals";
 import type { OrderWithFullDetails } from "@/data/orders";
 import {
   deleteOrderHistory,
@@ -67,64 +68,6 @@ import { cn } from "@/lib/utils";
 import { formattedDate } from "@/utils/formatted-date";
 import { getTrackingUrl } from "@/utils/tracking-url";
 import OrderGridTextBox from "./order-grid-textbox";
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: [
-    "processing",
-    "shipped",
-    "on_the_way",
-    "delay",
-    "exception",
-    "delivered",
-    "cancelled",
-    "collected",
-  ],
-  processing: [
-    "shipped",
-    "on_the_way",
-    "delay",
-    "exception",
-    "delivered",
-    "cancelled",
-    "collected",
-  ],
-  shipped: [
-    "on_the_way",
-    "delay",
-    "exception",
-    "delivered",
-    "returned",
-    "cancelled",
-  ],
-  on_the_way: [
-    "delay",
-    "exception",
-    "delivered",
-    "returned",
-    "cancelled",
-    "shipped",
-  ],
-  delay: [
-    "on_the_way",
-    "exception",
-    "delivered",
-    "returned",
-    "cancelled",
-    "shipped",
-  ],
-  exception: [
-    "on_the_way",
-    "delay",
-    "delivered",
-    "returned",
-    "cancelled",
-    "shipped",
-  ],
-  delivered: ["returned"],
-  cancelled: [],
-  returned: [],
-  collected: ["returned"],
-};
 
 interface TrackingSectionProps {
   order: OrderWithFullDetails;
@@ -162,7 +105,7 @@ export function TrackingSection({
   });
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const validNextStates = VALID_TRANSITIONS[order.status || "pending"] || [];
+  const validNextStates = VALID_ORDER_STATUS_TRANSITIONS[order.status || "pending"] || [];
 
   useEffect(() => {
     if (showHistory) {

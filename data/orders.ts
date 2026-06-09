@@ -11,7 +11,7 @@ import type {
   User,
 } from "@/app/generated/prisma/client";
 import type { OrderWhereInput } from "@/app/generated/prisma/models";
-import { getSession } from "@/lib/auth/get-session";
+import { getSession, requireAdmin, requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { sendOrderEmail } from "./email";
 import { createNotification } from "./notifications";
@@ -418,11 +418,7 @@ export async function updateOrder(args: {
   };
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized: Access Denied");
-
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) throw new Error("Forbidden: Insufficient Permissions");
+    const user = await requireSuperAdmin();
 
     const {
       id,
@@ -502,10 +498,7 @@ export async function updateOrderTracking(args: {
   createdAt?: number;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized: Access Denied");
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) throw new Error("Forbidden: Insufficient Permissions");
+    const user = await requireSuperAdmin();
 
     const {
       orderId,
@@ -648,10 +641,7 @@ export async function updateOrderItem({
   quantity: number;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized");
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) throw new Error("Forbidden");
+    const user = await requireSuperAdmin();
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
@@ -696,10 +686,7 @@ export async function addOrderItem({
   quantity: number;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized");
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) throw new Error("Forbidden");
+    const user = await requireSuperAdmin();
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -742,10 +729,7 @@ export async function removeOrderItem({
   orgId: string;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized");
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) throw new Error("Forbidden");
+    const user = await requireSuperAdmin();
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
@@ -787,8 +771,7 @@ export async function sendOrderNotification({
   sendNotification: boolean;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized");
+    const user = await requireSuperAdmin();
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -874,15 +857,7 @@ export async function getAdminOrders({
   postcode,
 }: GetAdminOrdersArgs) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const where: OrderWhereInput = {};
 

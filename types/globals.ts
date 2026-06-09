@@ -41,3 +41,62 @@ export const invoiceStatus = [
 export type OrderStatus = (typeof orderStatuses)[number];
 
 export type InvoiceStatus = (typeof invoiceStatus)[number];
+
+export const VALID_ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending: [
+    "processing",
+    "shipped",
+    "on_the_way",
+    "delay",
+    "exception",
+    "delivered",
+    "cancelled",
+    "collected",
+  ],
+  processing: [
+    "shipped",
+    "on_the_way",
+    "delay",
+    "exception",
+    "delivered",
+    "cancelled",
+    "collected",
+  ],
+  shipped: [
+    "on_the_way",
+    "delay",
+    "exception",
+    "delivered",
+    "returned",
+    "cancelled",
+  ],
+  on_the_way: [
+    "delay",
+    "exception",
+    "delivered",
+    "returned",
+    "cancelled",
+    "shipped",
+  ],
+  delay: [
+    "on_the_way",
+    "exception",
+    "delivered",
+    "returned",
+    "cancelled",
+    "shipped",
+  ],
+  exception: [
+    "on_the_way",
+    "delay",
+    "delivered",
+    "returned",
+    "cancelled",
+    "shipped",
+  ],
+  delivered: ["returned"],
+  cancelled: [],
+  returned: [],
+  collected: ["returned"],
+};
+

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import type { SearchParams } from "nuqs/server";
 import { ProductsCatalogWrapper } from "@/components/product/products-catalog-wrapper";
 import { getCartItems } from "@/data/cart";
+import { getActiveCategories } from "@/data/categories";
 import { getProducts } from "@/data/products";
 import { loadProductParams } from "@/lib/nuqs/product-params";
-import prisma from "@/lib/prisma";
 import type { Params } from "@/types/globals";
 
 export const metadata: Metadata = {
@@ -23,7 +23,6 @@ export default async function ProductsPage({
   const { currentPage, query, categoryId } =
     await loadProductParams(searchParams);
 
-  // Fetch initial products with filters (active only for customer grid)
   const initialData = await getProducts({
     orgId,
     currentPage,
@@ -33,13 +32,8 @@ export default async function ProductsPage({
     stockStatus: "active",
   });
 
-  // Fetch all active categories
-  const categories = await prisma.category.findMany({
-    where: { orgId, isActive: true },
-    orderBy: { name: "asc" },
-  });
+  const categories = await getActiveCategories({ orgId });
 
-  // Fetch cart items
   const cartItems = await getCartItems({ orgId });
 
   return (

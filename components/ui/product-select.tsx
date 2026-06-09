@@ -83,7 +83,7 @@ export function ProductSelect({
           </Button>
         }
       />
-      <PopoverContent className="w-[350px] p-0" align="start">
+      <PopoverContent className="w-[--anchor-width] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search products..." />
           <CommandList>

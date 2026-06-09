@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { CategoryWhereInput } from "@/app/generated/prisma/models";
-import { getSession } from "@/lib/auth/get-session";
+import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
@@ -20,10 +20,7 @@ export async function getCategories({
   query,
 }: GetCategoriesArgs = {}) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
 
     if (!orgId || orgId === "all") {
       return {
@@ -76,14 +73,39 @@ export async function getCategories({
   }
 }
 
+export async function getActiveCategories({ orgId }: { orgId: string }) {
+  try {
+    const user = await requireUser();
+
+    return await prisma.category.findMany({
+      where: { orgId, isActive: true },
+      orderBy: { name: "asc" },
+    });
+  } catch (error) {
+    console.error("Database error in getActiveCategories:", error);
+    return [];
+  }
+}
+
+export async function getAllCategories({ orgId }: { orgId: string }) {
+  try {
+    const user = await requireSuperAdmin();
+
+    return await prisma.category.findMany({
+      where: { orgId },
+      orderBy: { name: "asc" },
+    });
+  } catch (error) {
+    console.error("Database error in getAllCategories:", error);
+    return [];
+  }
+}
+
 export async function getCategoryById({ id }: { id: string }) {
   try {
     if (!id) return null;
 
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
 
     const category = await prisma.category.findUnique({
       where: { id },
@@ -102,10 +124,7 @@ export async function createCategory(values: {
   isActive?: boolean;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
     const userId = user.id;
 
     // Check organization exists
@@ -166,10 +185,7 @@ export async function updateCategory(values: {
   isActive?: boolean;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
     const userId = user.id;
 
     // Check organization exists
@@ -236,10 +252,7 @@ export async function updateCategory(values: {
 
 export async function deleteCategory({ id }: { id: string }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireSuperAdmin();
     const userId = user.id;
 
     const category = await prisma.category.findUnique({
@@ -274,3 +287,4 @@ export async function deleteCategory({ id }: { id: string }) {
       : new Error("Failed to delete category");
   }
 }
+

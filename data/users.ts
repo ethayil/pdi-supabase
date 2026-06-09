@@ -6,7 +6,7 @@ import type {
   UserUpdateInput,
   UserWhereInput,
 } from "@/app/generated/prisma/models";
-import { getSession } from "@/lib/auth/get-session";
+import { requireAdmin, requireSuperAdmin } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
@@ -29,14 +29,7 @@ export async function getUsers({
   userType = "org",
 }: GetUsersArgs) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    if (user.role !== "superAdmin") {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     let whereClause: UserWhereInput = {};
 
@@ -115,14 +108,7 @@ export async function getUserById({ id }: { id: string }): Promise<{
   error?: string;
 }> {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    if (user.role !== "superAdmin") {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const dbUser = await prisma.user.findUnique({
       where: { id },
@@ -168,14 +154,7 @@ export async function updateUser(data: {
   emailVerified?: boolean;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    if (user.role !== "superAdmin") {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const user = await requireSuperAdmin();
 
     const dbUser = await prisma.user.findUnique({
       where: { id: data.id },
@@ -316,16 +295,7 @@ export async function updateUser(data: {
 
 export async function getOrgUsers({ orgId }: { orgId: string }) {
   try {
-    const { user: loggedInUser } = await getSession();
-    if (!loggedInUser) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    const isAdmin =
-      loggedInUser.role === "superAdmin" || loggedInUser.role === "orgAdmin";
-    if (!isAdmin) {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const loggedInUser = await requireAdmin();
 
     const members = await prisma.member.findMany({
       where: { organizationId: orgId },
@@ -356,16 +326,7 @@ export type MemberWOrder = Member & {
 
 export async function getOrgMembersWithStats({ orgId }: { orgId: string }) {
   try {
-    const { user: loggedInUser } = await getSession();
-    if (!loggedInUser) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    const isAdmin =
-      loggedInUser.role === "superAdmin" || loggedInUser.role === "orgAdmin";
-    if (!isAdmin) {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const loggedInUser = await requireAdmin();
 
     const members = await prisma.member.findMany({
       where: { organizationId: orgId },

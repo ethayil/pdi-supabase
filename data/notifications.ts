@@ -1,7 +1,7 @@
 "use server";
 
 import type { NotificationType } from "@/app/generated/prisma/client";
-import { getSession } from "@/lib/auth/get-session";
+import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 
 export async function createNotification(params: {
@@ -45,10 +45,7 @@ export async function getNotifications({
   limit?: number;
 } = {}) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireUser();
 
     return await prisma.notification.findMany({
       where: { userId: user.id },
@@ -63,10 +60,7 @@ export async function getNotifications({
 
 export async function getUnreadCount() {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireUser();
 
     return await prisma.notification.count({
       where: { userId: user.id, isRead: false },
@@ -79,10 +73,7 @@ export async function getUnreadCount() {
 
 export async function markAsRead({ id }: { id: string }) {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireUser();
 
     const notification = await prisma.notification.findUnique({
       where: { id },
@@ -106,10 +97,7 @@ export async function markAsRead({ id }: { id: string }) {
 
 export async function markAllAsRead() {
   try {
-    const { user } = await getSession();
-    if (!user) {
-      throw new Error("Unauthorized: Access Denied");
-    }
+    const user = await requireUser();
 
     await prisma.notification.updateMany({
       where: { userId: user.id, isRead: false },
@@ -133,14 +121,7 @@ export async function sendCustomMessage(args: {
   linkUrl?: string;
 }) {
   try {
-    const { user: adminUser } = await getSession();
-    if (!adminUser) {
-      throw new Error("Unauthorized: Access Denied");
-    }
-
-    if (adminUser.role !== "superAdmin") {
-      throw new Error("Forbidden: Insufficient Permissions");
-    }
+    const adminUser = await requireSuperAdmin();
 
     let targetUsers: { id: string; email: string }[] = [];
 
