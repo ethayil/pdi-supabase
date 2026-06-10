@@ -8,7 +8,7 @@ const productsRouter = new Hono<{
   Variables: { supabase: SupabaseClient<Database> };
 }>();
 
-type ProductRow = Database["public"]["Tables"]["product"]["Row"];
+// type ProductRow = Database["public"]["Tables"]["product"]["Row"];
 
 interface GetProductsBody {
   AuthorizationToken: string;
@@ -63,7 +63,7 @@ productsRouter.post("/products/get", async (c) => {
 
     return c.json({
       Error: null,
-      Products: (products || []).map((p: ProductRow) => ({
+      Products: (products || []).map((p) => ({
         SKU: p.sku,
         Title: p.name,
         Price: 1,

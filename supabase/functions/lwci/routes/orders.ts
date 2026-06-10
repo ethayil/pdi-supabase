@@ -16,10 +16,10 @@ const ordersRouter = new Hono<{
   Variables: { supabase: SupabaseClient<Database> };
 }>();
 
-type OrderRow = Database["public"]["Tables"]["order"]["Row"];
-type OrderItemRow = Database["public"]["Tables"]["order_item"]["Row"];
-type ProductRow = Database["public"]["Tables"]["product"]["Row"];
-type UserRow = Database["public"]["Tables"]["user"]["Row"];
+// type OrderRow = Database["public"]["Tables"]["order"]["Row"];
+// type OrderItemRow = Database["public"]["Tables"]["order_item"]["Row"];
+// type ProductRow = Database["public"]["Tables"]["product"]["Row"];
+// type UserRow = Database["public"]["Tables"]["user"]["Row"];
 
 interface GetOrdersBody {
   AuthorizationToken: string;
@@ -81,6 +81,168 @@ interface PostSaleOptionsBody {
   AuthorizationToken: string;
 }
 
+// ordersRouter.post("/get", async (c) => {
+//   const supabase = c.get("supabase");
+//   try {
+//     const body: GetOrdersBody = await c.req.json();
+//     const valid = await validateToken(supabase, body.AuthorizationToken);
+//     if (!valid) return c.json({ Error: "Invalid Token" });
+
+//     console.log("[INFO] Fetching open orders for Linnworks sync...");
+
+//     const { data: baseOrders, error: ordersError } = await supabase
+//       .from("order")
+//       .select("*")
+//       .eq("status", "processing");
+
+//     if (ordersError) {
+//       console.error(
+//         "[ERROR] Failed to fetch processing orders:",
+//         ordersError.message,
+//       );
+//       return c.json({ Error: ordersError.message });
+//     }
+
+//     if (!baseOrders || baseOrders.length === 0) {
+//       return c.json({ Orders: [], TotalPages: 1 });
+//     }
+
+//     const processingOrders = await Promise.all(
+//       baseOrders.map(async (order: OrderRow) => {
+//         // Fetch User details
+//         let user: UserRow | null = null;
+//         if (order.userId) {
+//           const { data: userData } = await supabase
+//             .from("user")
+//             .select("*")
+//             .eq("id", order.userId)
+//             .maybeSingle();
+//           user = userData;
+//         }
+
+//         // Fetch Organization details
+//         const { data: orgData } = await supabase
+//           .from("organization")
+//           .select("*")
+//           .eq("id", order.orgId)
+//           .maybeSingle();
+
+//         // Fetch Order Items
+//         const { data: orderItems, error: itemsError } = await supabase
+//           .from("order_item")
+//           .select("*")
+//           .eq("orderId", order.id);
+
+//         if (itemsError) {
+//           console.error(
+//             `[ERROR] Failed to fetch items for order ${order.id}:`,
+//             itemsError.message,
+//           );
+//         }
+
+//         const itemsWithProducts = orderItems
+//           ? await Promise.all(
+//             orderItems.map(async (item: OrderItemRow) => {
+//               const { data: product } = await supabase
+//                 .from("product")
+//                 .select("*")
+//                 .eq("id", item.productId)
+//                 .maybeSingle();
+//               return { ...item, product };
+//             }),
+//           )
+//           : [];
+
+//         return {
+//           ...order,
+//           user,
+//           organization: orgData,
+//           orderItems: itemsWithProducts,
+//         };
+//       }),
+//     );
+
+//     const orders = processingOrders.map((order) => ({
+//       ReferenceNumber: order.reference,
+//       ExternalReference: order.externalRef || order.id,
+//       SecondaryReferenceNumber: null,
+//       Site: "",
+//       MatchPostalServiceTag: order.service,
+//       MatchPaymentMethodTag: "",
+//       ReceivedDate: formattedDate(order.createdAt, "lw"),
+//       PaidOn: formattedDate(order.createdAt, "lw"),
+//       DispatchBy: formattedDate(order.deliveryDate, "lw"),
+//       Currency: "GBP",
+//       DeliveryAddress: {
+//         FullName: order.fullname,
+//         Company: order.company || "",
+//         Address1: order.address1,
+//         Address2: order.address2 || "",
+//         Town: order.town,
+//         Region: order.city || "",
+//         PostCode: order.postcode,
+//         Country: order.country,
+//         EmailAddress: order.email,
+//         PhoneNumber: order.phone,
+//       },
+//       BillingAddress: {
+//         FullName: order.fullname,
+//         Company: order.company || "",
+//         Address1: order.address1,
+//         Address2: order.address2 || "",
+//         Town: order.town,
+//         Region: order.city || "",
+//         PostCode: order.postcode,
+//         Country: order.country,
+//         EmailAddress: order.email,
+//         PhoneNumber: order.phone,
+//       },
+//       OrderItems: order.orderItems.map(
+//         (
+//           item: OrderItemRow & { product: ProductRow | null },
+//           index: number,
+//         ) => ({
+//           TaxCostInclusive: true,
+//           UseChannelTax: false,
+//           IsService: false,
+//           OrderLineNumber: index + 1,
+//           SKU: item.product?.sku,
+//           PricePerUnit: 0,
+//           Qty: item.quantity,
+//           TaxRate: 0,
+//           LinePercentDiscount: 0.0,
+//           ItemTitle: item.product?.name,
+//         }),
+//       ),
+//       Notes: [
+//         {
+//           Note: order.comments,
+//           NoteEntryDate: formattedDate(order.createdAt, "lw"),
+//           NoteUserName: "pdi:system",
+//           IsInternal: true,
+//         },
+//         {
+//           Note: order.externalComments,
+//           NoteEntryDate: formattedDate(order.createdAt, "lw"),
+//           NoteUserName: "pdi:system",
+//           IsInternal: false,
+//         },
+//       ],
+//       PaymentStatus: "PAID",
+//     }));
+
+//     console.log(`[INFO] Found ${orders.length} processing orders to return.`);
+//     return c.json({
+//       Orders: orders,
+//       TotalPages: 1,
+//     });
+//   } catch (err) {
+//     const message = getErrorMessage(err);
+//     console.error("[ERROR] Unexpected error in orders/get:", message);
+//     return c.json({ Error: message });
+//   }
+// });
+
 ordersRouter.post("/get", async (c) => {
   const supabase = c.get("supabase");
   try {
@@ -88,11 +250,20 @@ ordersRouter.post("/get", async (c) => {
     const valid = await validateToken(supabase, body.AuthorizationToken);
     if (!valid) return c.json({ Error: "Invalid Token" });
 
-    console.log("[INFO] Fetching open processing orders for Linnworks sync...");
+    console.log("[INFO] Fetching open orders via relational join...");
 
+    // SINGLE database round-trip fetching the entire nested tree
     const { data: baseOrders, error: ordersError } = await supabase
       .from("order")
-      .select("*")
+      .select(`
+        *,
+        user (*),
+        organization (*),
+        order_item (
+          *,
+          product (*)
+        )
+      `)
       .eq("status", "processing");
 
     if (ordersError) {
@@ -107,62 +278,8 @@ ordersRouter.post("/get", async (c) => {
       return c.json({ Orders: [], TotalPages: 1 });
     }
 
-    const processingOrders = await Promise.all(
-      baseOrders.map(async (order: OrderRow) => {
-        // Fetch User details
-        let user: UserRow | null = null;
-        if (order.userId) {
-          const { data: userData } = await supabase
-            .from("user")
-            .select("*")
-            .eq("id", order.userId)
-            .maybeSingle();
-          user = userData;
-        }
-
-        // Fetch Organization details
-        const { data: orgData } = await supabase
-          .from("organization")
-          .select("*")
-          .eq("id", order.orgId)
-          .maybeSingle();
-
-        // Fetch Order Items
-        const { data: orderItems, error: itemsError } = await supabase
-          .from("order_item")
-          .select("*")
-          .eq("orderId", order.id);
-
-        if (itemsError) {
-          console.error(
-            `[ERROR] Failed to fetch items for order ${order.id}:`,
-            itemsError.message,
-          );
-        }
-
-        const itemsWithProducts = orderItems
-          ? await Promise.all(
-            orderItems.map(async (item: OrderItemRow) => {
-              const { data: product } = await supabase
-                .from("product")
-                .select("*")
-                .eq("id", item.productId)
-                .maybeSingle();
-              return { ...item, product };
-            }),
-          )
-          : [];
-
-        return {
-          ...order,
-          user,
-          organization: orgData,
-          orderItems: itemsWithProducts,
-        };
-      }),
-    );
-
-    const orders = processingOrders.map((order) => ({
+    // Since the database built the tree, map straight to the Linnworks format
+    const orders = baseOrders.map((order) => ({
       ReferenceNumber: order.reference,
       ExternalReference: order.externalRef || order.id,
       SecondaryReferenceNumber: null,
@@ -197,23 +314,19 @@ ordersRouter.post("/get", async (c) => {
         EmailAddress: order.email,
         PhoneNumber: order.phone,
       },
-      OrderItems: order.orderItems.map(
-        (
-          item: OrderItemRow & { product: ProductRow | null },
-          index: number,
-        ) => ({
-          TaxCostInclusive: true,
-          UseChannelTax: false,
-          IsService: false,
-          OrderLineNumber: index + 1,
-          SKU: item.product?.sku,
-          PricePerUnit: 0,
-          Qty: item.quantity,
-          TaxRate: 0,
-          LinePercentDiscount: 0.0,
-          ItemTitle: item.product?.name,
-        }),
-      ),
+      // Safely access the pre-joined order_item array mapping straight to products
+      OrderItems: (order.order_item || []).map((item, index) => ({
+        TaxCostInclusive: true,
+        UseChannelTax: false,
+        IsService: false,
+        OrderLineNumber: index + 1,
+        SKU: item.product?.sku,
+        PricePerUnit: 0,
+        Qty: item.quantity,
+        TaxRate: 0,
+        LinePercentDiscount: 0.0,
+        ItemTitle: item.product?.name,
+      })),
       Notes: [
         {
           Note: order.comments,

@@ -28,7 +28,6 @@ export const couriersData = [
       { label: "Tracked 24", value: "royalmail-tracked-24" },
       { label: "Tracked 48", value: "royalmail-tracked-48" },
       { label: "Signed 24", value: "royalmail-signed-24" },
-      { label: "Signed 48", value: "royalmail-signed-48" },
       {
         label: "Special Delivery 9:00 AM",
         value: "royalmail-special-delivery-9.00-am",
