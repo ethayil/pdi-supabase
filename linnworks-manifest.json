@@ -1,0 +1,150 @@
+{
+  "LinnworksPermissions": [
+    "GlobalPermissions.Settings.ChannelIntegration.ChannelDetailsNode",
+    "GlobalPermissions.Settings.ChannelIntegration.ChannelMappingNode",
+    "GlobalPermissions.Dashboards.InventoryDashboardNode"
+  ],
+  "Modules": [
+    {
+      "RequiredPermissionId": null,
+      "moduleName": null,
+      "formattedName": null,
+      "icon": null,
+      "path": "",
+      "type": "ChannelIntegration",
+      "isHidden": false,
+      "isBeta": false,
+      "isAngularComponent": false,
+      "maxOpened": 0,
+      "group": [],
+      "parameters": [
+        {
+          "name": "ChannelName",
+          "value": "pdi-v0"
+        },
+        {
+          "name": "ChannelFriendlyName",
+          "value": "PDi"
+        },
+        {
+          "name": "ChannelLogoURL",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/logo.png"
+        },
+        {
+          "name": "AddNewUserEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/config/add-new-user"
+        },
+        {
+          "name": "UserConfigEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/config/user-config"
+        },
+        {
+          "name": "SaveConfigEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/config/save-config"
+        },
+        {
+          "name": "ShippingTagsEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/config/shipping-tags"
+        },
+        {
+          "name": "PaymentTagsEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/config/payment-tags"
+        },
+        {
+          "name": "ConfigDeletedEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/config/deleted"
+        },
+        {
+          "name": "ConfigTestEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/config/test"
+        },
+        {
+          "name": "OrdersEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/orders/get"
+        },
+        {
+          "name": "DespatchEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/orders/despatch"
+        },
+        {
+          "name": "CancelEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/orders/cancel"
+        },
+        {
+          "name": "PostSaleOptionsEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/orders/post-sale-options"
+        },
+        {
+          "name": "ProductsEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/products/get"
+        },
+        {
+          "name": "InventoryUpdateEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/inventory/update"
+        },
+        {
+          "name": "PriceUpdateEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/inventory/price-update"
+        },
+        {
+          "name": "GetConfiguratorSettingsEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/listing/configurator-settings"
+        },
+        {
+          "name": "GetCategoriesEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/listing/categories"
+        },
+        {
+          "name": "GetAttributesByCategoryEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/listing/attributes"
+        },
+        {
+          "name": "GetVariationsByCategoryEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/listing/variations"
+        },
+        {
+          "name": "ListingUpdateEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/listing/update"
+        },
+        {
+          "name": "ListingDeleteEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/listing/delete"
+        },
+        {
+          "name": "CheckFeedEndpoint",
+          "value": "https://wzkjslqzahgcqsxwslnx.supabase.co/functions/v1/lwci/listing/check-feed"
+        },
+        {
+          "name": "IsListingSupported",
+          "value": "True"
+        },
+        {
+          "name": "ListingUpdateBatchSize",
+          "value": "50"
+        },
+        {
+          "name": "InventoryUpdateBatchSize",
+          "value": "50"
+        },
+        {
+          "name": "DespatchUpdateBatchSize",
+          "value": "50"
+        },
+        {
+          "name": "PriceUpdateBatchSize",
+          "value": "50"
+        },
+        {
+          "name": "AllowRefundOnCancel",
+          "value": "False"
+        }
+      ],
+      "files": {
+        "scripts": [],
+        "style": null,
+        "styles": []
+      }
+    }
+  ],
+  "ScriptUrl": null
+}
