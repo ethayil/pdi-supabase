@@ -257,8 +257,6 @@ ordersRouter.post("/get", async (c) => {
       .from("order")
       .select(`
         *,
-        user (*),
-        organization (*),
         order_item (
           *,
           product (*)
