@@ -20,7 +20,7 @@ export async function getCategories({
   query,
 }: GetCategoriesArgs = {}) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     if (!orgId || orgId === "all") {
       return {
@@ -75,7 +75,7 @@ export async function getCategories({
 
 export async function getActiveCategories({ orgId }: { orgId: string }) {
   try {
-    const user = await requireUser();
+    await requireUser();
 
     return await prisma.category.findMany({
       where: { orgId, isActive: true },
@@ -89,7 +89,7 @@ export async function getActiveCategories({ orgId }: { orgId: string }) {
 
 export async function getAllCategories({ orgId }: { orgId: string }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     return await prisma.category.findMany({
       where: { orgId },
@@ -105,7 +105,7 @@ export async function getCategoryById({ id }: { id: string }) {
   try {
     if (!id) return null;
 
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const category = await prisma.category.findUnique({
       where: { id },
@@ -287,4 +287,3 @@ export async function deleteCategory({ id }: { id: string }) {
       : new Error("Failed to delete category");
   }
 }
-

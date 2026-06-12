@@ -1,6 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type {
+  ProductUpdateInput,
+  ProductWhereInput,
+} from "@/app/generated/prisma/models";
 import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { logActivity, logProductMovement } from "./logging";
@@ -23,7 +27,7 @@ export async function getProducts({
   stockStatus = "all",
 }: GetProductsArgs = {}) {
   try {
-    const user = await requireUser();
+    await requireUser();
 
     if (!orgId || orgId === "all") {
       return {
@@ -42,7 +46,7 @@ export async function getProducts({
     });
     const lowStockThreshold = org?.lowStockThreshold ?? 50;
 
-    const where: any = { orgId };
+    const where: ProductWhereInput = { orgId };
 
     // Stock status mapping to isActive and quantity ranges
     if (stockStatus === "active") {
@@ -115,7 +119,7 @@ export async function getProductById({ id }: { id: string }) {
   try {
     if (!id) return null;
 
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -533,7 +537,7 @@ export async function bulkUpdateProducts({
         }
 
         // Find or create category if provided
-        let categoryId = undefined;
+        let categoryId: string | undefined;
         if (row.categoryName) {
           let category = await prisma.category.findFirst({
             where: {
@@ -553,9 +557,11 @@ export async function bulkUpdateProducts({
           categoryId = category.id;
         }
 
-        const updateData: any = {};
+        const updateData: ProductUpdateInput = {};
+
         if (row.name !== undefined) updateData.name = row.name;
-        if (categoryId !== undefined) updateData.categoryId = categoryId;
+        if (categoryId !== undefined)
+          updateData.category = { connect: { id: categoryId } };
         if (row.weight !== undefined) updateData.weight = row.weight;
         if (row.quantity !== undefined) updateData.quantity = row.quantity;
         if (row.description !== undefined)
@@ -621,7 +627,7 @@ export async function bulkUpdateProducts({
 
 export async function getAvailableProducts({ orgId }: { orgId: string }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const products = await prisma.product.findMany({
       where: {
