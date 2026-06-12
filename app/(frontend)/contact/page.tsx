@@ -47,10 +47,16 @@ export default function ContactUs() {
         animate="show"
         className="text-center max-w-3xl mx-auto mb-16"
       >
-        <motion.h1 variants={itemVariants} className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+        <motion.h1
+          variants={itemVariants}
+          className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
+        >
           <TextRevealEffect text="Contact Our Team" />
         </motion.h1>
-        <motion.p variants={itemVariants} className="text-lg text-muted-foreground leading-relaxed">
+        <motion.p
+          variants={itemVariants}
+          className="text-lg text-muted-foreground leading-relaxed"
+        >
           Have an upcoming prospectus mailing, exhibition stand delivery, or
           need a logistics postage cost audit? Reach out using the details
           below.
@@ -70,7 +76,7 @@ export default function ContactUs() {
             <h2 className="text-2xl font-bold mb-6">
               <TextRevealEffect text="Get In Touch" />
             </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            <p className="text-sm text-muted-foreground leading-relaxed mb-6 text-justify">
               Our support team and logistics consultants are based in Aylesbury,
               UK. We are available to answer shipping inquiries, configure
               Virtual Warehouse logins, and audit courier invoices.

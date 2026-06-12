@@ -57,13 +57,22 @@ export default function SmartDistribution() {
         animate="show"
         className="text-center max-w-3xl mx-auto mb-16"
       >
-        <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4">
+        <motion.div
+          variants={itemVariants}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4"
+        >
           <Mail className="size-4" /> Smart Logistics & Global Mail
         </motion.div>
-        <motion.h1 variants={itemVariants} className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+        <motion.h1
+          variants={itemVariants}
+          className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
+        >
           <TextRevealEffect text="Smart Distribution & Mail" />
         </motion.h1>
-        <motion.p variants={itemVariants} className="text-lg text-muted-foreground leading-relaxed">
+        <motion.p
+          variants={itemVariants}
+          className="text-lg text-muted-foreground leading-relaxed"
+        >
           Unlock significant postage savings and run highly targeted mailing
           campaigns. By combining data cleansing, distribution consultancy, and
           direct carrier partnerships, we get your materials to market
@@ -79,7 +88,10 @@ export default function SmartDistribution() {
         viewport={{ once: true, margin: "-50px" }}
         className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20"
       >
-        <motion.div variants={itemVariants} className="p-6 rounded-2xl border border-border bg-card/50 hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out flex flex-col justify-between">
+        <motion.div
+          variants={itemVariants}
+          className="p-6 rounded-2xl border border-border bg-card/50 hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out flex flex-col justify-between"
+        >
           <div>
             <div className="p-2.5 bg-primary/10 text-primary rounded-xl size-fit mb-4">
               <Percent className="size-5" />
@@ -94,7 +106,10 @@ export default function SmartDistribution() {
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="p-6 rounded-2xl border border-border bg-card/50 hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out flex flex-col justify-between">
+        <motion.div
+          variants={itemVariants}
+          className="p-6 rounded-2xl border border-border bg-card/50 hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out flex flex-col justify-between"
+        >
           <div>
             <div className="p-2.5 bg-primary/10 text-primary rounded-xl size-fit mb-4">
               <CheckCircle className="size-5" />
@@ -109,7 +124,10 @@ export default function SmartDistribution() {
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="p-6 rounded-2xl border border-border bg-card/50 hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out flex flex-col justify-between">
+        <motion.div
+          variants={itemVariants}
+          className="p-6 rounded-2xl border border-border bg-card/50 hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out flex flex-col justify-between"
+        >
           <div>
             <div className="p-2.5 bg-primary/10 text-primary rounded-xl size-fit mb-4">
               <BarChart3 className="size-5" />
@@ -136,12 +154,12 @@ export default function SmartDistribution() {
           <h2 className="text-2xl font-bold mb-4">
             <TextRevealEffect text="Optimized Mailings, Less Waste" />
           </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+          <p className="text-muted-foreground text-sm leading-relaxed mb-4 text-justify">
             At PDi UK, we believe distribution is more than just shipping boxes.
             It requires a smart, analytical approach to database management and
             courier consolidation.
           </p>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+          <p className="text-muted-foreground text-sm leading-relaxed mb-6 text-justify">
             By cleansing recipient data first, we verify that addresses are
             correct and up-to-date. This decreases returns by up to 15% and
             saves thousands of pounds in wasted print production and shipping
@@ -209,12 +227,20 @@ export default function SmartDistribution() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/contact">
-            <Button variant="hero" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <Button
+              variant="hero"
+              size="hero"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               Request Free Audit
             </Button>
           </Link>
           <Link href="/services/virtual-warehouse">
-            <Button variant="outline" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <Button
+              variant="outline"
+              size="hero"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               Virtual Warehouse Demo
             </Button>
           </Link>

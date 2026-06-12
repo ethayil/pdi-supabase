@@ -53,13 +53,23 @@ export default function UniversityDistribution() {
         animate="show"
         className="text-center max-w-3xl mx-auto mb-16"
       >
-        <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4">
-          <GraduationCap className="size-4" /> Higher Education Logistics Partner
+        <motion.div
+          variants={itemVariants}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4"
+        >
+          <GraduationCap className="size-4" /> Higher Education Logistics
+          Partner
         </motion.div>
-        <motion.h1 variants={itemVariants} className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+        <motion.h1
+          variants={itemVariants}
+          className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
+        >
           <TextRevealEffect text="University Global Distribution" />
         </motion.h1>
-        <motion.p variants={itemVariants} className="text-lg text-muted-foreground leading-relaxed">
+        <motion.p
+          variants={itemVariants}
+          className="text-lg text-muted-foreground leading-relaxed"
+        >
           For over 20 years, PDi UK has been the trusted supply chain partner
           for leading UK universities, managing their international recruitment
           campaigns, prospectus distribution, and overseas agent packaging.
@@ -77,13 +87,13 @@ export default function UniversityDistribution() {
           <h2 className="text-2xl font-bold mb-4">
             <TextRevealEffect text="End-to-End Recruitment Logistics" />
           </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+          <p className="text-muted-foreground text-sm leading-relaxed mb-4 text-justify">
             International student recruitment is a highly competitive and
             time-sensitive process. Having your marketing materials,
             prospectuses, and course directories arrive at global recruitment
             hubs and schools in perfect condition is crucial.
           </p>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+          <p className="text-muted-foreground text-sm leading-relaxed mb-6 text-justify">
             PDi UK provides a fully integrated solution—from initial database
             preparation and custom packing to shipping coordination with
             discounted international postage rates.
@@ -169,7 +179,9 @@ export default function UniversityDistribution() {
         >
           <motion.div variants={itemVariants}>
             <SpotlightCard className="p-6 rounded-xl border border-border bg-card hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out h-full">
-              <h3 className="font-bold text-lg mb-3">Prospectus Distribution</h3>
+              <h3 className="font-bold text-lg mb-3">
+                Prospectus Distribution
+              </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Automatic and manual data imports from your university's CRM
                 system (such as Salesforce, CRM, or Gecko) to process individual
@@ -180,7 +192,9 @@ export default function UniversityDistribution() {
 
           <motion.div variants={itemVariants}>
             <SpotlightCard className="p-6 rounded-xl border border-border bg-card hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out h-full">
-              <h3 className="font-bold text-lg mb-3">Agent Recruitment Packs</h3>
+              <h3 className="font-bold text-lg mb-3">
+                Agent Recruitment Packs
+              </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Consolidated packing of merchandise, USBs, course guides, and
                 display stands sent directly to your overseas agents and
@@ -222,12 +236,20 @@ export default function UniversityDistribution() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/contact">
-            <Button variant="hero" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <Button
+              variant="hero"
+              size="hero"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               Get in Touch
             </Button>
           </Link>
           <Link href="/about">
-            <Button variant="outline" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <Button
+              variant="outline"
+              size="hero"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               About PDi UK
             </Button>
           </Link>

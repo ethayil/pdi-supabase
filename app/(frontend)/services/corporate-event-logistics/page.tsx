@@ -53,13 +53,23 @@ export default function CorporateEventLogistics() {
         animate="show"
         className="text-center max-w-3xl mx-auto mb-16"
       >
-        <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4">
-          <Briefcase className="size-4" /> Corporate Logistics & Event Management
+        <motion.div
+          variants={itemVariants}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4"
+        >
+          <Briefcase className="size-4" /> Corporate Logistics & Event
+          Management
         </motion.div>
-        <motion.h1 variants={itemVariants} className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+        <motion.h1
+          variants={itemVariants}
+          className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
+        >
           <TextRevealEffect text="Corporate & Event Logistics" />
         </motion.h1>
-        <motion.p variants={itemVariants} className="text-lg text-muted-foreground leading-relaxed">
+        <motion.p
+          variants={itemVariants}
+          className="text-lg text-muted-foreground leading-relaxed"
+        >
           From high-stakes shareholder communications to global exhibition
           tours, PDi UK coordinates corporate fulfillment and logistics. We
           handle storage, delivery, set-up, and return with complete timeliness.
@@ -77,12 +87,12 @@ export default function CorporateEventLogistics() {
           <h2 className="text-2xl font-bold mb-4">
             <TextRevealEffect text="Exhibition & Print Logistics" />
           </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+          <p className="text-muted-foreground text-sm leading-relaxed mb-4 text-justify">
             Managing exhibition stands, brochures, and banner displays across
             multiple domestic and international conference venues is an
             administrative challenge.
           </p>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+          <p className="text-muted-foreground text-sm leading-relaxed mb-6 text-justify">
             PDi UK provides event logistics solutions. We store your exhibition
             assets in our secure Aylesbury warehouse, consolidate them with
             marketing literature, transport them to the event venue, and even
@@ -187,19 +197,21 @@ export default function CorporateEventLogistics() {
               <h3 className="font-bold text-lg mb-3">Annual Reports Mailing</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Time-critical distribution of annual statements, accounts, and
-                proxy voter mailings to shareholders, guaranteeing compliance with
-                corporate timetables.
+                proxy voter mailings to shareholders, guaranteeing compliance
+                with corporate timetables.
               </p>
             </SpotlightCard>
           </motion.div>
 
           <motion.div variants={itemVariants}>
             <SpotlightCard className="p-6 rounded-xl border border-border bg-card hover:-translate-y-1.5 hover:shadow-lg hover:border-primary/20 transition-all duration-300 ease-out h-full">
-              <h3 className="font-bold text-lg mb-3">Employee Communications</h3>
+              <h3 className="font-bold text-lg mb-3">
+                Employee Communications
+              </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Dispatch newsletters, benefit updates, onboarding gifts, or
-                regulatory print files to remote staff divisions across the UK and
-                internationally.
+                regulatory print files to remote staff divisions across the UK
+                and internationally.
               </p>
             </SpotlightCard>
           </motion.div>
@@ -209,8 +221,8 @@ export default function CorporateEventLogistics() {
               <h3 className="font-bold text-lg mb-3">Event Return Logistics</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 We don't just send it out. We work with couriers and freight
-                coordinators to retrieve display materials after the event, return
-                them to storage, and verify their condition.
+                coordinators to retrieve display materials after the event,
+                return them to storage, and verify their condition.
               </p>
             </SpotlightCard>
           </motion.div>
@@ -235,12 +247,20 @@ export default function CorporateEventLogistics() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/contact">
-            <Button variant="hero" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <Button
+              variant="hero"
+              size="hero"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               Request a Quote
             </Button>
           </Link>
           <Link href="/services/smart-distribution">
-            <Button variant="outline" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <Button
+              variant="outline"
+              size="hero"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               Explore Mail Discounts
             </Button>
           </Link>

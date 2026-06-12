@@ -88,18 +88,6 @@ export default function VirtualWarehouse() {
             immediately print, pack, and ship them. You receive automatic
             notification logs with tracking links directly back to the system.
           </p>
-          <div className="pt-4 flex flex-wrap gap-4">
-            <Link href="/auth/signin">
-              <Button size="hero" variant="rainbow" className="hover:scale-102 active:scale-98 transition-transform duration-200">
-                Sign In to Portal
-              </Button>
-            </Link>
-            <Link href="/contact">
-              <Button size="hero" variant="outline" className="hover:scale-102 active:scale-98 transition-transform duration-200">
-                Request a Demo Account
-              </Button>
-            </Link>
-          </div>
         </motion.div>
 
         <motion.div

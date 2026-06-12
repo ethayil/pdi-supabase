@@ -1,15 +1,14 @@
 "use client";
 
 import { ExternalLink, Mail, MapPin, Package, Phone } from "lucide-react";
-import * as motion from "motion/react-client";
 import Link from "next/link";
 
 export function MarketingFooter() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-card text-foreground border-t border-border mt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+    <footer className="bg-card text-foreground border-t border-border rounded-t-2xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
           {/* Logo & Company details */}
           <div className="space-y-4 md:col-span-1">
@@ -41,9 +40,9 @@ export function MarketingFooter() {
               <div className="flex items-start gap-2">
                 <MapPin className="size-3.5 text-primary shrink-0 mt-0.5" />
                 <span>
-                  Hall 1, 5 Rabans Lane,
+                  Hall 1, 5 Rabans Lane
                   <br />
-                  Aylesbury HP19 8RT,
+                  Aylesbury, HP19 8RT
                   <br />
                   United Kingdom
                 </span>
@@ -155,20 +154,22 @@ export function MarketingFooter() {
                   Terms & Conditions
                 </Link>
               </li>
-              <li className="pt-2 text-[10px] text-muted-foreground leading-normal border-t border-border mt-3 space-y-1.5">
-                <div>
-                  E-PickPack Limited is registered in England and Wales.
-                </div>
-                <div>
-                  <strong>Company No:</strong> 06404412
-                </div>
-                <div className="text-[10px] pt-1 border-t border-border/50 mt-2">
-                  © {currentYear} E-PickPack Limited trading as PDi UK. All
-                  rights reserved.
-                </div>
-              </li>
             </ul>
           </div>
+        </div>
+
+        {/* Footer Bottom Bar */}
+        <div className="mt-2 pt-2 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left text-[10px] text-muted-foreground">
+          <div className="space-y-1">
+            <p>
+              E-PickPack Limited is registered in England and Wales.{" "}
+              <strong>Company No:</strong> 06404412
+            </p>
+          </div>
+          <p>
+            © {currentYear} E-PickPack Limited trading as PDi UK. All rights
+            reserved.
+          </p>
         </div>
       </div>
     </footer>

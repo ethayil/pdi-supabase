@@ -16,6 +16,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { cn } from "@/lib/utils";
 
 const SERVICES = [
   {
@@ -49,9 +59,12 @@ export function MarketingNav() {
   const [servicesOpen, setServicesOpen] = useState(false);
   const pathname = usePathname();
 
-  const handleLinkClick = () => {
-    setIsOpen(false);
-    setServicesOpen(false);
+  const getActiveClassname = (path: string, startsWith?: boolean) => {
+    const isActive = startsWith ? pathname.startsWith(path) : pathname === path;
+
+    return isActive
+      ? "text-primary bg-linear-to-b from-primary/20 to-primary/10 shadow-lg! shadow-white"
+      : "text-muted-foreground hover:text-foreground";
   };
 
   return (
@@ -64,11 +77,7 @@ export function MarketingNav() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link
-            href="/"
-            className="shrink-0 flex items-center gap-2"
-            onClick={handleLinkClick}
-          >
+          <Link href="/" className="shrink-0 flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
               <Package className="text-primary-foreground text-xl fill-current" />
             </div>
@@ -78,87 +87,83 @@ export function MarketingNav() {
           </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
-            <Link
-              href="/"
-              onClick={handleLinkClick}
-              className={`transition-colors ${
-                pathname === "/"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Home
-            </Link>
+          <div className="hidden md:flex items-center">
+            <NavigationMenu>
+              <NavigationMenuList className="gap-1">
+                <NavigationMenuItem>
+                  <NavigationMenuLink
+                    render={<Link href="/" />}
+                    className={cn(
+                      navigationMenuTriggerStyle(),
+                      getActiveClassname("/"),
+                    )}
+                  >
+                    Home
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
 
-            {/* Services Dropdown */}
-            <div className="relative group">
-              <button
-                type="button"
-                className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors py-2"
-                onClick={() => setServicesOpen(!servicesOpen)}
-              >
-                Services
-                <ChevronDown className="size-4 transition-transform group-hover:rotate-180 duration-200" />
-              </button>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger
+                    className={cn(getActiveClassname("/services", true))}
+                  >
+                    Services
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent className="p-3 w-80">
+                    <div className="grid gap-1">
+                      {SERVICES.map((service) => {
+                        const Icon = service.icon;
+                        return (
+                          <NavigationMenuLink
+                            key={service.href}
+                            render={<Link href={service.href} />}
+                            className={cn(
+                              "flex items-start gap-3 p-3 rounded-lg hover:bg-muted/80 transition-colors",
+                              getActiveClassname(service.href),
+                            )}
+                          >
+                            <div className="p-2 rounded-md bg-primary/10 text-primary shrink-0">
+                              <Icon className="size-4" />
+                            </div>
+                            <div>
+                              <div className="font-semibold text-sm">
+                                {service.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground leading-normal mt-0.5">
+                                {service.description}
+                              </div>
+                            </div>
+                          </NavigationMenuLink>
+                        );
+                      })}
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
 
-              {/* Dropdown Menu */}
-              <div className="absolute left-1/2 -translate-x-1/2 top-full w-80 bg-popover border border-border rounded-xl shadow-lg p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <div className="grid gap-1">
-                  {SERVICES.map((service) => {
-                    const Icon = service.icon;
-                    return (
-                      <Link
-                        key={service.href}
-                        href={service.href}
-                        onClick={handleLinkClick}
-                        className={`flex items-start gap-3 p-3 rounded-lg hover:bg-muted/80 transition-colors ${
-                          pathname === service.href
-                            ? "bg-muted text-primary"
-                            : "text-foreground"
-                        }`}
-                      >
-                        <div className="p-2 rounded-md bg-primary/10 text-primary shrink-0">
-                          <Icon className="size-4" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-sm">
-                            {service.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground leading-normal mt-0.5">
-                            {service.description}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+                <NavigationMenuItem>
+                  <NavigationMenuLink
+                    render={<Link href="/about" />}
+                    className={cn(
+                      navigationMenuTriggerStyle(),
+                      getActiveClassname("/about"),
+                    )}
+                  >
+                    About
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
 
-            <Link
-              href="/about"
-              onClick={handleLinkClick}
-              className={`transition-colors ${
-                pathname === "/about"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              About
-            </Link>
-
-            <Link
-              href="/contact"
-              onClick={handleLinkClick}
-              className={`transition-colors ${
-                pathname === "/contact"
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Contact
-            </Link>
+                <NavigationMenuItem>
+                  <NavigationMenuLink
+                    render={<Link href="/contact" />}
+                    className={cn(
+                      navigationMenuTriggerStyle(),
+                      getActiveClassname("/contact"),
+                    )}
+                  >
+                    Contact
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
           </div>
 
           {/* Action Button & Mobile Menu Toggle */}
@@ -196,12 +201,13 @@ export function MarketingNav() {
           <div className="flex flex-col space-y-1">
             <Link
               href="/"
-              onClick={handleLinkClick}
-              className={`p-2 rounded-md transition-colors ${
-                pathname === "/"
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-foreground hover:bg-muted"
-              }`}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                getActiveClassname("/"),
+                // pathname === "/"
+                //   ? "bg-primary/10 text-primary font-semibold"
+                //   : "text-foreground hover:bg-muted",
+              )}
             >
               Home
             </Link>
@@ -227,12 +233,10 @@ export function MarketingNav() {
                       <Link
                         key={service.href}
                         href={service.href}
-                        onClick={handleLinkClick}
-                        className={`flex items-center gap-2 p-2 rounded-md text-sm transition-colors ${
-                          pathname === service.href
-                            ? "text-primary font-semibold bg-muted"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        }`}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-md text-sm transition-colors",
+                          getActiveClassname(service.href),
+                        )}
                       >
                         <Icon className="size-4 text-primary" />
                         {service.name}
@@ -245,24 +249,20 @@ export function MarketingNav() {
 
             <Link
               href="/about"
-              onClick={handleLinkClick}
-              className={`p-2 rounded-md transition-colors ${
-                pathname === "/about"
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-foreground hover:bg-muted"
-              }`}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                getActiveClassname("/about"),
+              )}
             >
               About
             </Link>
 
             <Link
               href="/contact"
-              onClick={handleLinkClick}
-              className={`p-2 rounded-md transition-colors ${
-                pathname === "/contact"
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-foreground hover:bg-muted"
-              }`}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                getActiveClassname("/contact"),
+              )}
             >
               Contact
             </Link>

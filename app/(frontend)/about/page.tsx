@@ -52,13 +52,22 @@ export default function AboutUs() {
         animate="show"
         className="text-center max-w-3xl mx-auto mb-16"
       >
-        <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4">
+        <motion.div
+          variants={itemVariants}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4"
+        >
           <History className="size-4" /> Established in 2004
         </motion.div>
-        <motion.h1 variants={itemVariants} className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+        <motion.h1
+          variants={itemVariants}
+          className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
+        >
           <TextRevealEffect text="About PDi UK" />
         </motion.h1>
-        <motion.p variants={itemVariants} className="text-lg text-muted-foreground leading-relaxed">
+        <motion.p
+          variants={itemVariants}
+          className="text-lg text-muted-foreground leading-relaxed"
+        >
           PDi is a trading name of E-PickPack Limited. For over two decades, we
           have partnered with UK universities and corporate teams to deliver
           print, fulfillment, and global mailing solutions.
@@ -77,13 +86,13 @@ export default function AboutUs() {
           <h2 className="text-2xl font-bold mb-4">
             <TextRevealEffect text="Our Journey" />
           </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed">
+          <p className="text-muted-foreground text-sm leading-relaxed text-justify">
             Founded in 2004, e-PickPack recognized that university marketing
             departments and corporate communications teams were struggling with
             complex shipping rules, incomplete data, and high international
             postage rates.
           </p>
-          <p className="text-muted-foreground text-sm leading-relaxed">
+          <p className="text-muted-foreground text-sm leading-relaxed text-justify">
             We developed a total solution: blending physical print and warehouse
             storage in Aylesbury with custom-built inventory management software
             (our Virtual Warehouse) and direct bulk mail partnerships. This
@@ -147,7 +156,7 @@ export default function AboutUs() {
         >
           <TextRevealEffect text="Our Operating Values" />
         </motion.h2>
-        
+
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -222,7 +231,11 @@ export default function AboutUs() {
 
         <div className="text-center">
           <Link href="/contact">
-            <Button variant="hero" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <Button
+              variant="hero"
+              size="hero"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               Get in Touch
             </Button>
           </Link>
