@@ -8,7 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-b from-[var(--btn-gradient-from)] to-[var(--btn-gradient-to)] text-primary-foreground hover:brightness-110 transition-[filter]",
+        default:
+          "bg-gradient-to-b from-[var(--btn-gradient-from)] to-[var(--btn-gradient-to)] text-primary-foreground hover:brightness-110 transition-[filter]",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground hover:shadow-[inset_0_1px_0_0_var(--btn-outline-glow)] aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
@@ -22,7 +23,7 @@ const buttonVariants = cva(
         glass:
           "relative overflow-hidden bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-[0_2px_10px_-3px_rgba(59,130,246,0.5)] before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/20 before:to-transparent after:absolute after:inset-px after:rounded-[inherit] after:border-t after:border-white/20 after:pointer-events-none hover:from-blue-600 hover:to-blue-700 hover:shadow-[0_4px_15px_-3px_rgba(59,130,246,0.6)]",
         rainbow:
-          "group relative animate-rainbow border-2 border-transparent bg-[length:200%] [background-clip:padding-box,border-box,border-box] [background-origin:border-box] bg-[linear-gradient(var(--primary),var(--primary)),linear-gradient(var(--primary)_30%,rgba(0,0,0,0)),linear-gradient(90deg,#ff4242,#a1ff42,#42a1ff,#42d0ff,#a142ff)] text-primary-foreground focus-visible:ring-ring/50 before:absolute before:bottom-[-20%] before:left-0 before:z-0 before:h-1/5 before:w-full before:animate-rainbow before:bg-[linear-gradient(90deg,#ff4242,#a1ff42,#42a1ff,#42d0ff,#a142ff)] before:[filter:blur(calc(0.625*1rem))] transition-all duration-300 hover:hue-rotate-180",
+          "group relative animate-rainbow border-2 border-transparent   -[length:200%] [background-clip:padding-box,border-box,border-box] [background-origin:border-box] bg-[linear-gradient(#fff,#fff),linear-gradient(#fff_30%,rgba(0,0,0,0)),linear-gradient(90deg,#ff4242,#a1ff42,#42a1ff,#42d0ff,#a142ff)] text-zinc-950 focus-visible:ring-ring/50 before:absolute before:bottom-[-20%] before:left-0 before:z-0 before:h-1/5 before:w-full before:animate-rainbow before:bg-[linear-gradient(90deg,#ff4242,#a1ff42,#42a1ff,#42d0ff,#a142ff)] before:[filter:blur(calc(0.625*1rem))] transition-all duration-300 hover:opacity-95 hover:shadow-md",
       },
       size: {
         default:

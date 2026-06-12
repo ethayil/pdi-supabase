@@ -1,8 +1,14 @@
 /** biome-ignore-all lint/suspicious/noArrayIndexKey: index is required */
 "use client";
 
-import { motion, useInView } from "motion/react";
-import { useRef, useState } from "react";
+import {
+  animate,
+  motion,
+  useInView,
+  useMotionValue,
+  useTransform,
+} from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface TextRevealProps {
@@ -33,16 +39,16 @@ export function TextRevealEffect({
           >
             {chars.map((char, charIdx) => {
               const currentDelay =
-                delay + cumulativeCharCount * 0.02 + wordIdx * 0.05;
+                delay + cumulativeCharCount * 0.012 + wordIdx * 0.025;
               cumulativeCharCount++;
               return (
                 <motion.span
                   key={charIdx}
                   initial={{
                     opacity: 0,
-                    y: 10,
-                    filter: "blur(8px)",
-                    scale: 0.95,
+                    y: 12,
+                    filter: "blur(6px)",
+                    scale: 0.97,
                   }}
                   animate={
                     isInView
@@ -50,9 +56,11 @@ export function TextRevealEffect({
                       : {}
                   }
                   transition={{
-                    duration: 0.4,
+                    type: "spring",
+                    stiffness: 150,
+                    damping: 15,
+                    mass: 0.3,
                     delay: currentDelay,
-                    ease: [0.2, 0.65, 0.3, 0.9],
                   }}
                   className="inline-block"
                 >
@@ -130,7 +138,7 @@ export function MovingBorder({
 }) {
   return (
     <div className={`relative ${className}`}>
-      <div className="absolute -inset-[2px] bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-75 blur-sm">
+      <div className="absolute inset-[-2px] bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-75 blur-sm">
         <motion.div
           className="absolute inset-0 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
           animate={{
@@ -184,5 +192,51 @@ export function GridBackgroundPattern() {
         />
       ))}
     </div>
+  );
+}
+
+export function AnimatedNumber({
+  value,
+  duration = 2,
+  prefix = "",
+  suffix = "",
+  className = "",
+}: {
+  value: number;
+  duration?: number;
+  prefix?: string;
+  suffix?: string;
+  className?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inViewRef = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(inViewRef, { once: true, margin: "-50px" });
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (latest) => Math.round(latest));
+
+  useEffect(() => {
+    if (isInView) {
+      const controls = animate(count, value, {
+        duration: duration,
+        ease: "easeOut",
+      });
+      return () => controls.stop();
+    }
+  }, [isInView, count, value, duration]);
+
+  useEffect(() => {
+    return rounded.on("change", (latest) => {
+      if (ref.current) {
+        ref.current.textContent = `${prefix}${latest.toLocaleString()}${suffix}`;
+      }
+    });
+  }, [rounded, prefix, suffix]);
+
+  return (
+    <span ref={inViewRef} className={className}>
+      <span ref={ref}>
+        {prefix}0{suffix}
+      </span>
+    </span>
   );
 }
