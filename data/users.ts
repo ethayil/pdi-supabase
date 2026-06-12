@@ -191,6 +191,12 @@ export async function updateUser(data: {
     if (data.orgId !== undefined) {
       const targetOrgId = data.orgId === "none" ? null : data.orgId;
 
+      // Update active sessions to match the new organization assignment
+      await prisma.session.updateMany({
+        where: { userId: data.id },
+        data: { activeOrganizationId: targetOrgId },
+      });
+
       if (targetOrgId) {
         // Find existing membership(s)
         const existingMembers = await prisma.member.findMany({

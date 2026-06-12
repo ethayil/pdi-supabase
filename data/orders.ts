@@ -13,7 +13,6 @@ import type {
 import type { OrderWhereInput } from "@/app/generated/prisma/models";
 import {
   getSession,
-  requireAdmin,
   requireSuperAdmin,
   requireUser,
 } from "@/lib/auth/get-session";
@@ -310,13 +309,15 @@ export async function createOrder(args: {
 
 export async function getOrders({ orgId }: { orgId: string }) {
   try {
-    const { user } = await getSession();
+    const user = await requireUser({ shouldThrow: false });
     if (!user) return [];
+
+    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
 
     const orders = await prisma.order.findMany({
       where: {
         orgId,
-        userId: user.id,
+        ...(isAdmin ? {} : { userId: user.id }),
       },
       orderBy: {
         createdAt: "desc",
@@ -482,10 +483,7 @@ export async function updateOrder(args: {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Update tracking
-// ---------------------------------------------------------------------------
-
 export async function updateOrderTracking(args: {
   orderId: string;
   orgId: string;
@@ -555,10 +553,7 @@ export async function updateOrderTracking(args: {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Order history
-// ---------------------------------------------------------------------------
-
 export async function getOrderHistory({
   orderId,
   orgId,
@@ -567,8 +562,7 @@ export async function getOrderHistory({
   orgId: string;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) return [];
+    await requireUser();
     return await prisma.orderHistory.findMany({
       where: { orderId, orgId },
       orderBy: { createdAt: "desc" },
@@ -587,10 +581,8 @@ export async function deleteOrderHistory({
   orgId: string;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized");
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) throw new Error("Forbidden");
+    await requireSuperAdmin();
+
     await prisma.orderHistory.delete({ where: { id: historyId, orgId } });
     return { success: true };
   } catch (error) {
@@ -612,10 +604,8 @@ export async function updateOrderHistory({
   createdAt: number;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized");
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-    if (!isAdmin) throw new Error("Forbidden");
+    await requireSuperAdmin();
+
     await prisma.orderHistory.update({
       where: { id: historyId, orgId },
       data: { description, createdAt: new Date(createdAt) },
@@ -628,10 +618,7 @@ export async function updateOrderHistory({
   }
 }
 
-// ---------------------------------------------------------------------------
 // Order items mutations
-// ---------------------------------------------------------------------------
-
 export async function updateOrderItem({
   orderItemId,
   orderId,
@@ -644,7 +631,7 @@ export async function updateOrderItem({
   quantity: number;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
@@ -689,7 +676,7 @@ export async function addOrderItem({
   quantity: number;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -732,7 +719,7 @@ export async function removeOrderItem({
   orgId: string;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
@@ -758,10 +745,7 @@ export async function removeOrderItem({
   }
 }
 
-// ---------------------------------------------------------------------------
 // Send order notification / email update
-// ---------------------------------------------------------------------------
-
 export async function sendOrderNotification({
   orderId,
   recipientEmail,
@@ -774,7 +758,7 @@ export async function sendOrderNotification({
   sendNotification: boolean;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -833,7 +817,7 @@ export async function sendOrderNotification({
   }
 }
 
-export interface GetAdminOrdersArgs {
+interface GetAdminOrdersArgs {
   orgId: string;
   currentPage?: number;
   entriesPerPage?: number;
@@ -861,7 +845,7 @@ export async function getAdminOrders({
   postcode,
 }: GetAdminOrdersArgs) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const where: OrderWhereInput = {};
 
@@ -952,8 +936,7 @@ export async function searchOrdersByRef({
   searchTerm: string;
 }) {
   try {
-    const { user } = await getSession();
-    if (!user) throw new Error("Unauthorized");
+    await requireUser();
 
     return await prisma.order.findMany({
       where: {
