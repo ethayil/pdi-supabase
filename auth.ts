@@ -2,6 +2,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { betterAuth } from "better-auth/minimal";
 import { nextCookies } from "better-auth/next-js";
 import { admin, emailOTP, organization } from "better-auth/plugins";
+import { sendPasswordResetEmail, sendVerificationEmail } from "./data/email";
 import { superAdminPlugin } from "./lib/auth/super-admin-plugin";
 import prisma from "./lib/prisma";
 
@@ -9,7 +10,7 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { enabled: true, requireEmailVerification: true },
   plugins: [
     admin(),
     organization({
@@ -102,13 +103,17 @@ export const auth = betterAuth({
       },
     }),
     emailOTP({
+      overrideDefaultEmailVerification: true,
+      sendVerificationOnSignUp: true,
       async sendVerificationOTP({ email, otp, type }) {
-        if (type === "sign-in") {
-          // Send the OTP for sign in
-        } else if (type === "email-verification") {
-          // Send the OTP for email verification
-        } else {
-          // Send the OTP for password reset
+        if (type === "email-verification") {
+          const siteUrl = process.env.SITE_URL || "http://localhost:3000";
+          const url = `${siteUrl}/auth/verify-email?email=${
+            encodeURIComponent(email)
+          }&otp=${encodeURIComponent(otp)}`;
+          await sendVerificationEmail({ to: email, url });
+        } else if (type === "forget-password") {
+          await sendPasswordResetEmail({ to: email, otp });
         }
       },
     }),
