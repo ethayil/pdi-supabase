@@ -11,7 +11,12 @@ import type {
   User,
 } from "@/app/generated/prisma/client";
 import type { OrderWhereInput } from "@/app/generated/prisma/models";
-import { getSession, requireAdmin, requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import {
+  getSession,
+  requireAdmin,
+  requireSuperAdmin,
+  requireUser,
+} from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
 import { sendOrderEmail } from "./email";
 import { createNotification } from "./notifications";
@@ -50,8 +55,8 @@ export async function createOrder(args: {
     let userId = loggedInUser.id;
 
     // Handle admin placing order for another user
-    const isAdmin =
-      loggedInUser.role === "superAdmin" || loggedInUser.role === "orgAdmin";
+    const isAdmin = loggedInUser.role === "superAdmin" ||
+      loggedInUser.role === "orgAdmin";
     if (args.userId && isAdmin) {
       userId = args.userId;
     }
@@ -109,10 +114,9 @@ export async function createOrder(args: {
       finalAddressId = newAddress.id;
     }
 
-    const deliveryDate =
-      args.deliveryDate instanceof Date
-        ? args.deliveryDate
-        : new Date(args.deliveryDate);
+    const deliveryDate = args.deliveryDate instanceof Date
+      ? args.deliveryDate
+      : new Date(args.deliveryDate);
 
     // Transaction to create order, decrement product stocks, create order items, log product movements, etc.
     const result = await prisma.$transaction(async (tx) => {
@@ -228,7 +232,8 @@ export async function createOrder(args: {
           action: "create",
           entityType: "order",
           entityId: order.id,
-          description: `Created order ${reference} with ${args.items.length} item(s)`,
+          description:
+            `Created order ${reference} with ${args.items.length} item(s)`,
         },
       });
 
@@ -342,13 +347,14 @@ export async function getOrderById({
   orgId: string;
 }) {
   try {
-    const { user } = await getSession();
+    const user = await requireUser({ shouldThrow: false });
     if (!user) return null;
 
+    const isSuperAdmin = user.role === "superAdmin";
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        orgId,
+        ...(isSuperAdmin ? {} : { orgId }),
       },
       include: {
         user: true,
@@ -375,10 +381,7 @@ export async function getOrderById({
   }
 }
 
-// ---------------------------------------------------------------------------
 // Shared type for full order detail view
-// ---------------------------------------------------------------------------
-
 export type OrderWithFullDetails = Order & {
   user: User | null;
   organization: Organization | null;
@@ -386,10 +389,7 @@ export type OrderWithFullDetails = Order & {
   history?: OrderHistory[];
 };
 
-// ---------------------------------------------------------------------------
 // Update order (general fields, address, notes)
-// ---------------------------------------------------------------------------
-
 export async function updateOrder(args: {
   id: string;
   orgId: string;
@@ -418,7 +418,7 @@ export async function updateOrder(args: {
   };
 }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const {
       id,
@@ -451,25 +451,25 @@ export async function updateOrder(args: {
     if (status !== undefined) data.status = status;
     if (externalRef !== undefined) data.externalRef = externalRef;
     if (poRef !== undefined) data.poRef = poRef;
-    if (deliveryDate !== undefined)
-      data.deliveryDate =
-        typeof deliveryDate === "number"
-          ? new Date(deliveryDate)
-          : deliveryDate;
-    if (sendDate !== undefined)
+    if (deliveryDate !== undefined) {
+      data.deliveryDate = typeof deliveryDate === "number"
+        ? new Date(deliveryDate)
+        : deliveryDate;
+    }
+    if (sendDate !== undefined) {
       data.sendDate = sendDate
-        ? typeof sendDate === "number"
-          ? new Date(sendDate)
-          : sendDate
+        ? typeof sendDate === "number" ? new Date(sendDate) : sendDate
         : null;
+    }
     if (totalPackages !== undefined) data.totalPackages = totalPackages;
     if (weight !== undefined) data.weight = weight;
     if (courierCost !== undefined) data.courierCost = courierCost;
     if (courierVAT !== undefined) data.courierVAT = courierVAT;
     if (invoiceCost !== undefined) data.invoiceCost = invoiceCost;
     if (comments !== undefined) data.comments = comments;
-    if (externalComments !== undefined)
+    if (externalComments !== undefined) {
       data.externalComments = externalComments;
+    }
     if (address) Object.assign(data, address);
     data.updatedAt = new Date();
 
@@ -518,8 +518,9 @@ export async function updateOrderTracking(args: {
     if (status !== undefined) data.status = status;
     if (signedBy !== undefined) data.signedBy = signedBy;
     if (message !== undefined) data.trackingMessage = message;
-    if (status === "delivered")
+    if (status === "delivered") {
       data.deliveredAt = createdAt ? new Date(createdAt) : new Date();
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id: orderId, orgId }, data });
@@ -536,7 +537,9 @@ export async function updateOrderTracking(args: {
             service,
             signedBy,
           },
-          description: `Tracking updated: ${status ?? "no change"}${message ? ` — ${message}` : ""}`,
+          description: `Tracking updated: ${status ?? "no change"}${
+            message ? ` — ${message}` : ""
+          }`,
           createdAt: createdAt ? new Date(createdAt) : new Date(),
         },
       });
@@ -815,7 +818,8 @@ export async function sendOrderNotification({
         orgId: order.orgId,
         type: "order_status_update",
         title: "Order Update",
-        message: `Your order ${order.reference} has been updated (${order.status}).`,
+        message:
+          `Your order ${order.reference} has been updated (${order.status}).`,
         linkUrl: `/${order.orgId}/orders/${order.id}`,
         relatedEntityId: order.id,
       });
@@ -967,4 +971,3 @@ export async function searchOrdersByRef({
     return [];
   }
 }
-
