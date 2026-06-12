@@ -6,7 +6,7 @@ services:
     
     # Tells Compose which file to pull the values from
     env_file:
-      - .env.prod
+      - .env
     
     # The name of the image it will create
     image: pdi:0.5.4

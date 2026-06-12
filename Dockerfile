@@ -16,9 +16,12 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# DIRECT_URL is required to run prisma generate at build time. 
+# It will be overridden at runtime by the environment variables defined in .env
+ENV DIRECT_URL="postgresql://placeholder" 
 
 # Generate Prisma Client before build
-RUN bunx prisma generate
+RUN bunx --bun prisma generate
 
 # Build Next.js
 RUN bun run build
