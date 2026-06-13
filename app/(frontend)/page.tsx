@@ -13,6 +13,7 @@ import {
 import * as motion from "motion/react-client";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { EarthHero } from "@/components/ui/earth-hero";
 import { GlowingIcon } from "@/components/ui/glowing-icon";
@@ -67,7 +68,9 @@ export default function Home() {
           className="absolute inset-0 overflow-hidden flex items-center justify-center lg:overflow-visible lg:relative lg:inset-auto lg:order-2 pointer-events-none lg:pointer-events-auto"
         >
           <div className="w-full max-w-[600px] lg:max-w-full aspect-square opacity-40 lg:opacity-100 scale-140 lg:scale-100 transition-opacity">
-            <EarthHero />
+            <Suspense fallback={null}>
+              <EarthHero />
+            </Suspense>
           </div>
         </motion.div>
 

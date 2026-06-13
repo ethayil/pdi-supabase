@@ -1,26 +1,15 @@
 "use client";
-import { OrbitControls } from "@react-three/drei";
-import { Canvas, extend, useFrame, useThree } from "@react-three/fiber";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Color,
-  Fog,
-  Group,
-  Mesh,
-  PerspectiveCamera,
-  Scene,
-  Vector3,
-} from "three";
+import { useEffect, useRef, useState } from "react";
+import { Color, Scene, Fog, PerspectiveCamera, Vector3 } from "three";
 import ThreeGlobe from "three-globe";
+import { useThree, Canvas, extend } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
 import countries from "@/data/globe.json";
-
-declare global {
-  namespace React {
-    namespace JSX {
-      interface IntrinsicElements {
-        threeGlobe: any;
-      }
-    }
+declare module "@react-three/fiber" {
+  interface ThreeElements {
+    threeGlobe: ThreeElements["mesh"] & {
+      new (): ThreeGlobe;
+    };
   }
 }
 
@@ -75,7 +64,7 @@ let numbersOfRings = [0];
 
 export function Globe({ globeConfig, data }: WorldProps) {
   const globeRef = useRef<ThreeGlobe | null>(null);
-  const groupRef = useRef<Group>(null);
+  const groupRef = useRef();
   const [isInitialized, setIsInitialized] = useState(false);
 
   const defaultProps = {
@@ -83,7 +72,7 @@ export function Globe({ globeConfig, data }: WorldProps) {
     atmosphereColor: "#ffffff",
     showAtmosphere: true,
     atmosphereAltitude: 0.1,
-    polygonColor: "rgba(255,255,255,0.8)",
+    polygonColor: "rgba(255,255,255,0.7)",
     globeColor: "#1d072e",
     emissive: "#000000",
     emissiveIntensity: 0.1,
@@ -182,7 +171,7 @@ export function Globe({ globeConfig, data }: WorldProps) {
       .arcDashLength(defaultProps.arcLength)
       .arcDashInitialGap((e) => (e as { order: number }).order * 1)
       .arcDashGap(15)
-      .arcDashAnimateTime(defaultProps.arcTime);
+      .arcDashAnimateTime(() => defaultProps.arcTime);
 
     globeRef.current
       .pointsData(filteredPoints)
@@ -197,8 +186,7 @@ export function Globe({ globeConfig, data }: WorldProps) {
       .ringMaxRadius(defaultProps.maxRings)
       .ringPropagationSpeed(RING_PROPAGATION_SPEED)
       .ringRepeatPeriod(
-        (defaultProps.arcTime * defaultProps.arcLength) /
-          (defaultProps.rings || 1),
+        (defaultProps.arcTime * defaultProps.arcLength) / defaultProps.rings,
       );
   }, [
     isInitialized,

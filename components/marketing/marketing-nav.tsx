@@ -26,6 +26,7 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
+import { RainbowButton } from "../ui/rainbow-button";
 
 const SERVICES = [
   {
@@ -63,7 +64,7 @@ export function MarketingNav() {
     const isActive = startsWith ? pathname.startsWith(path) : pathname === path;
 
     return isActive
-      ? "text-primary bg-linear-to-b from-primary/20 to-primary/10 shadow-lg! shadow-white"
+      ? "text-primary bg-primary/10 dark:bg-primary/20"
       : "text-muted-foreground hover:text-foreground";
   };
 
@@ -170,10 +171,7 @@ export function MarketingNav() {
           <div className="flex items-center gap-4">
             <div className="hidden md:block">
               <Link href="/auth/signin">
-                <Button size="hero" variant="rainbow">
-                  Client Portal
-                  <ArrowRightToLineIcon className="size-4" />
-                </Button>
+                <RainbowButton>Client Portal</RainbowButton>
               </Link>
             </div>
 
@@ -204,9 +202,6 @@ export function MarketingNav() {
               className={cn(
                 "p-2 rounded-md transition-colors",
                 getActiveClassname("/"),
-                // pathname === "/"
-                //   ? "bg-primary/10 text-primary font-semibold"
-                //   : "text-foreground hover:bg-muted",
               )}
             >
               Home
@@ -270,14 +265,7 @@ export function MarketingNav() {
 
           <div className="pt-2 border-t border-border">
             <Link href="/auth/signin" className="block w-full">
-              <Button
-                size="hero"
-                variant="rainbow"
-                className="w-full justify-center"
-              >
-                Client Portal
-                <ArrowRightToLineIcon className="size-4 ml-2" />
-              </Button>
+              <RainbowButton className="w-full">Client Portal</RainbowButton>
             </Link>
           </div>
         </motion.div>

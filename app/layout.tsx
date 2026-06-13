@@ -10,7 +10,11 @@ const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "PDi UK - Global Distribution & Logistics Portal",
-  description: "Secure logistics management portal for E-PickPack Ltd trading as PDi UK.",
+  description:
+    "Secure logistics management portal for E-PickPack Ltd trading as PDi UK.",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

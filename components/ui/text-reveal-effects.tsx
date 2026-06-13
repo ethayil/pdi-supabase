@@ -201,12 +201,14 @@ export function AnimatedNumber({
   prefix = "",
   suffix = "",
   className = "",
+  disableGrouping = false,
 }: {
   value: number;
   duration?: number;
   prefix?: string;
   suffix?: string;
   className?: string;
+  disableGrouping?: boolean;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inViewRef = useRef<HTMLSpanElement>(null);
@@ -227,10 +229,11 @@ export function AnimatedNumber({
   useEffect(() => {
     return rounded.on("change", (latest) => {
       if (ref.current) {
-        ref.current.textContent = `${prefix}${latest.toLocaleString()}${suffix}`;
+        const formatted = disableGrouping ? latest.toString() : latest.toLocaleString();
+        ref.current.textContent = `${prefix}${formatted}${suffix}`;
       }
     });
-  }, [rounded, prefix, suffix]);
+  }, [rounded, prefix, suffix, disableGrouping]);
 
   return (
     <span ref={inViewRef} className={className}>

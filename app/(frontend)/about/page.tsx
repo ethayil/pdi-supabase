@@ -111,7 +111,7 @@ export default function AboutUs() {
           <div className="grid grid-cols-2 gap-6">
             <div className="border-b border-border pb-4">
               <span className="text-3xl font-extrabold text-primary">
-                <AnimatedNumber value={2004} duration={1.5} />
+                <AnimatedNumber value={2004} duration={1.5} disableGrouping />
               </span>
               <p className="text-xs text-muted-foreground mt-1">
                 Year Established

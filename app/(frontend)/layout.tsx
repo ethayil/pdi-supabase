@@ -29,7 +29,7 @@ export default function FrontendLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-background text-foreground font-sans min-h-screen flex flex-col overflow-x-hidden">
+    <div className="theme-midnight bg-background text-foreground font-sans min-h-screen flex flex-col overflow-x-hidden">
       <MarketingNav />
       <main className="flex-1 pt-16">{children}</main>
       <MarketingFooter />

@@ -3,6 +3,7 @@ import * as motion from "motion/react-client";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { RainbowButton } from "@/components/ui/rainbow-button";
 import {
   SpotlightCard,
   TextRevealEffect,
@@ -51,13 +52,22 @@ export default function VirtualWarehouse() {
         animate="show"
         className="text-center max-w-3xl mx-auto mb-16"
       >
-        <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4">
+        <motion.div
+          variants={itemVariants}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-4"
+        >
           <Warehouse className="size-4" /> Real-Time Stock Management Portal
         </motion.div>
-        <motion.h1 variants={itemVariants} className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+        <motion.h1
+          variants={itemVariants}
+          className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
+        >
           <TextRevealEffect text="Virtual Warehouse Solution" />
         </motion.h1>
-        <motion.p variants={itemVariants} className="text-lg text-muted-foreground leading-relaxed">
+        <motion.p
+          variants={itemVariants}
+          className="text-lg text-muted-foreground leading-relaxed"
+        >
           Manage your global inventory from anywhere in the world. Our Virtual
           Warehouse software offers complete transparency over stock holdings,
           transaction history, and dispatch tracking with zero training
@@ -174,8 +184,8 @@ export default function VirtualWarehouse() {
               <h3 className="font-bold text-base mb-2">Zero Training Needed</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Designed to be intuitive for busy university recruitment staff,
-                marketing managers, and regional offices. Add items to a dispatch
-                list exactly like shopping online.
+                marketing managers, and regional offices. Add items to a
+                dispatch list exactly like shopping online.
               </p>
             </SpotlightCard>
           </motion.div>
@@ -228,14 +238,22 @@ export default function VirtualWarehouse() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/contact">
-            <Button variant="hero" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <Button
+              variant="hero"
+              size="hero"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               Book a Portal Demo
             </Button>
           </Link>
           <Link href="/auth/signin">
-            <Button variant="outline" size="hero" className="hover:scale-102 active:scale-98 transition-transform duration-200">
+            <RainbowButton
+              size="lg"
+              variant="outline"
+              className="hover:scale-102 active:scale-98 transition-transform duration-200"
+            >
               Client Portal Sign In
-            </Button>
+            </RainbowButton>
           </Link>
         </div>
       </motion.div>
