@@ -132,7 +132,7 @@ export default function ContactUs() {
                   Business Hours
                 </h3>
                 <p className="text-muted-foreground">
-                  Monday to Friday: 9:00 AM - 5:30 PM (GMT)
+                  Monday to Friday: 8:30 AM - 5:00 PM (GMT)
                 </p>
               </div>
             </div>
