@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
   reactCompiler: true,
+  // logging: { fetches: { fullUrl: true, hmrRefreshes: true } },
   images: {
     remotePatterns: [
       {
