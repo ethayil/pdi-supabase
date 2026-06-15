@@ -39,7 +39,7 @@ export default function UserTypeSelect({
     { value: 'all', label: 'All' },
     { value: 'org', label: 'Organization' },
     { value: 'unlinked', label: 'Unlinked' },
-    { value: 'superadmin', label: 'Superadmin' },
+    { value: 'admin', label: 'Admin' },
   ]
 
   if (loading) {

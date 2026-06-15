@@ -33,6 +33,9 @@ export function CommandPalette({ role }: { role?: string | null }) {
   const organizationId = (params.orgId ?? params.organizationId) as string;
   const { toggleSidebar } = useSidebar();
 
+  const isAdmin =
+    role?.toLowerCase() === "admin" || role?.toLowerCase() === "orgadmin";
+
   // Toggle palette with '?' or 'h'
   useHotkey("?" as RegisterableHotkey, () => setOpen((prev) => !prev));
   useHotkey("h" as RegisterableHotkey, () => setOpen((prev) => !prev));
@@ -58,9 +61,9 @@ export function CommandPalette({ role }: { role?: string | null }) {
     category: "General",
   });
 
-  // Navigation Actions (Restricted to Superadmin)
+  // Navigation Actions (Restricted to Admin)
   useRegisterAction(
-    role?.toLowerCase() === "superadmin"
+    isAdmin
       ? {
           id: "nav-orders",
           label: "Go to Orders",
@@ -73,7 +76,7 @@ export function CommandPalette({ role }: { role?: string | null }) {
   );
 
   useRegisterAction(
-    role?.toLowerCase() === "superadmin"
+    isAdmin
       ? {
           id: "nav-categories",
           label: "Go to Categories",
@@ -86,7 +89,7 @@ export function CommandPalette({ role }: { role?: string | null }) {
   );
 
   useRegisterAction(
-    role?.toLowerCase() === "superadmin"
+    isAdmin
       ? {
           id: "nav-products",
           label: "Go to Products",
@@ -99,7 +102,7 @@ export function CommandPalette({ role }: { role?: string | null }) {
   );
 
   useRegisterAction(
-    role?.toLowerCase() === "superadmin"
+    isAdmin
       ? {
           id: "nav-orgs",
           label: "Go to Organizations",
@@ -112,7 +115,7 @@ export function CommandPalette({ role }: { role?: string | null }) {
   );
 
   useRegisterAction(
-    role?.toLowerCase() === "superadmin"
+    isAdmin
       ? {
           id: "nav-invoices",
           label: "Go to Invoices",
@@ -125,7 +128,7 @@ export function CommandPalette({ role }: { role?: string | null }) {
   );
 
   useRegisterAction(
-    role?.toLowerCase() === "superadmin"
+    isAdmin
       ? {
           id: "nav-users",
           label: "Go to Users",
@@ -138,7 +141,7 @@ export function CommandPalette({ role }: { role?: string | null }) {
   );
 
   useRegisterAction(
-    role?.toLowerCase() === "superadmin"
+    isAdmin
       ? {
           id: "nav-logs",
           label: "Go to Logs",
@@ -151,7 +154,7 @@ export function CommandPalette({ role }: { role?: string | null }) {
   );
 
   useRegisterAction(
-    role?.toLowerCase() === "superadmin"
+    isAdmin
       ? {
           id: "nav-notifications",
           label: "Go to Notifications",

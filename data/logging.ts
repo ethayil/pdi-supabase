@@ -6,7 +6,7 @@ import type {
   MovementType,
 } from "@/app/generated/prisma/client";
 import type { ActivityLogWhereInput } from "@/app/generated/prisma/models";
-import { getSession, requireSuperAdmin } from "@/lib/auth/get-session";
+import { getSession, requireGlobalAdmin } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 
@@ -261,7 +261,7 @@ export async function getLogs({
   endDate,
 }: GetLogsArgs = {}) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     return getCachedLogsDbData(
       orgId,
@@ -325,7 +325,7 @@ export async function getProductMovements({
   productId: string;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
     return getCachedProductMovementsDbData(productId);
   } catch (error) {
     console.error("Failed to get product movements:", error);

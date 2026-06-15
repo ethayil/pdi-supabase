@@ -45,7 +45,7 @@ export default function OrganizationSwitcher({
 
   const orgName = selectedOrganization?.name ?? "PDi";
 
-  const isAdmin = user?.role === "superAdmin";
+  const isAdmin = user?.role === "admin";
 
   if (!organizationId) return null;
 

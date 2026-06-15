@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth/minimal";
 import { nextCookies } from "better-auth/next-js";
 import { admin, emailOTP, organization } from "better-auth/plugins";
 import { sendPasswordResetEmail, sendVerificationEmail } from "./data/email";
-import { superAdminPlugin } from "./lib/auth/super-admin-plugin";
+import { globalAdminPlugin } from "./lib/auth/global-admin-plugin";
 import prisma from "./lib/prisma";
 
 export const auth = betterAuth({
@@ -117,13 +117,13 @@ export const auth = betterAuth({
         }
       },
     }),
-    superAdminPlugin(),
+    globalAdminPlugin(),
     nextCookies(),
   ],
   user: {
     additionalFields: {
       role: {
-        type: ["user", "orgAdmin", "superAdmin", "warehouse"],
+        type: ["user", "orgAdmin", "admin", "warehouse"],
         required: false,
         defaultValue: "user",
         input: false,

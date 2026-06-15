@@ -65,7 +65,7 @@ export default function CheckoutForm({
   const [isLoading, setIsLoading] = useState(false);
 
   const isAdmin =
-    currentUser?.role === "superAdmin" || currentUser?.role === "orgAdmin";
+    currentUser?.role === "admin" || currentUser?.role === "orgAdmin";
 
   const totalItems =
     cartItems?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;

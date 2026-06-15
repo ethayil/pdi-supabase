@@ -30,16 +30,16 @@ export const requireUser = async <T extends { shouldThrow?: boolean }>(
 
 export const requireAdmin = async () => {
   const user = await requireUser();
-  const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
+  const isAdmin = user.role === "admin" || user.role === "orgAdmin";
   if (!isAdmin) {
     throw new Error("Forbidden: Insufficient Permissions");
   }
   return user;
 };
 
-export const requireSuperAdmin = async () => {
+export const requireGlobalAdmin = async () => {
   const user = await requireUser();
-  if (user.role !== "superAdmin") {
+  if (user.role !== "admin") {
     throw new Error("Forbidden: Insufficient Permissions");
   }
   return user;

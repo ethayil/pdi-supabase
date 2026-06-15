@@ -6,7 +6,7 @@ import type {
   ProductUpdateInput,
   ProductWhereInput,
 } from "@/app/generated/prisma/models";
-import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import { requireGlobalAdmin, requireUser } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity, logProductMovement } from "./logging";
@@ -170,7 +170,7 @@ export async function getProductById({ id }: { id: string }) {
   try {
     if (!id) return null;
 
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -198,7 +198,7 @@ export async function createProduct(values: {
   isActive: boolean;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
     const userId = user.id;
 
     // Check organization exists
@@ -290,7 +290,7 @@ export async function updateProduct(values: {
   isActive: boolean;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
     const userId = user.id;
 
     // Check organization exists
@@ -389,7 +389,7 @@ export async function updateProduct(values: {
 
 export async function deleteProduct({ id }: { id: string }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
     const userId = user.id;
 
     const product = await prisma.product.findUnique({
@@ -448,7 +448,7 @@ export async function bulkCreateProducts({
   }[];
 }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
     const userId = user.id;
 
     const results = [];
@@ -582,7 +582,7 @@ export async function bulkUpdateProducts({
   }[];
 }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
     const userId = user.id;
 
     const results = [];
@@ -704,7 +704,7 @@ export async function bulkUpdateProducts({
 
 export async function getAvailableProducts({ orgId }: { orgId: string }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const products = await prisma.product.findMany({
       where: {

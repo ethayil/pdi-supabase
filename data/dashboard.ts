@@ -21,10 +21,10 @@ async function fetchDashboardDbData({
 }: {
   orgId: string;
   userId: string;
-  role: "superadmin" | "admin" | "user";
+  role: "globalAdmin" | "admin" | "user";
 }) {
-  const isAdmin = role === "admin" || role === "superadmin";
-  const isSuperadmin = role === "superadmin";
+  const isAdmin = role === "admin" || role === "globalAdmin";
+  const isGlobalAdmin = role === "globalAdmin";
 
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
@@ -192,7 +192,7 @@ async function fetchDashboardDbData({
   }));
 
   let orgOrdersTotal: string | number = 0;
-  if (isSuperadmin) {
+  if (isGlobalAdmin) {
     const allOrgsOrdersCount = await prisma.order.count();
     const thisOrgOrdersCount = await prisma.order.count({ where: { orgId } });
     orgOrdersTotal = `${allOrgsOrdersCount} — ${thisOrgOrdersCount}`;
@@ -218,7 +218,7 @@ const getCachedDbData = unstable_cache(
   async (
     orgId: string,
     userId: string,
-    role: "superadmin" | "admin" | "user",
+    role: "globalAdmin" | "admin" | "user",
   ) => fetchDashboardDbData({ orgId, userId, role }),
   ["dashboard-db-data"],
   {
@@ -234,8 +234,8 @@ export async function getDashboardData({ orgId }: { orgId: string }) {
       return null;
     }
 
-    const role = user.role === "superAdmin"
-      ? "superadmin"
+    const role = user.role === "admin"
+      ? "globalAdmin"
       : user.role === "orgAdmin"
       ? "admin"
       : "user";

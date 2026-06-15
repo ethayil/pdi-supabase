@@ -7,13 +7,13 @@ import {
 import { getOrgAdapter } from "better-auth/plugins/organization";
 import { z } from "zod";
 
-// Create a plugin for your super admin endpoints
-export const superAdminPlugin = () => {
+// Create a plugin for your global admin endpoints
+export const globalAdminPlugin = () => {
   return {
-    id: "super-admin",
+    id: "global-admin",
     endpoints: {
-      superAdminUpdateOrganization: createAuthEndpoint(
-        "/super-admin/organization/update",
+      adminUpdateOrganization: createAuthEndpoint(
+        "/global-admin/organization/update",
         {
           method: "POST",
           body: z.object({
@@ -49,11 +49,11 @@ export const superAdminPlugin = () => {
         async (ctx) => {
           const session = ctx.context.session;
 
-          // Check if user is super admin
-          const isSuperAdmin = session.user.role === "superAdmin";
-          if (!isSuperAdmin) {
+          // Check if user is global admin
+          const isGlobalAdmin = session.user.role === "admin";
+          if (!isGlobalAdmin) {
             throw new APIError("FORBIDDEN", {
-              message: "Super admin required",
+              message: "Admin required",
             });
           }
 
@@ -80,8 +80,8 @@ export const superAdminPlugin = () => {
           return ctx.json(updated);
         },
       ),
-      superAdminDeleteOrganization: createAuthEndpoint(
-        "/super-admin/organization/delete",
+      adminDeleteOrganization: createAuthEndpoint(
+        "/global-admin/organization/delete",
         {
           method: "POST",
           body: z.object({
@@ -93,11 +93,11 @@ export const superAdminPlugin = () => {
         async (ctx) => {
           const session = ctx.context.session;
 
-          // Check if user is super admin
-          const isSuperAdmin = session.user.role === "superAdmin";
-          if (!isSuperAdmin) {
+          // Check if user is global admin
+          const isGlobalAdmin = session.user.role === "admin";
+          if (!isGlobalAdmin) {
             throw new APIError("FORBIDDEN", {
-              message: "Super admin required",
+              message: "Admin required",
             });
           }
 

@@ -23,7 +23,7 @@ export default async function CheckoutPage({ params }: { params: Params }) {
   const addresses = await getAddresses({ orgId });
   const cartItems = await getCartItems({ orgId });
 
-  const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
+  const isAdmin = user.role === "admin" || user.role === "orgAdmin";
 
   const orgUsers = isAdmin ? await getOrgUsers({ orgId }) : [];
 

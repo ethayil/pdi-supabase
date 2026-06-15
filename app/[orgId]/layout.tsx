@@ -51,7 +51,7 @@ export default async function OrganizationLayout({
   // Organization not found or unauthorized
   if (!selectedOrganization) {
     if (
-      (user.role === "superAdmin" || user.role === "orgAdmin") &&
+      (user.role === "admin" || user.role === "orgAdmin") &&
       orgs.length > 0
     ) {
       redirect(`/${orgs[0].id}`);
@@ -70,7 +70,7 @@ export default async function OrganizationLayout({
   // const primaryColor = settings?.primaryColor;
 
   // Organization inactive (Lock Screen)
-  if (selectedOrganization.isActive === false && user.role !== "superAdmin") {
+  if (selectedOrganization.isActive === false && user.role !== "admin") {
     return (
       <VerifyCard
         title="Organization Inactive"

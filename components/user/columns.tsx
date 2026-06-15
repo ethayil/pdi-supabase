@@ -36,7 +36,7 @@ export const columns: ColumnDef<UserWMember>[] = [
       return (
         <Badge
           variant={
-            role === "admin" || role === "superadmin" ? "default" : "outline"
+            role === "orgAdmin" || role === "admin" ? "default" : "outline"
           }
         >
           {role}

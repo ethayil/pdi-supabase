@@ -3,7 +3,7 @@
 import { revalidateTag, unstable_cache } from "next/cache";
 import { after } from "next/server";
 import type { NotificationType } from "@/app/generated/prisma/client";
-import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import { requireGlobalAdmin, requireUser } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 
@@ -160,7 +160,7 @@ export async function sendCustomMessage(args: {
   linkUrl?: string;
 }) {
   try {
-    const adminUser = await requireSuperAdmin();
+    const adminUser = await requireGlobalAdmin();
 
     let targetUsers: { id: string; email: string }[] = [];
 

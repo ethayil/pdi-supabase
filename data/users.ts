@@ -6,7 +6,7 @@ import type {
   UserUpdateInput,
   UserWhereInput,
 } from "@/app/generated/prisma/models";
-import { requireAdmin, requireSuperAdmin } from "@/lib/auth/get-session";
+import { requireAdmin, requireGlobalAdmin } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
@@ -50,9 +50,9 @@ async function fetchUsersDbData({
         none: {},
       },
     };
-  } else if (userType === "superadmin") {
+  } else if (userType === "admin") {
     whereClause = {
-      role: "superAdmin",
+      role: "admin",
     };
   }
 
@@ -114,7 +114,7 @@ export async function getUsers({
   userType = "org",
 }: GetUsersArgs) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     return getCachedUsersDbData(orgId, currentPage, entriesPerPage, userType);
   } catch (error) {
@@ -136,7 +136,7 @@ export async function getUserById({ id }: { id: string }): Promise<{
   error?: string;
 }> {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const dbUser = await prisma.user.findUnique({
       where: { id },
@@ -182,7 +182,7 @@ export async function updateUser(data: {
   emailVerified?: boolean;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
 
     const dbUser = await prisma.user.findUnique({
       where: { id: data.id },
@@ -337,7 +337,7 @@ async function fetchOrgUsersDbData({ orgId }: { orgId: string }) {
     role: m.user.role as
       | "user"
       | "orgAdmin"
-      | "superAdmin"
+      | "admin"
       | "warehouse"
       | null
       | undefined,

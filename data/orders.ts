@@ -14,7 +14,7 @@ import type {
 import type { OrderWhereInput } from "@/app/generated/prisma/models";
 import {
   getSession,
-  requireSuperAdmin,
+  requireGlobalAdmin,
   requireUser,
 } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
@@ -56,7 +56,7 @@ export async function createOrder(args: {
     let userId = loggedInUser.id;
 
     // Handle admin placing order for another user
-    const isAdmin = loggedInUser.role === "superAdmin" ||
+    const isAdmin = loggedInUser.role === "admin" ||
       loggedInUser.role === "orgAdmin";
     if (args.userId && isAdmin) {
       userId = args.userId;
@@ -362,7 +362,7 @@ export async function getOrders({ orgId }: { orgId: string }) {
     const user = await requireUser({ shouldThrow: false });
     if (!user) return [];
 
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
+    const isAdmin = user.role === "admin" || user.role === "orgAdmin";
 
     return getCachedOrdersDbData(orgId, user.id, isAdmin);
   } catch (error) {
@@ -382,11 +382,11 @@ export async function getOrderById({
     const user = await requireUser({ shouldThrow: false });
     if (!user) return null;
 
-    const isSuperAdmin = user.role === "superAdmin";
+    const isGlobalAdmin = user.role === "admin";
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        ...(isSuperAdmin ? {} : { orgId }),
+        ...(isGlobalAdmin ? {} : { orgId }),
       },
       include: {
         user: true,
@@ -401,7 +401,7 @@ export async function getOrderById({
 
     if (!order) return null;
 
-    const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
+    const isAdmin = user.role === "admin" || user.role === "orgAdmin";
     if (order.userId !== user.id && !isAdmin) {
       return null;
     }
@@ -450,7 +450,7 @@ export async function updateOrder(args: {
   };
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const {
       id,
@@ -531,7 +531,7 @@ export async function updateOrderTracking(args: {
   createdAt?: number;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
 
     const {
       orderId,
@@ -620,7 +620,7 @@ export async function deleteOrderHistory({
   orgId: string;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     await prisma.orderHistory.delete({ where: { id: historyId, orgId } });
     return { success: true };
@@ -643,7 +643,7 @@ export async function updateOrderHistory({
   createdAt: number;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     await prisma.orderHistory.update({
       where: { id: historyId, orgId },
@@ -670,7 +670,7 @@ export async function updateOrderItem({
   quantity: number;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
@@ -719,7 +719,7 @@ export async function addOrderItem({
   quantity: number;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -766,7 +766,7 @@ export async function removeOrderItem({
   orgId: string;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
@@ -809,7 +809,7 @@ export async function sendOrderNotification({
   sendNotification: boolean;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -1032,7 +1032,7 @@ export async function getAdminOrders({
   postcode,
 }: GetAdminOrdersArgs) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     return getCachedAdminOrdersDbData(
       orgId,

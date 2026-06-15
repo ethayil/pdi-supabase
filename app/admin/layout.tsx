@@ -12,7 +12,7 @@ export default async function AdminLayout({
     redirect("/auth/signin");
   }
 
-  if (user.role !== "superAdmin") {
+  if (user.role !== "admin") {
     redirect("/verify");
   }
 

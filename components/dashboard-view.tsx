@@ -34,13 +34,13 @@ export async function DashboardView({
   if (!user) return null;
 
   const role =
-    user.role === "superAdmin"
-      ? "superadmin"
+    user.role === "admin"
+      ? "globalAdmin"
       : user.role === "orgAdmin"
         ? "admin"
         : "user";
-  const isAdmin = role === "admin" || role === "superadmin";
-  const isSuperadmin = role === "superadmin";
+  const isAdmin = role === "admin" || role === "globalAdmin";
+  const isGlobalAdmin = role === "globalAdmin";
 
   // Create the promise for dashboard data
   const dataPromise = getDashboardData({ orgId: organizationId });
@@ -124,7 +124,7 @@ export async function DashboardView({
     );
   }
 
-  // Admin / Superadmin View
+  // Admin / Global Admin View
   return (
     <div className="space-y-4">
       {/* Stats row */}
@@ -135,7 +135,7 @@ export async function DashboardView({
           icon="Package"
           color="#3b82f6"
           delay={0}
-          sub={isSuperadmin ? "All orgs — your org" : undefined}
+          sub={isGlobalAdmin ? "All orgs — your org" : undefined}
         />
         <StatCard
           title="Pending Dispatch"

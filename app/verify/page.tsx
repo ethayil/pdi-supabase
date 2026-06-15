@@ -18,7 +18,7 @@ export default async function VerifyPage() {
   const orgsResult = await getOrganizations();
   const orgs = orgsResult.success ? orgsResult.data : [];
 
-  const isAdmin = user.role === "orgAdmin" || user.role === "superAdmin";
+  const isAdmin = user.role === "orgAdmin" || user.role === "admin";
 
   // Account deactivated
   if (user.banned === true) {
@@ -35,7 +35,7 @@ export default async function VerifyPage() {
     redirect(`/${activeOrganization}`);
   }
 
-  // Admin/Superadmin without orgId
+  // admin without orgId
   if (isAdmin) {
     if (orgs.length > 0) {
       // Redirect to the first organization's admin panel if they are admin
@@ -43,8 +43,8 @@ export default async function VerifyPage() {
       redirect(`/${orgs[0].id}`);
     }
 
-    if (user.role === "superAdmin") {
-      // No organizations exist, and user is superadmin - redirect to setup
+    if (user.role === "admin") {
+      // No organizations exist, and user is admin - redirect to setup
       redirect("/admin/setup");
     }
   }

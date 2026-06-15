@@ -18,7 +18,7 @@ export default async function OrdersPage({ params }: { params: Params }) {
 
   if (!user) return null;
 
-  const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
+  const isAdmin = user.role === "admin" || user.role === "orgAdmin";
 
   const [orders, orgUsers] = await Promise.all([
     getOrders({ orgId }),

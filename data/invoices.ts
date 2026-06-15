@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type { InvoiceCharge, Order } from "@/app/generated/prisma/client";
 import type { TransactionClient } from "@/app/generated/prisma/internal/prismaNamespace";
 import type { InvoiceWhereInput } from "@/app/generated/prisma/models";
-import { requireSuperAdmin } from "@/lib/auth/get-session";
+import { requireGlobalAdmin } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import type { InvoiceStatus } from "@/types/globals";
@@ -178,7 +178,7 @@ export async function getPaginatedInvoices({
   pageSize: number;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
     return getCachedPaginatedInvoicesDbData(
       orgId,
       status,
@@ -204,7 +204,7 @@ export async function getInvoiceCount({
   dateFrom?: number;
   dateTo?: number;
 }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
   const where: InvoiceWhereInput = { orgId };
   if (status && status !== "all") {
     where.status = status as InvoiceStatus;
@@ -255,7 +255,7 @@ const getCachedInvoiceDetailsDbData = unstable_cache(
 
 export async function getInvoiceDetails({ invoiceId }: { invoiceId: string }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
     return getCachedInvoiceDetailsDbData(invoiceId);
   } catch (error) {
     console.error("Database error in getInvoiceDetails:", error);
@@ -272,7 +272,7 @@ export async function updateInvoiceStatus({
   status: InvoiceStatus;
   paidDate?: number;
 }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
   const invoice = await prisma.invoice.update({
     where: { id: invoiceId },
     data: {
@@ -286,7 +286,7 @@ export async function updateInvoiceStatus({
 }
 
 export async function removeInvoiceCharge({ chargeId }: { chargeId: string }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
   const charge = await prisma.invoiceCharge.findUnique({
     where: { id: chargeId },
   });
@@ -311,7 +311,7 @@ export async function addOrderToInvoice({
   invoiceId: string;
   orderId: string;
 }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     select: { orgId: true },
@@ -338,7 +338,7 @@ export async function removeOrderFromInvoice({
   invoiceId: string;
   orderId: string;
 }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     select: { orgId: true },
@@ -365,7 +365,7 @@ export async function updateOrderInvoiceCost({
   orderId: string;
   invoiceCost: number | null;
 }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
   const order = await prisma.order.findUnique({
     where: { id: orderId },
   });
@@ -389,7 +389,7 @@ export async function updateOrderInvoiceCost({
 }
 
 export async function getUninvoicedOrders({ orgId }: { orgId: string }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
   return await prisma.order.findMany({
     where: {
       orgId,
@@ -410,7 +410,7 @@ export async function createInvoice(args: {
   invoiceNotes?: string;
   dueDate?: number;
 }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
 
   // Validate all orders belong to org and are processing or above
   for (const orderId of args.orderIds) {
@@ -516,7 +516,7 @@ export async function addInvoiceCharge(args: {
   vat: number;
   chargeDate: number;
 }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
 
   const invoice = await prisma.invoice.findUnique({
     where: { id: args.invoiceId },
@@ -561,7 +561,7 @@ export async function updateInvoiceCharge(args: {
   vat: number;
   chargeDate: number;
 }) {
-  await requireSuperAdmin();
+  await requireGlobalAdmin();
 
   const charge = await prisma.invoiceCharge.findUnique({
     where: { id: args.chargeId },

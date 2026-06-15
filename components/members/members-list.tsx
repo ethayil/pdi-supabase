@@ -35,7 +35,7 @@ export function MembersList({ members }: MembersListProps) {
             .toUpperCase()
             .slice(0, 2) ?? "?";
 
-        const isAdmin = member.role === "admin" || member.role === "superadmin";
+        const isAdmin = member.role === "admin";
 
         return (
           <motion.div
@@ -50,9 +50,6 @@ export function MembersList({ members }: MembersListProps) {
               <AvatarImage src={member.user.image || undefined} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
-            {/* <div className="size-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground shrink-0 select-none">
-              {initials}
-            </div> */}
 
             {/* Info */}
             <div className="min-w-0 flex-1">

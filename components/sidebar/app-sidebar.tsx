@@ -36,7 +36,7 @@ export function AppSidebar({
       <SidebarContent>
         <SidebarItems organizationId={organizationId} routes={userRoutes} />
 
-        {(user?.role === "orgAdmin" || user?.role === "superAdmin") && (
+        {(user?.role === "orgAdmin" || user?.role === "admin") && (
           <>
             <Separator />
             <SidebarItems
@@ -47,12 +47,12 @@ export function AppSidebar({
           </>
         )}
 
-        {user?.role === "superAdmin" && (
+        {user?.role === "admin" && (
           <>
             <Separator />
             <SidebarItems
               organizationId={organizationId}
-              title="Super Admin"
+              title="Global Admin"
               routes={adminRoutes}
             />
           </>

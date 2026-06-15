@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type { CategoryWhereInput } from "@/app/generated/prisma/models";
-import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import { requireGlobalAdmin, requireUser } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
@@ -79,7 +79,7 @@ export async function getCategories({
   query,
 }: GetCategoriesArgs = {}) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     if (!orgId || orgId === "all") {
       return {
@@ -131,7 +131,7 @@ export async function getActiveCategories({ orgId }: { orgId: string }) {
 
 export async function getAllCategories({ orgId }: { orgId: string }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     return await prisma.category.findMany({
       where: { orgId },
@@ -147,7 +147,7 @@ export async function getCategoryById({ id }: { id: string }) {
   try {
     if (!id) return null;
 
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const category = await prisma.category.findUnique({
       where: { id },
@@ -166,7 +166,7 @@ export async function createCategory(values: {
   isActive?: boolean;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
     const userId = user.id;
 
     // Check organization exists
@@ -228,7 +228,7 @@ export async function updateCategory(values: {
   isActive?: boolean;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
     const userId = user.id;
 
     // Check organization exists
@@ -296,7 +296,7 @@ export async function updateCategory(values: {
 
 export async function deleteCategory({ id }: { id: string }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
     const userId = user.id;
 
     const category = await prisma.category.findUnique({

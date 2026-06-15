@@ -256,7 +256,7 @@ export default function ManageUserDialog({
   const userRoleOptions = [
     { value: "user", label: "User" },
     { value: "orgAdmin", label: "Org Admin" },
-    { value: "superAdmin", label: "Super Admin" },
+    { value: "admin", label: "Admin" },
     { value: "warehouse", label: "Warehouse" },
   ];
 

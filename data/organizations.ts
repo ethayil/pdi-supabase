@@ -7,7 +7,7 @@ import type {
   OrganizationWhereInput,
 } from "@/app/generated/prisma/models";
 import { auth, type Organization } from "@/auth";
-import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import { requireGlobalAdmin, requireUser } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
@@ -37,7 +37,7 @@ async function fetchOrganizationsDbData({
   let totalCount = 0;
   let organizations: any[] = [];
 
-  if (userRole === "superAdmin") {
+  if (userRole === "admin") {
     const whereClause: OrganizationWhereInput = {
       isActive: isActive ? true : undefined,
       ...(query
@@ -167,7 +167,7 @@ export async function getOrganizations({
 
 export async function getOrganizationById({ id }: { id: string }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const organization = await prisma.organization.findUnique({
       where: { id },
@@ -206,7 +206,7 @@ export async function createOrganization(
   data: Omit<Organization, "id" | "slug" | "createdAt">,
 ) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
 
     const slug = data.name
       .toLowerCase()
@@ -255,7 +255,7 @@ export async function updateOrganization(
   data: Omit<Organization, "slug" | "createdAt">,
 ) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
 
     const { id, name, ...rest } = data;
     const slug = name
@@ -274,7 +274,7 @@ export async function updateOrganization(
       throw new Error("Organization not found");
     }
 
-    const updated = await auth.api.superAdminUpdateOrganization({
+    const updated = await auth.api.adminUpdateOrganization({
       headers: await headers(),
       body: {
         organizationId: id,
@@ -323,9 +323,9 @@ export async function updateOrganization(
 
 export async function deleteOrganization({ id }: { id: string }) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
 
-    const deleted = await auth.api.superAdminDeleteOrganization({
+    const deleted = await auth.api.adminDeleteOrganization({
       headers: await headers(),
       body: {
         organizationId: id,

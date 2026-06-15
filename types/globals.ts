@@ -8,7 +8,7 @@ export type Params = Promise<{
   invoiceId: string;
 }>;
 
-export type UserRole = "user" | "orgAdmin" | "superAdmin" | "warehouse";
+export type UserRole = "user" | "orgAdmin" | "admin" | "warehouse";
 
 export type InvoiceChargeType =
   | "ddp"
@@ -42,7 +42,10 @@ export type OrderStatus = (typeof orderStatuses)[number];
 
 export type InvoiceStatus = (typeof invoiceStatus)[number];
 
-export const VALID_ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+export const VALID_ORDER_STATUS_TRANSITIONS: Record<
+  OrderStatus,
+  OrderStatus[]
+> = {
   pending: [
     "processing",
     "shipped",
@@ -99,4 +102,3 @@ export const VALID_ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> 
   returned: [],
   collected: ["returned"],
 };
-

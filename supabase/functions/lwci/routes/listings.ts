@@ -297,12 +297,12 @@ listingsRouter.post("/update", async (c) => {
           changes: productData,
         });
       } else {
-        // Find superadmin user to use as creator
+        // Find admin user to use as creator
         let userId = "";
         const { data: systemUser } = await supabase
           .from("user")
           .select("id")
-          .in("role", ["superAdmin", "superadmin", "admin"])
+          .in("role", ["admin"])
           .limit(1)
           .maybeSingle();
 

@@ -17,8 +17,8 @@ export default async function MembersPage({ params }: { params: Params }) {
 
   const { user } = await getSession();
 
-  // Route guard — only admin and superadmin can access
-  if (!user || (user.role !== "orgAdmin" && user.role !== "superAdmin")) {
+  // Route guard — only orgAdmin and admin can access
+  if (!user || (user.role !== "orgAdmin" && user.role !== "admin")) {
     redirect(`/${orgId}`);
   }
 

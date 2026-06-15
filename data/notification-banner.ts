@@ -5,7 +5,7 @@ import type {
   BannerCreateInput,
   BannerUpdateInput,
 } from "@/app/generated/prisma/models";
-import { getSession, requireSuperAdmin } from "@/lib/auth/get-session";
+import { getSession, requireGlobalAdmin } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 
@@ -13,7 +13,7 @@ export async function createBanner(
   data: Omit<BannerCreateInput, "id" | "createdBy">,
 ) {
   try {
-    const user = await requireSuperAdmin();
+    const user = await requireGlobalAdmin();
 
     const banner = await prisma.banner.create({
       data: { ...data, createdById: user.id },
@@ -30,7 +30,7 @@ export async function createBanner(
 
 export async function removeBanner({ id }: { id: string }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     await prisma.banner.delete({
       where: { id },
@@ -53,7 +53,7 @@ export async function toggleBannerActive({
   isActive: boolean;
 }) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const banner = await prisma.banner.update({
       where: { id },
@@ -73,7 +73,7 @@ export async function toggleBannerActive({
 
 export async function updateBanner(id: string, data: BannerUpdateInput) {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     const banner = await prisma.banner.update({
       where: { id },
@@ -152,7 +152,7 @@ const getCachedAllBannersDbData = unstable_cache(
 
 export async function listAllBanners() {
   try {
-    await requireSuperAdmin();
+    await requireGlobalAdmin();
 
     return await getCachedAllBannersDbData();
   } catch (error) {
