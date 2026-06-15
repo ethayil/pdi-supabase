@@ -1,7 +1,8 @@
 "use client";
 
-import { Moon, Palette, Sun } from "lucide-react";
+import { Database, Moon, Palette, RefreshCw, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import type { User } from "@/auth";
 import { ThemeColorSwitcher } from "@/components/theme-color-switcher";
 import {
   Card,
@@ -10,9 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { useOrganizationStore } from "@/store/use-organization-store";
+import { Button } from "../ui/button";
 
-export function SettingsView() {
+export function SettingsView({ user }: { user?: User }) {
   const { theme, setTheme } = useTheme();
+  const { lastSyncedAt, loading, error, fetchOrganizations } =
+    useOrganizationStore();
 
   return (
     <div className="space-y-6">
@@ -71,6 +77,43 @@ export function SettingsView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Admin Cache Sync Section */}
+      {user?.role === "admin" && (
+        <Card className="border-amber-500 dark:border-amber-400 bg-linear-to-br from-amber-500/10 via-background to-background ring-1 ring-amber-500/20 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="size-4" />
+              System Cache Sync
+            </CardTitle>
+            <CardDescription>
+              Force sync organization lists cached client-side. Useful when
+              organizations are added or renamed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs text-muted-foreground">
+                Last Synced:{" "}
+                <span className="font-mono font-semibold text-foreground">
+                  {lastSyncedAt || "Never"}
+                </span>
+              </p>
+              {error && <p className="text-xs text-red-500">Error: {error}</p>}
+            </div>
+            <Button
+              variant="glass"
+              disabled={loading}
+              onClick={() => fetchOrganizations(true)}
+            >
+              <RefreshCw
+                className={cn("size-3.5", loading && "animate-spin")}
+              />
+              {loading ? "Syncing..." : "Sync Cache Now"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Placeholder for future settings */}
       <Card>

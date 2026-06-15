@@ -15,7 +15,6 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useTransition } from "react";
-import type { Organization } from "@/app/generated/prisma/client";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +29,7 @@ import type {
 } from "@/data/despatch-data";
 import { useDespatchParams } from "@/lib/nuqs/despatch-params";
 import { cn } from "@/lib/utils";
+import { useOrganizationStore } from "@/store/use-organization-store";
 import { formattedDate } from "@/utils/formatted-date";
 
 type UrgencyGroup = "overdue" | "due_today" | "due_soon" | "upcoming";
@@ -111,18 +111,16 @@ function classifyOrder(order: DespatchOrder): UrgencyGroup {
 
 interface DespatchConsoleProps {
   initialData: DespatchOrdersResponse;
-  organizations: Organization[];
 }
 
-export function DespatchConsole({
-  initialData,
-  organizations,
-}: DespatchConsoleProps) {
+export function DespatchConsole({ initialData }: DespatchConsoleProps) {
   const { orgId } = useParams<{ orgId: string }>();
   const [isPending, startTransition] = useTransition();
   const [{ urgency: activeFilter }, setParams] = useDespatchParams({
     startTransition,
   });
+
+  const { organizations } = useOrganizationStore();
 
   const orders = initialData.data;
 

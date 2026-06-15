@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { headers } from "next/headers";
+import type { Organization as PrismaOrganization } from "@/app/generated/prisma/client";
 import type {
   OrganizationCreateInput,
   OrganizationWhereInput,
@@ -12,11 +13,24 @@ import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
+export interface OrganizationSettings {
+  primaryColor: string;
+  secondaryColor: string | null;
+  fontFamily: string;
+  welcomeMessage: string;
+  lowStockThreshold: number;
+}
+
+export type MappedOrganization = PrismaOrganization & {
+  settings: OrganizationSettings;
+};
+
 interface GetOrganizationsArgs {
   currentPage?: number;
   entriesPerPage?: number;
   isActive?: boolean;
   query?: string;
+  bypassCache?: boolean;
 }
 
 async function fetchOrganizationsDbData({
@@ -33,78 +47,46 @@ async function fetchOrganizationsDbData({
   entriesPerPage: number;
   isActive: boolean;
   query?: string;
-}) {
-  let totalCount = 0;
-  let organizations: any[] = [];
+}): Promise<{
+  success: boolean;
+  data: PrismaOrganization[];
+  totalPages: number;
+  totalCount: number;
+}> {
+  const where: OrganizationWhereInput = {
+    isActive: isActive ? true : undefined,
+  };
 
-  if (userRole === "admin") {
-    const whereClause: OrganizationWhereInput = {
-      isActive: isActive ? true : undefined,
-      ...(query
-        ? {
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { slug: { contains: query, mode: "insensitive" } },
-          ],
-        }
-        : {}),
-    };
-
-    const [count, orgs] = await Promise.all([
-      prisma.organization.count({
-        where: whereClause,
-      }),
-      prisma.organization.findMany({
-        where: whereClause,
-        take: entriesPerPage,
-        skip: (currentPage - 1) * entriesPerPage,
-        orderBy: { id: "asc" },
-      }),
-    ]);
-    totalCount = count;
-    organizations = orgs;
-  } else {
-    const members = await prisma.member.findMany({
-      where: {
+  if (userRole !== "admin") {
+    where.members = {
+      some: {
         userId: userId,
-        organization: {
-          isActive: isActive ? true : undefined,
-          ...(query
-            ? {
-              OR: [
-                { name: { contains: query, mode: "insensitive" } },
-                { slug: { contains: query, mode: "insensitive" } },
-              ],
-            }
-            : {}),
-        },
       },
-      include: { organization: true },
-    });
-    organizations = members.map((m) => m.organization);
-    totalCount = organizations.length;
-    organizations = organizations.slice(
-      (currentPage - 1) * entriesPerPage,
-      currentPage * entriesPerPage,
-    );
+    };
   }
+
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: "insensitive" } },
+      { slug: { contains: query, mode: "insensitive" } },
+    ];
+  }
+
+  const [totalCount, organizations] = await Promise.all([
+    prisma.organization.count({ where }),
+    prisma.organization.findMany({
+      where,
+      take: entriesPerPage,
+      skip: (currentPage - 1) * entriesPerPage,
+      orderBy: { id: "asc" },
+    }),
+  ]);
 
   const totalPages = Math.ceil(totalCount / entriesPerPage);
 
-  const mappedOrganizations = organizations.map((org) => ({
-    ...org,
-    settings: {
-      primaryColor: org.primaryColor ?? "#0056D2",
-      secondaryColor: org.secondaryColor ?? null,
-      fontFamily: org.fontFamily ?? "",
-      welcomeMessage: org.welcomeMessage ?? "",
-      lowStockThreshold: org.lowStockThreshold ?? 50,
-    },
-  }));
-
   return {
     success: true,
-    data: mappedOrganizations,
+    data: organizations,
     totalPages,
     totalCount,
   };
@@ -129,7 +111,7 @@ const getCachedOrganizationsDbData = unstable_cache(
     }),
   ["organizations-list-cache"],
   {
-    revalidate: 20, // Cache for 20 seconds
+    revalidate: 3600, // Cache for 1 hour
     tags: [cacheTags.organizations],
   },
 );
@@ -139,9 +121,28 @@ export async function getOrganizations({
   entriesPerPage = 20,
   isActive = true,
   query,
-}: GetOrganizationsArgs = {}) {
+  bypassCache = false,
+}: GetOrganizationsArgs = {}): Promise<{
+  success: boolean;
+  data: PrismaOrganization[];
+  totalPages: number;
+  totalCount: number;
+  error?: string;
+}> {
   try {
     const user = await requireUser();
+
+    if (bypassCache) {
+      revalidateTag(cacheTags.organizations, "");
+      return fetchOrganizationsDbData({
+        userRole: user.role ?? "",
+        userId: user.id,
+        currentPage,
+        entriesPerPage,
+        isActive,
+        query,
+      });
+    }
 
     return getCachedOrganizationsDbData(
       user.role ?? "",
@@ -157,7 +158,6 @@ export async function getOrganizations({
     return {
       success: false,
       data: [],
-      nextCursor: undefined,
       totalPages: 0,
       totalCount: 0,
       error: error instanceof Error ? error.message : "Internal Server Error",

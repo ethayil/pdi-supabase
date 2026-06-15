@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDownIcon } from "lucide-react";
+import { ChevronsUpDownIcon, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import type { Organization } from "@/app/generated/prisma/client";
@@ -19,17 +19,16 @@ import {
 import { SidebarHeader } from "@/components/ui/sidebar";
 import { useCurrentPath } from "@/hooks/use-current-path";
 import { cn } from "@/lib/utils";
+import { useOrganizationStore } from "@/store/use-organization-store";
 
 interface OrganizationSwitcherProps {
   user: User;
-  orgs: Organization[];
   organizationId?: string | null;
   className?: string;
 }
 
 export default function OrganizationSwitcher({
   user,
-  orgs = [],
   organizationId,
   className,
 }: OrganizationSwitcherProps) {
@@ -37,11 +36,11 @@ export default function OrganizationSwitcher({
   const router = useRouter();
   const { currentPath } = useCurrentPath();
 
-  const organizations = orgs || [];
+  const { organizations, loading } = useOrganizationStore();
 
-  const selectedOrganization = organizations.filter(
+  const selectedOrganization = organizations.find(
     (org) => org.id === organizationId,
-  )[0];
+  );
 
   const orgName = selectedOrganization?.name ?? "PDi";
 
@@ -69,13 +68,18 @@ export default function OrganizationSwitcher({
             className,
           )}
         >
-          <Avatar className="h-8 w-8">
-            <AvatarImage
-              src={getLogoUrl(selectedOrganization)}
-              alt={orgName}
-              // className="grayscale"
-            />
-            <AvatarFallback>PDi</AvatarFallback>
+          <Avatar className="h-8 w-8 flex items-center justify-center">
+            {loading ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : (
+              <>
+                <AvatarImage
+                  src={getLogoUrl(selectedOrganization)}
+                  alt={orgName}
+                />
+                <AvatarFallback>PDi</AvatarFallback>
+              </>
+            )}
           </Avatar>
           <div className="flex-1 min-w-0 group-data-[state=collapsed]:hidden">
             <p className="text-sm font-medium truncate">{orgName}</p>
@@ -119,15 +123,20 @@ export default function OrganizationSwitcher({
           }
         >
           <div className="flex items-center gap-3 flex-1 min-w-0 group-data-[state=collapsed]:justify-center group-data-[state=collapsed]:w-full transition-all">
-            <Avatar className="size-8">
-              <AvatarImage
-                src={getLogoUrl(selectedOrganization)}
-                alt={selectedOrganization?.name}
-                // className="grayscale"
-              />
-              <AvatarFallback>
-                {selectedOrganization?.name.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
+            <Avatar className="size-8 flex items-center justify-center">
+              {loading ? (
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <AvatarImage
+                    src={getLogoUrl(selectedOrganization)}
+                    alt={selectedOrganization?.name}
+                  />
+                  <AvatarFallback>
+                    {selectedOrganization?.name.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </>
+              )}
             </Avatar>
             <div className="flex-1 min-w-0 text-left group-data-[state=collapsed]:hidden">
               <p className="text-sm font-medium truncate">

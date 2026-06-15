@@ -3,7 +3,7 @@
 import { BellIcon, Megaphone, SendIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import type { Banner, Organization } from "@/app/generated/prisma/client";
+import type { Banner } from "@/app/generated/prisma/client";
 import { BannerDialog } from "@/components/admin/notifications/banner-dialog";
 import { BannerList } from "@/components/admin/notifications/banner-list";
 import { SendCustomMessageDialog } from "@/components/admin/notifications/send-custom-message-dialog";
@@ -12,16 +12,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRegisterAction } from "@/hooks/use-command-actions";
 
+import { useOrganizationStore } from "@/store/use-organization-store";
+
 export function AdminNotificationsView({
   initialBanners,
-  organizations,
 }: {
   initialBanners: Banner[];
-  organizations: Organization[];
 }) {
   const [banners, setBanners] = useState(initialBanners);
   const [createBannerOpen, setCreateBannerOpen] = useState(false);
   const [sendMessageOpen, setSendMessageOpen] = useState(false);
+
+  const { organizations } = useOrganizationStore();
 
   useEffect(() => {
     setBanners(initialBanners);

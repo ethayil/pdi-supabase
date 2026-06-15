@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth/auth-client";
 
+import { useOrganizationStore } from "@/store/use-organization-store";
+
 export default function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
+      // Clear organization store cache
+      useOrganizationStore.getState().clearStore();
       await authClient.signOut();
       router.push("/auth/signin");
     } catch (error) {

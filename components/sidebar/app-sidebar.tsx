@@ -1,4 +1,3 @@
-import type { Organization } from "@/app/generated/prisma/client";
 import type { User } from "@/auth";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -14,23 +13,16 @@ import { SidebarUser } from "./sidebar-user";
 
 export function AppSidebar({
   user,
-  orgs = [],
   organizationId,
   ...props
 }: {
   user: User;
-  orgs?: Organization[];
   organizationId?: string | null;
 } & React.ComponentProps<typeof Sidebar>) {
-  const organizations = orgs || [];
-  const _selectedOrg = organizations.find((org) => org.id === organizationId);
-  // const settings = selectedOrg?.settings;
-
   return (
     <Sidebar collapsible="icon" {...props}>
       <OrganizationSwitcher
         user={user}
-        orgs={orgs}
         organizationId={organizationId}
       />
       <SidebarContent>

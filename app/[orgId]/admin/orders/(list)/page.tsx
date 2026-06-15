@@ -5,7 +5,6 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import OrdersHeader from "@/components/order/orders-header";
 import { OrdersTableWrapper } from "@/components/order/orders-table-wrapper";
 import { getAdminOrders } from "@/data/orders";
-import { getOrganizations } from "@/data/organizations";
 import { loadOrderParams } from "@/lib/nuqs/order-params";
 import type { Params } from "@/types/globals";
 
@@ -36,30 +35,25 @@ export default async function AdminOrdersPage({
     courier,
   } = await loadOrderParams(searchParams);
 
-  // Fetch initial orders and active organizations concurrently
-  const [initialData, orgsResponse] = await Promise.all([
-    getAdminOrders({
-      orgId: paramOrgId,
-      currentPage,
-      entriesPerPage,
-      status,
-      search: query || undefined,
-      startDate: start ? parseInt(start, 10) : undefined,
-      endDate: end ? parseInt(end, 10) : undefined,
-      courier: courier || undefined,
-      reference: ref || undefined,
-      fullname: name || undefined,
-      postcode: post || undefined,
-    }),
-    getOrganizations({ entriesPerPage: 1000 }),
-  ]);
-
-  const orgs = orgsResponse?.data || [];
+  // Fetch initial orders only
+  const initialData = await getAdminOrders({
+    orgId: paramOrgId,
+    currentPage,
+    entriesPerPage,
+    status,
+    search: query || undefined,
+    startDate: start ? parseInt(start, 10) : undefined,
+    endDate: end ? parseInt(end, 10) : undefined,
+    courier: courier || undefined,
+    reference: ref || undefined,
+    fullname: name || undefined,
+    postcode: post || undefined,
+  });
 
   return (
     <>
       <DashboardHeader title="Orders" mobileTitle="Orders">
-        <OrdersHeader organizations={orgs} />
+        <OrdersHeader />
       </DashboardHeader>
 
       <motion.div

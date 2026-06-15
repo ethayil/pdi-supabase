@@ -2,7 +2,6 @@
 
 import { MousePointerClickIcon } from "lucide-react";
 import { useState } from "react";
-import type { Organization } from "@/app/generated/prisma/client";
 import {
   Select,
   SelectContent,
@@ -15,17 +14,13 @@ import {
 } from "@/components/ui/select";
 import { useRegisterAction } from "@/hooks/use-command-actions";
 import { useDespatchParams } from "@/lib/nuqs/despatch-params";
+import { useOrganizationStore } from "@/store/use-organization-store";
 
-interface DespatchHeaderProps {
-  organizations?: Organization[];
-}
-
-export default function DespatchHeader({
-  organizations = [],
-}: DespatchHeaderProps) {
+export default function DespatchHeader() {
   const [isOrgOpen, setIsOrgOpen] = useState(false);
 
   const [{ orgId }, setParams] = useDespatchParams();
+  const { organizations } = useOrganizationStore();
 
   useRegisterAction({
     id: "despatch-org",

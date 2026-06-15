@@ -5,7 +5,6 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { DespatchConsole } from "@/components/order/despatch-console";
 import DespatchHeader from "@/components/order/despatch-header";
 import { getDespatchOrders } from "@/data/despatch-data";
-import { getOrganizations } from "@/data/organizations";
 import { loadDespatchParams } from "@/lib/nuqs/despatch-params";
 
 export const metadata: Metadata = {
@@ -25,22 +24,18 @@ export default async function DespatchPage({
     urgency,
   } = await loadDespatchParams(searchParams);
 
-  const [ordersResponse, orgsResponse] = await Promise.all([
-    getDespatchOrders({
-      orgId: paramOrgId,
-      currentPage,
-      entriesPerPage,
-      urgency,
-    }),
-    getOrganizations({ entriesPerPage: 1000 }),
-  ]);
-
-  const orgs = orgsResponse?.data || [];
+  // Fetch orders only
+  const ordersResponse = await getDespatchOrders({
+    orgId: paramOrgId,
+    currentPage,
+    entriesPerPage,
+    urgency,
+  });
 
   return (
     <>
       <DashboardHeader title="Despatch Console" mobileTitle="Despatch">
-        <DespatchHeader organizations={orgs} />
+        <DespatchHeader />
       </DashboardHeader>
 
       <motion.div
@@ -51,7 +46,6 @@ export default async function DespatchPage({
       >
         <DespatchConsole
           initialData={ordersResponse}
-          organizations={orgs}
         />
       </motion.div>
     </>

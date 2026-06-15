@@ -5,6 +5,7 @@ import VerifyCard from "@/components/auth/verify-card";
 import { CommandPalette } from "@/components/command-palette";
 import { BannerNotification } from "@/components/notifications/banner-notification";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { StoreInitializer } from "@/components/store-initializer";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getOrganizations } from "@/data/organizations";
 import { getSession } from "@/lib/auth/get-session";
@@ -66,9 +67,6 @@ export default async function OrganizationLayout({
     return redirectToUserOrg();
   }
 
-  // const settings = selectedOrganization.settings;
-  // const primaryColor = settings?.primaryColor;
-
   // Organization inactive (Lock Screen)
   if (selectedOrganization.isActive === false && user.role !== "admin") {
     return (
@@ -86,7 +84,8 @@ export default async function OrganizationLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar user={user} orgs={orgs} organizationId={orgId} />
+      <StoreInitializer organizations={orgs} />
+      <AppSidebar user={user} organizationId={orgId} />
       <SidebarInset className="h-svh p-0 flex flex-col overflow-hidden relative">
         <BannerNotification orgId={orgId} />
         <div className="absolute inset-0 bg-grid pointer-events-none" />

@@ -2,7 +2,6 @@
 
 import { MousePointerClickIcon } from "lucide-react";
 import { useState } from "react";
-import type { Organization } from "@/app/generated/prisma/client";
 import {
   Select,
   SelectContent,
@@ -15,17 +14,13 @@ import {
 } from "@/components/ui/select";
 import { useRegisterAction } from "@/hooks/use-command-actions";
 import { useOrderParams } from "@/lib/nuqs/order-params";
+import { useOrganizationStore } from "@/store/use-organization-store";
 
-interface OrdersHeaderProps {
-  organizations?: Organization[];
-}
-
-export default function OrdersHeader({
-  organizations = [],
-}: OrdersHeaderProps) {
+export default function OrdersHeader() {
   const [isOrgOpen, setIsOrgOpen] = useState(false);
 
   const [{ orgId }, setParams] = useOrderParams();
+  const { organizations } = useOrganizationStore();
 
   useRegisterAction({
     id: "orders-org",
