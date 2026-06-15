@@ -2,7 +2,7 @@
 
 import { ChevronRightCircle, ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { use, useState } from "react";
 import type { Category, Product } from "@/app/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,11 +31,12 @@ export interface CartItemData {
 
 export default function CartSheet({
   organizationId,
-  cartItems = [],
+  cartItemsPromise,
 }: {
   organizationId: string;
-  cartItems: CartItemData[];
+  cartItemsPromise: Promise<CartItemData[]>;
 }) {
+  const cartItems = use(cartItemsPromise);
   const [open, setOpen] = useState(false);
 
   useRegisterAction({

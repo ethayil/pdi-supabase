@@ -193,7 +193,12 @@ export default function CheckoutForm({
           onSubmit={form.handleSubmit(onSubmit)}
           className="grid grid-cols-1 lg:grid-cols-3 gap-2 md:gap-4 h-full"
         >
-          <div className="lg:col-span-2 space-y-2 md:space-y-4  overflow-auto">
+          <motion.div
+            className="lg:col-span-2 space-y-2 md:space-y-4 overflow-auto"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
             {isAdmin && (
               <UserSelector
                 orgId={orgId}
@@ -555,10 +560,15 @@ export default function CheckoutForm({
                 />
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
 
           {/* Right column */}
-          <div className="lg:col-span-1 lg:sticky top-20 h-[70dvh] space-y-2">
+          <motion.div
+            className="lg:col-span-1 lg:sticky top-20 h-[70dvh] space-y-2"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -584,7 +594,7 @@ export default function CheckoutForm({
                 type="submit"
               />
             </div>
-          </div>
+          </motion.div>
         </form>
       )}
     </main>

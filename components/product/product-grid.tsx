@@ -3,6 +3,7 @@
 import { Box } from "lucide-react";
 import { AnimatePresence, motion as m } from "motion/react";
 import * as motion from "motion/react-client";
+import { use } from "react";
 import type { Category, Product } from "@/app/generated/prisma/client";
 import { PaginationMain } from "@/components/ui/pagination-main";
 import { useProductParams } from "@/lib/nuqs/product-params";
@@ -14,23 +15,25 @@ type ProductWithCategory = Product & {
 };
 
 interface ProductGridProps {
-  initialData: {
+  initialDataPromise: Promise<{
     success: boolean;
     data: ProductWithCategory[];
     totalPages: number;
     totalCount: number;
-  };
-  cartItems?: CartItemData[];
+  }>;
+  cartItemsPromise: Promise<CartItemData[]>;
   isPending?: boolean;
   startTransition?: React.TransitionStartFunction;
 }
 
 export function ProductGrid({
-  initialData,
-  cartItems = [],
+  initialDataPromise,
+  cartItemsPromise,
   isPending = false,
   startTransition,
 }: ProductGridProps) {
+  const initialData = use(initialDataPromise);
+  const cartItems = use(cartItemsPromise);
   const [{ currentPage }] = useProductParams();
 
   const products = initialData?.data ?? [];
@@ -76,7 +79,7 @@ export function ProductGrid({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.65, ease: "easeOut" }}
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4"
               >
                 {products.map((product, index) => (
@@ -84,7 +87,11 @@ export function ProductGrid({
                     key={product.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.05 }}
+                    transition={{
+                      duration: 0.65,
+                      ease: "easeOut",
+                      delay: index * 0.05,
+                    }}
                   >
                     <ProductCard product={product} cartItems={cartItems} />
                   </motion.div>

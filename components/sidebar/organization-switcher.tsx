@@ -29,7 +29,7 @@ interface OrganizationSwitcherProps {
 
 export default function OrganizationSwitcher({
   user,
-  orgs,
+  orgs = [],
   organizationId,
   className,
 }: OrganizationSwitcherProps) {
@@ -37,7 +37,7 @@ export default function OrganizationSwitcher({
   const router = useRouter();
   const { currentPath } = useCurrentPath();
 
-  const organizations = orgs;
+  const organizations = orgs || [];
 
   const selectedOrganization = organizations.filter(
     (org) => org.id === organizationId,

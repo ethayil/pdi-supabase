@@ -14,15 +14,15 @@ import { SidebarUser } from "./sidebar-user";
 
 export function AppSidebar({
   user,
-  orgs,
+  orgs = [],
   organizationId,
   ...props
 }: {
   user: User;
-  orgs: Organization[];
+  orgs?: Organization[];
   organizationId?: string | null;
 } & React.ComponentProps<typeof Sidebar>) {
-  const organizations = orgs;
+  const organizations = orgs || [];
   const _selectedOrg = organizations.find((org) => org.id === organizationId);
   // const settings = selectedOrg?.settings;
 

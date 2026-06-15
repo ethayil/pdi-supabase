@@ -17,10 +17,12 @@ import { useRegisterAction } from "@/hooks/use-command-actions";
 import { useOrderParams } from "@/lib/nuqs/order-params";
 
 interface OrdersHeaderProps {
-  organizations: Organization[];
+  organizations?: Organization[];
 }
 
-export default function OrdersHeader({ organizations }: OrdersHeaderProps) {
+export default function OrdersHeader({
+  organizations = [],
+}: OrdersHeaderProps) {
   const [isOrgOpen, setIsOrgOpen] = useState(false);
 
   const [{ orgId }, setParams] = useOrderParams();

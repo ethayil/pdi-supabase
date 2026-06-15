@@ -18,16 +18,18 @@ interface MemberSelectProps {
   members: User[];
 }
 
-export function MemberSelect({ currentUserId, members }: MemberSelectProps) {
+export function MemberSelect({ currentUserId, members = [] }: MemberSelectProps) {
   const [filterMember, setFilterMember] = useQueryState("member", {
     defaultValue: currentUserId,
     shallow: false,
   });
 
+  const safeMembers = members || [];
+
   const options = [
     { value: currentUserId, label: "My Orders" },
     { value: "all", label: "All Members" },
-    ...members
+    ...safeMembers
       .filter((m) => m.id !== currentUserId)
       .map((m) => ({
         value: m.id,

@@ -37,8 +37,8 @@ export const OrdersTableWrapper = ({
       data={orders}
       loading={isPending}
       headerComponent={
-        <OrdersTableToolbar 
-          loading={isPending} 
+        <OrdersTableToolbar
+          loading={isPending}
           startTransition={startTransition}
         />
       }

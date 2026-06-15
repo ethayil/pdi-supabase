@@ -1,7 +1,7 @@
 "use client";
 
 import { FilterIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import type { Category } from "@/app/generated/prisma/client";
 import {
   Select,
@@ -16,16 +16,17 @@ import { useRegisterAction } from "@/hooks/use-command-actions";
 import { useProductParams } from "@/lib/nuqs/product-params";
 
 interface ProductFiltersProps {
-  categories: Category[] | null;
+  categoriesPromise: Promise<Category[]>;
   selectedCategoryId?: string;
   startTransition?: React.TransitionStartFunction;
 }
 
 export function ProductFilters({
-  categories,
+  categoriesPromise,
   selectedCategoryId = "all",
   startTransition,
 }: ProductFiltersProps) {
+  const categories = use(categoriesPromise);
   const [_, setParams] = useProductParams({ startTransition });
 
   const [open, setOpen] = useState(false);
