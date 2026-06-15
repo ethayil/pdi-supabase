@@ -1,7 +1,10 @@
 "use server";
 
+import { revalidateTag, unstable_cache } from "next/cache";
+import { after } from "next/server";
 import type { NotificationType } from "@/app/generated/prisma/client";
 import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 
 export async function createNotification(params: {
@@ -32,12 +35,37 @@ export async function createNotification(params: {
         isRead: false,
       },
     });
+    revalidateTag(cacheTags.notifications, "");
     return notification.id;
   } catch (error) {
     console.error("Failed to create notification:", error);
     return null;
   }
 }
+
+async function fetchNotificationsDbData({
+  userId,
+  limit,
+}: {
+  userId: string;
+  limit: number;
+}) {
+  return prisma.notification.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+const getCachedNotificationsDbData = unstable_cache(
+  async (userId: string, limit: number) =>
+    fetchNotificationsDbData({ userId, limit }),
+  ["user-notifications-cache"],
+  {
+    revalidate: 30, // Cache for 30 seconds
+    tags: [cacheTags.notifications],
+  }
+);
 
 export async function getNotifications({
   limit = 20,
@@ -47,24 +75,33 @@ export async function getNotifications({
   try {
     const user = await requireUser();
 
-    return await prisma.notification.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-    });
+    return getCachedNotificationsDbData(user.id, limit);
   } catch (error) {
     console.error("Failed to get notifications:", error);
     return [];
   }
 }
 
+async function fetchUnreadCountDbData({ userId }: { userId: string }) {
+  return prisma.notification.count({
+    where: { userId, isRead: false },
+  });
+}
+
+const getCachedUnreadCountDbData = unstable_cache(
+  async (userId: string) => fetchUnreadCountDbData({ userId }),
+  ["user-unread-notifications-count-cache"],
+  {
+    revalidate: 30, // Cache for 30 seconds
+    tags: [cacheTags.notifications],
+  }
+);
+
 export async function getUnreadCount() {
   try {
     const user = await requireUser();
 
-    return await prisma.notification.count({
-      where: { userId: user.id, isRead: false },
-    });
+    return getCachedUnreadCountDbData(user.id);
   } catch (error) {
     console.error("Failed to get unread count:", error);
     return 0;
@@ -88,6 +125,7 @@ export async function markAsRead({ id }: { id: string }) {
       data: { isRead: true },
     });
 
+    revalidateTag(cacheTags.notifications, "");
     return { success: true };
   } catch (error) {
     console.error("Failed to mark notification as read:", error);
@@ -104,6 +142,7 @@ export async function markAllAsRead() {
       data: { isRead: true },
     });
 
+    revalidateTag(cacheTags.notifications, "");
     return { success: true };
   } catch (error) {
     console.error("Failed to mark all notifications as read:", error);
@@ -145,44 +184,51 @@ export async function sendCustomMessage(args: {
       if (user) targetUsers = [user];
     }
 
-    if (args.sendInApp) {
-      const adminMember = await prisma.member.findFirst({
-        where: { userId: adminUser.id },
-        select: { organizationId: true },
-      });
-      const defaultOrgId = adminMember?.organizationId;
-
-      await Promise.all(
-        targetUsers.map(async (u) => {
-          const targetMember = await prisma.member.findFirst({
-            where: { userId: u.id },
+    after(async () => {
+      try {
+        if (args.sendInApp) {
+          const adminMember = await prisma.member.findFirst({
+            where: { userId: adminUser.id },
             select: { organizationId: true },
           });
-          const orgId = targetMember?.organizationId || defaultOrgId;
+          const defaultOrgId = adminMember?.organizationId;
 
-          if (!orgId) return;
+          await Promise.all(
+            targetUsers.map(async (u) => {
+              const targetMember = await prisma.member.findFirst({
+                where: { userId: u.id },
+                select: { organizationId: true },
+              });
+              const orgId = targetMember?.organizationId || defaultOrgId;
 
-          return prisma.notification.create({
-            data: {
-              userId: u.id,
-              orgId: orgId,
-              type: "custom_message",
-              title: args.title,
-              message: args.message,
-              linkUrl: args.linkUrl || null,
-              isRead: false,
-            },
-          });
-        }),
-      );
-    }
+              if (!orgId) return;
 
-    if (args.sendEmail) {
-      console.log(
-        "Send email requested for users:",
-        targetUsers.map((u) => u.email),
-      );
-    }
+              return prisma.notification.create({
+                data: {
+                  userId: u.id,
+                  orgId: orgId,
+                  type: "custom_message",
+                  title: args.title,
+                  message: args.message,
+                  linkUrl: args.linkUrl || null,
+                  isRead: false,
+                },
+              });
+            }),
+          );
+          revalidateTag(cacheTags.notifications, "");
+        }
+
+        if (args.sendEmail) {
+          console.log(
+            "Send email requested for users:",
+            targetUsers.map((u) => u.email),
+          );
+        }
+      } catch (err) {
+        console.error("Error in sendCustomMessage background actions:", err);
+      }
+    });
 
     return { success: true };
   } catch (error) {

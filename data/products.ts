@@ -1,11 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { after } from "next/server";
 import type {
   ProductUpdateInput,
   ProductWhereInput,
 } from "@/app/generated/prisma/models";
 import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity, logProductMovement } from "./logging";
 
@@ -17,6 +19,110 @@ interface GetProductsArgs {
   search?: string;
   stockStatus?: string; // "all" | "active" | "inactive" | "out_of_stock" | "low_stock"
 }
+
+async function fetchProductsDbData({
+  orgId,
+  currentPage,
+  entriesPerPage,
+  categoryId,
+  search,
+  stockStatus,
+}: {
+  orgId: string;
+  currentPage: number;
+  entriesPerPage: number;
+  categoryId?: string;
+  search?: string;
+  stockStatus: string;
+}) {
+  // Fetch organization settings for threshold
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { lowStockThreshold: true },
+  });
+  const lowStockThreshold = org?.lowStockThreshold ?? 50;
+
+  const where: ProductWhereInput = { orgId };
+
+  // Stock status mapping to isActive and quantity ranges
+  if (stockStatus === "active") {
+    where.isActive = true;
+  } else if (stockStatus === "inactive") {
+    where.isActive = false;
+  } else if (stockStatus === "out_of_stock") {
+    where.isActive = true;
+    where.quantity = 0;
+  } else if (stockStatus === "low_stock") {
+    where.isActive = true;
+    where.quantity = {
+      gt: 0,
+      lte: lowStockThreshold,
+    };
+  }
+
+  // Category filter
+  if (categoryId && categoryId !== "all") {
+    where.categoryId = categoryId;
+  }
+
+  // Search filter
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { sku: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const skip = (currentPage - 1) * entriesPerPage;
+  const take = entriesPerPage;
+
+  const [totalCount, products] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { name: "asc" },
+      include: {
+        category: true,
+      },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+  return {
+    success: true,
+    data: products,
+    totalPages,
+    totalCount,
+    lowStockThreshold,
+  };
+}
+
+const getCachedProductsDbData = unstable_cache(
+  async (
+    orgId: string,
+    currentPage: number,
+    entriesPerPage: number,
+    categoryId?: string,
+    search?: string,
+    stockStatus?: string,
+  ) =>
+    fetchProductsDbData({
+      orgId,
+      currentPage,
+      entriesPerPage,
+      categoryId,
+      search,
+      stockStatus: stockStatus || "all",
+    }),
+  ["products-list-cache"],
+  {
+    revalidate: 20, // Cache for 20 seconds
+    tags: [cacheTags.products],
+  },
+);
 
 export async function getProducts({
   orgId,
@@ -39,69 +145,14 @@ export async function getProducts({
       };
     }
 
-    // Fetch organization settings for threshold
-    const org = await prisma.organization.findUnique({
-      where: { id: orgId },
-      select: { lowStockThreshold: true },
-    });
-    const lowStockThreshold = org?.lowStockThreshold ?? 50;
-
-    const where: ProductWhereInput = { orgId };
-
-    // Stock status mapping to isActive and quantity ranges
-    if (stockStatus === "active") {
-      where.isActive = true;
-    } else if (stockStatus === "inactive") {
-      where.isActive = false;
-    } else if (stockStatus === "out_of_stock") {
-      where.isActive = true;
-      where.quantity = 0;
-    } else if (stockStatus === "low_stock") {
-      where.isActive = true;
-      where.quantity = {
-        gt: 0,
-        lte: lowStockThreshold,
-      };
-    }
-
-    // Category filter
-    if (categoryId && categoryId !== "all") {
-      where.categoryId = categoryId;
-    }
-
-    // Search filter
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { sku: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    const skip = (currentPage - 1) * entriesPerPage;
-    const take = entriesPerPage;
-
-    const [totalCount, products] = await Promise.all([
-      prisma.product.count({ where }),
-      prisma.product.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { name: "asc" },
-        include: {
-          category: true,
-        },
-      }),
-    ]);
-
-    const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-    return {
-      success: true,
-      data: products,
-      totalPages,
-      totalCount,
-      lowStockThreshold,
-    };
+    return getCachedProductsDbData(
+      orgId,
+      currentPage,
+      entriesPerPage,
+      categoryId,
+      search,
+      stockStatus,
+    );
   } catch (error) {
     console.error("Database error in getProducts:", error);
     return {
@@ -188,28 +239,34 @@ export async function createProduct(values: {
       },
     });
 
-    // Log activity and initial movement
-    await logActivity({
-      orgId: values.orgId,
-      userId,
-      action: "create",
-      entityType: "product",
-      entityId: product.id,
-      description: `Created product "${values.name}" (SKU: ${values.sku})`,
-    });
+    after(async () => {
+      try {
+        await logActivity({
+          orgId: values.orgId,
+          userId,
+          action: "create",
+          entityType: "product",
+          entityId: product.id,
+          description: `Created product "${values.name}" (SKU: ${values.sku})`,
+        });
 
-    await logProductMovement({
-      orgId: values.orgId,
-      productId: product.id,
-      userId,
-      movementType: "initial",
-      quantityChange: values.quantity,
-      quantityBefore: 0,
-      quantityAfter: values.quantity,
-      reason: "Initial stock on product creation",
+        await logProductMovement({
+          orgId: values.orgId,
+          productId: product.id,
+          userId,
+          movementType: "initial",
+          quantityChange: values.quantity,
+          quantityBefore: 0,
+          quantityAfter: values.quantity,
+          reason: "Initial stock on product creation",
+        });
+      } catch (err) {
+        console.error("Error logging product creation in background:", err);
+      }
     });
 
     revalidatePath(`/${values.orgId}/admin/products`);
+    revalidateTag(cacheTags.products, "");
 
     return { success: true, product };
   } catch (error) {
@@ -283,37 +340,43 @@ export async function updateProduct(values: {
       },
     });
 
-    // Log activity
-    await logActivity({
-      orgId: values.orgId,
-      userId,
-      action: "update",
-      entityType: "product",
-      entityId: values.id,
-      description: `Updated product "${values.name}" (SKU: ${values.sku})`,
-      changes: {
-        sku: { from: existingProduct.sku, to: values.sku },
-        name: { from: existingProduct.name, to: values.name },
-        quantity: { from: previousQuantity, to: values.quantity },
-        isActive: { from: existingProduct.isActive, to: values.isActive },
-      },
+    after(async () => {
+      try {
+        await logActivity({
+          orgId: values.orgId,
+          userId,
+          action: "update",
+          entityType: "product",
+          entityId: values.id,
+          description: `Updated product "${values.name}" (SKU: ${values.sku})`,
+          changes: {
+            sku: { from: existingProduct.sku, to: values.sku },
+            name: { from: existingProduct.name, to: values.name },
+            quantity: { from: previousQuantity, to: values.quantity },
+            isActive: { from: existingProduct.isActive, to: values.isActive },
+          },
+        });
+
+        // Log product movement if quantity changed
+        if (previousQuantity !== values.quantity) {
+          await logProductMovement({
+            orgId: values.orgId,
+            productId: values.id,
+            userId,
+            movementType: "adjustment",
+            quantityChange: values.quantity - previousQuantity,
+            quantityBefore: previousQuantity,
+            quantityAfter: values.quantity,
+            reason: "Manual stock adjustment",
+          });
+        }
+      } catch (err) {
+        console.error("Error logging product update in background:", err);
+      }
     });
 
-    // Log product movement if quantity changed
-    if (previousQuantity !== values.quantity) {
-      await logProductMovement({
-        orgId: values.orgId,
-        productId: values.id,
-        userId,
-        movementType: "adjustment",
-        quantityChange: values.quantity - previousQuantity,
-        quantityBefore: previousQuantity,
-        quantityAfter: values.quantity,
-        reason: "Manual stock adjustment",
-      });
-    }
-
     revalidatePath(`/${values.orgId}/admin/products`);
+    revalidateTag(cacheTags.products, "");
 
     return { success: true, product };
   } catch (error) {
@@ -340,17 +403,24 @@ export async function deleteProduct({ id }: { id: string }) {
       where: { id },
     });
 
-    // Log activity
-    await logActivity({
-      orgId: product.orgId,
-      userId,
-      action: "delete",
-      entityType: "product",
-      entityId: id,
-      description: `Deleted product "${product.name}" (SKU: ${product.sku})`,
+    after(async () => {
+      try {
+        await logActivity({
+          orgId: product.orgId,
+          userId,
+          action: "delete",
+          entityType: "product",
+          entityId: id,
+          description:
+            `Deleted product "${product.name}" (SKU: ${product.sku})`,
+        });
+      } catch (err) {
+        console.error("Error logging product deletion in background:", err);
+      }
     });
 
     revalidatePath(`/${product.orgId}/admin/products`);
+    revalidateTag(cacheTags.products, "");
 
     return { success: true };
   } catch (error) {
@@ -478,13 +548,15 @@ export async function bulkCreateProducts({
           row: rowNum,
           sku: row.sku,
           success: false,
-          error:
-            err instanceof Error ? err.message : "Failed to create product",
+          error: err instanceof Error
+            ? err.message
+            : "Failed to create product",
         });
       }
     }
 
     revalidatePath(`/${orgId}/admin/products`);
+    revalidateTag(cacheTags.products, "");
 
     return results;
   } catch (error) {
@@ -560,12 +632,14 @@ export async function bulkUpdateProducts({
         const updateData: ProductUpdateInput = {};
 
         if (row.name !== undefined) updateData.name = row.name;
-        if (categoryId !== undefined)
+        if (categoryId !== undefined) {
           updateData.category = { connect: { id: categoryId } };
+        }
         if (row.weight !== undefined) updateData.weight = row.weight;
         if (row.quantity !== undefined) updateData.quantity = row.quantity;
-        if (row.description !== undefined)
+        if (row.description !== undefined) {
           updateData.description = row.description;
+        }
         if (row.imgUrl !== undefined) updateData.imgUrl = row.imgUrl;
         if (row.isActive !== undefined) updateData.isActive = row.isActive;
 
@@ -583,7 +657,8 @@ export async function bulkUpdateProducts({
           action: "update",
           entityType: "product",
           entityId: existingProduct.id,
-          description: `Bulk Updated product "${product.name}" (SKU: ${product.sku})`,
+          description:
+            `Bulk Updated product "${product.name}" (SKU: ${product.sku})`,
         });
 
         // Log movement if quantity changed
@@ -610,13 +685,15 @@ export async function bulkUpdateProducts({
           row: rowNum,
           sku: row.sku,
           success: false,
-          error:
-            err instanceof Error ? err.message : "Failed to update product",
+          error: err instanceof Error
+            ? err.message
+            : "Failed to update product",
         });
       }
     }
 
     revalidatePath(`/${orgId}/admin/products`);
+    revalidateTag(cacheTags.products, "");
 
     return results;
   } catch (error) {

@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { after } from "next/server";
 import type {
   Order,
   OrderHistory,
@@ -16,6 +17,7 @@ import {
   requireSuperAdmin,
   requireUser,
 } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { sendOrderEmail } from "./email";
 import { createNotification } from "./notifications";
@@ -254,51 +256,60 @@ export async function createOrder(args: {
       return order;
     });
 
-    // Create notification
-    await createNotification({
-      userId,
-      orgId: args.orgId,
-      type: "order_placed",
-      title: "Order Placed",
-      message: `Your order ${reference} has been placed successfully.`,
-      linkUrl: `/${args.orgId}/orders/${result.id}`,
-      relatedEntityId: result.id,
-    });
+    after(async () => {
+      try {
+        // Create notification
+        await createNotification({
+          userId,
+          orgId: args.orgId,
+          type: "order_placed",
+          title: "Order Placed",
+          message: `Your order ${reference} has been placed successfully.`,
+          linkUrl: `/${args.orgId}/orders/${result.id}`,
+          relatedEntityId: result.id,
+        });
 
-    // Fetch order items with product details for email template
-    const dbOrderItems = await prisma.orderItem.findMany({
-      where: { orderId: result.id },
-      include: { product: true },
-    });
+        // Fetch order items with product details for email template
+        const dbOrderItems = await prisma.orderItem.findMany({
+          where: { orderId: result.id },
+          include: { product: true },
+        });
 
-    const itemsForEmail = dbOrderItems.map((i) => ({
-      name: i.product.name,
-      sku: i.product.sku,
-      quantity: i.quantity,
-    }));
+        const itemsForEmail = dbOrderItems.map((i) => ({
+          name: i.product.name,
+          sku: i.product.sku,
+          quantity: i.quantity,
+        }));
 
-    // Trigger order confirmation email asynchronously
-    sendOrderEmail({
-      to: loggedInUser.email,
-      reference,
-      status: "pending",
-      fullname: args.fullname,
-      address1: args.address1,
-      address2: args.address2 || undefined,
-      town: args.town,
-      city: args.city || undefined,
-      postcode: args.postcode,
-      country: args.country,
-      deliveryDate,
-      weight: args.weight,
-      items: itemsForEmail,
-      orderUrl: `${process.env.SITE_URL}/${args.orgId}/orders/${result.id}`,
-    }).catch((err) => {
-      console.error("Error sending order email:", err);
+        // Trigger order confirmation email
+        await sendOrderEmail({
+          to: loggedInUser.email,
+          reference,
+          status: "pending",
+          fullname: args.fullname,
+          address1: args.address1,
+          address2: args.address2 || undefined,
+          town: args.town,
+          city: args.city || undefined,
+          postcode: args.postcode,
+          country: args.country,
+          deliveryDate,
+          weight: args.weight,
+          items: itemsForEmail,
+          orderUrl: `${process.env.SITE_URL}/${args.orgId}/orders/${result.id}`,
+        });
+      } catch (err) {
+        console.error("Error in after background actions:", err);
+      }
     });
 
     revalidatePath(`/${args.orgId}/orders`);
     revalidatePath(`/${args.orgId}/products`);
+    revalidateTag(cacheTags.dashboard, "");
+    revalidateTag(cacheTags.products, "");
+    revalidateTag(cacheTags.orders, "");
+    revalidateTag(cacheTags.adminOrders, "");
+    revalidateTag(cacheTags.addresses, "");
 
     return { success: true, orderId: result.id };
   } catch (error) {
@@ -307,6 +318,45 @@ export async function createOrder(args: {
   }
 }
 
+async function fetchOrdersDbData({
+  orgId,
+  userId,
+  isAdmin,
+}: {
+  orgId: string;
+  userId: string;
+  isAdmin: boolean;
+}) {
+  return prisma.order.findMany({
+    where: {
+      orgId,
+      ...(isAdmin ? {} : { userId }),
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      user: true,
+      organization: true,
+      items: {
+        include: {
+          product: true,
+        },
+      },
+    },
+  });
+}
+
+const getCachedOrdersDbData = unstable_cache(
+  async (orgId: string, userId: string, isAdmin: boolean) =>
+    fetchOrdersDbData({ orgId, userId, isAdmin }),
+  ["normal-orders-cache"],
+  {
+    revalidate: 60, // Cache for 1 minute
+    tags: [cacheTags.orders],
+  },
+);
+
 export async function getOrders({ orgId }: { orgId: string }) {
   try {
     const user = await requireUser({ shouldThrow: false });
@@ -314,26 +364,7 @@ export async function getOrders({ orgId }: { orgId: string }) {
 
     const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
 
-    const orders = await prisma.order.findMany({
-      where: {
-        orgId,
-        ...(isAdmin ? {} : { userId: user.id }),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        user: true,
-        organization: true,
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
-    });
-
-    return orders;
+    return getCachedOrdersDbData(orgId, user.id, isAdmin);
   } catch (error) {
     console.error("Error in getOrders:", error);
     return [];
@@ -476,6 +507,10 @@ export async function updateOrder(args: {
 
     await prisma.order.update({ where: { id, orgId }, data });
     revalidatePath(`/${orgId}/orders/${id}`);
+    revalidateTag(cacheTags.dashboard, "");
+    revalidateTag(cacheTags.products, "");
+    revalidateTag(cacheTags.orders, "");
+    revalidateTag(cacheTags.adminOrders, "");
     return { success: true };
   } catch (error) {
     console.error("Error in updateOrder:", error);
@@ -544,6 +579,10 @@ export async function updateOrderTracking(args: {
     });
 
     revalidatePath(`/${orgId}/orders/${orderId}`);
+    revalidateTag(cacheTags.dashboard, "");
+    revalidateTag(cacheTags.products, "");
+    revalidateTag(cacheTags.orders, "");
+    revalidateTag(cacheTags.adminOrders, "");
     return { success: true };
   } catch (error) {
     console.error("Error in updateOrderTracking:", error);
@@ -658,6 +697,10 @@ export async function updateOrderItem({
     ]);
 
     revalidatePath(`/${orgId}/orders/${orderId}`);
+    revalidateTag(cacheTags.dashboard, "");
+    revalidateTag(cacheTags.products, "");
+    revalidateTag(cacheTags.orders, "");
+    revalidateTag(cacheTags.adminOrders, "");
     return { success: true };
   } catch (error) {
     throw error instanceof Error ? error : new Error("Failed to update item");
@@ -703,6 +746,10 @@ export async function addOrderItem({
     ]);
 
     revalidatePath(`/${orgId}/orders/${orderId}`);
+    revalidateTag(cacheTags.dashboard, "");
+    revalidateTag(cacheTags.products, "");
+    revalidateTag(cacheTags.orders, "");
+    revalidateTag(cacheTags.adminOrders, "");
     return { success: true };
   } catch (error) {
     throw error instanceof Error ? error : new Error("Failed to add item");
@@ -739,6 +786,10 @@ export async function removeOrderItem({
     ]);
 
     revalidatePath(`/${orgId}/orders/${orderId}`);
+    revalidateTag(cacheTags.dashboard, "");
+    revalidateTag(cacheTags.products, "");
+    revalidateTag(cacheTags.orders, "");
+    revalidateTag(cacheTags.adminOrders, "");
     return { success: true };
   } catch (error) {
     throw error instanceof Error ? error : new Error("Failed to remove item");
@@ -768,46 +819,52 @@ export async function sendOrderNotification({
 
     const toEmail = recipientEmail ?? order.user?.email ?? order.email;
 
-    if (doSendEmail && toEmail) {
-      await sendOrderEmail({
-        to: toEmail,
-        reference: order.reference,
-        status: order.status,
-        fullname: order.fullname,
-        address1: order.address1,
-        address2: order.address2 ?? undefined,
-        town: order.town,
-        city: order.city ?? undefined,
-        postcode: order.postcode,
-        country: order.country,
-        deliveryDate: order.deliveryDate,
-        weight: order.weight,
-        courier: order.courier ?? undefined,
-        trackingNumber: order.trackingNumber ?? undefined,
-        service: order.service ?? undefined,
-        signedBy: order.signedBy ?? undefined,
-        deliveredAt: order.deliveredAt ?? undefined,
-        items: order.items.map((i) => ({
-          name: i.product.name,
-          sku: i.product.sku,
-          quantity: i.quantity,
-        })),
-        orderUrl: `${process.env.SITE_URL}/${order.orgId}/orders/${order.id}`,
-      });
-    }
+    after(async () => {
+      try {
+        if (doSendEmail && toEmail) {
+          await sendOrderEmail({
+            to: toEmail,
+            reference: order.reference,
+            status: order.status,
+            fullname: order.fullname,
+            address1: order.address1,
+            address2: order.address2 ?? undefined,
+            town: order.town,
+            city: order.city ?? undefined,
+            postcode: order.postcode,
+            country: order.country,
+            deliveryDate: order.deliveryDate,
+            weight: order.weight,
+            courier: order.courier ?? undefined,
+            trackingNumber: order.trackingNumber ?? undefined,
+            service: order.service ?? undefined,
+            signedBy: order.signedBy ?? undefined,
+            deliveredAt: order.deliveredAt ?? undefined,
+            items: order.items.map((i) => ({
+              name: i.product.name,
+              sku: i.product.sku,
+              quantity: i.quantity,
+            })),
+            orderUrl: `${process.env.SITE_URL}/${order.orgId}/orders/${order.id}`,
+          });
+        }
 
-    if (sendNotification && order.userId) {
-      await createNotification({
-        userId: order.userId,
-        orgId: order.orgId,
-        type: "order_status_update",
-        title: "Order Update",
-        message:
-          `Your order ${order.reference} has been updated (${order.status}).`,
-        linkUrl: `/${order.orgId}/orders/${order.id}`,
-        relatedEntityId: order.id,
-      });
-    }
+        if (sendNotification && order.userId) {
+          await createNotification({
+            userId: order.userId,
+            orgId: order.orgId,
+            type: "order_status_update",
+            title: "Order Update",
+            message:
+              `Your order ${order.reference} has been updated (${order.status}).`,
+            linkUrl: `/${order.orgId}/orders/${order.id}`,
+            relatedEntityId: order.id,
+          });
+        }
+      } catch (err) {
+        console.error("Error in sendOrderNotification background actions:", err);
+      }
+    });
 
     return { success: true };
   } catch (error) {
@@ -831,6 +888,136 @@ interface GetAdminOrdersArgs {
   postcode?: string;
 }
 
+async function fetchAdminOrdersDbData({
+  orgId,
+  currentPage,
+  entriesPerPage,
+  status,
+  search,
+  startDate,
+  endDate,
+  courier,
+  reference,
+  fullname,
+  postcode,
+}: {
+  orgId: string;
+  currentPage: number;
+  entriesPerPage: number;
+  status?: string;
+  search?: string;
+  startDate?: number;
+  endDate?: number;
+  courier?: string;
+  reference?: string;
+  fullname?: string;
+  postcode?: string;
+}) {
+  const where: OrderWhereInput = {};
+
+  if (orgId && orgId !== "all") {
+    where.orgId = orgId;
+  }
+
+  if (status && status !== "all") {
+    where.status = status as OrderStatus;
+  }
+
+  if (search) {
+    where.OR = [
+      { reference: { contains: search, mode: "insensitive" } },
+      { fullname: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { postcode: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  if (reference) {
+    where.reference = { contains: reference, mode: "insensitive" };
+  }
+
+  if (fullname) {
+    where.fullname = { contains: fullname, mode: "insensitive" };
+  }
+
+  if (postcode) {
+    where.postcode = { contains: postcode, mode: "insensitive" };
+  }
+
+  if (courier && courier !== "all") {
+    where.courier = { contains: courier, mode: "insensitive" };
+  }
+
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) {
+      where.createdAt.gte = new Date(startDate);
+    }
+    if (endDate) {
+      where.createdAt.lte = new Date(endDate);
+    }
+  }
+
+  const skip = (currentPage - 1) * entriesPerPage;
+  const take = entriesPerPage;
+
+  const [totalCount, orders] = await Promise.all([
+    prisma.order.count({ where }),
+    prisma.order.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: true,
+      },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+  return {
+    success: true,
+    data: orders,
+    totalPages,
+    totalCount,
+  };
+}
+
+const getCachedAdminOrdersDbData = unstable_cache(
+  async (
+    orgId: string,
+    currentPage: number,
+    entriesPerPage: number,
+    status?: string,
+    search?: string,
+    startDate?: number,
+    endDate?: number,
+    courier?: string,
+    reference?: string,
+    fullname?: string,
+    postcode?: string,
+  ) =>
+    fetchAdminOrdersDbData({
+      orgId,
+      currentPage,
+      entriesPerPage,
+      status,
+      search,
+      startDate,
+      endDate,
+      courier,
+      reference,
+      fullname,
+      postcode,
+    }),
+  ["admin-orders-cache"],
+  {
+    revalidate: 20, // Cache for 20 seconds
+    tags: [cacheTags.adminOrders],
+  },
+);
+
 export async function getAdminOrders({
   orgId,
   currentPage = 1,
@@ -847,75 +1034,19 @@ export async function getAdminOrders({
   try {
     await requireSuperAdmin();
 
-    const where: OrderWhereInput = {};
-
-    if (orgId && orgId !== "all") {
-      where.orgId = orgId;
-    }
-
-    if (status && status !== "all") {
-      where.status = status as OrderStatus;
-    }
-
-    if (search) {
-      where.OR = [
-        { reference: { contains: search, mode: "insensitive" } },
-        { fullname: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-        { postcode: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    if (reference) {
-      where.reference = { contains: reference, mode: "insensitive" };
-    }
-
-    if (fullname) {
-      where.fullname = { contains: fullname, mode: "insensitive" };
-    }
-
-    if (postcode) {
-      where.postcode = { contains: postcode, mode: "insensitive" };
-    }
-
-    if (courier && courier !== "all") {
-      where.courier = { contains: courier, mode: "insensitive" };
-    }
-
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) {
-        where.createdAt.gte = new Date(startDate);
-      }
-      if (endDate) {
-        where.createdAt.lte = new Date(endDate);
-      }
-    }
-
-    const skip = (currentPage - 1) * entriesPerPage;
-    const take = entriesPerPage;
-
-    const [totalCount, orders] = await Promise.all([
-      prisma.order.count({ where }),
-      prisma.order.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { createdAt: "desc" },
-        include: {
-          user: true,
-        },
-      }),
-    ]);
-
-    const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-    return {
-      success: true,
-      data: orders,
-      totalPages,
-      totalCount,
-    };
+    return getCachedAdminOrdersDbData(
+      orgId,
+      currentPage,
+      entriesPerPage,
+      status,
+      search,
+      startDate,
+      endDate,
+      courier,
+      reference,
+      fullname,
+      postcode,
+    );
   } catch (error) {
     console.error("Database error in getAdminOrders:", error);
     return {

@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type { InvoiceCharge, Order } from "@/app/generated/prisma/client";
 import type { TransactionClient } from "@/app/generated/prisma/internal/prismaNamespace";
 import type { InvoiceWhereInput } from "@/app/generated/prisma/models";
-import { getSession, requireSuperAdmin } from "@/lib/auth/get-session";
+import { requireSuperAdmin } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import type { InvoiceStatus } from "@/types/globals";
 
@@ -92,7 +93,7 @@ async function calculateAndWriteInvoiceTotals(
   });
 }
 
-export async function getPaginatedInvoices({
+async function fetchPaginatedInvoicesDbData({
   orgId,
   status,
   dateFrom,
@@ -107,7 +108,6 @@ export async function getPaginatedInvoices({
   currentPage: number;
   pageSize: number;
 }) {
-  await requireSuperAdmin();
   const where: InvoiceWhereInput = { orgId };
   if (status && status !== "all") {
     where.status = status as InvoiceStatus;
@@ -138,6 +138,61 @@ export async function getPaginatedInvoices({
   }));
 }
 
+const getCachedPaginatedInvoicesDbData = unstable_cache(
+  async (
+    orgId: string,
+    status: string | undefined,
+    dateFrom: number | undefined,
+    dateTo: number | undefined,
+    currentPage: number,
+    pageSize: number,
+  ) =>
+    fetchPaginatedInvoicesDbData({
+      orgId,
+      status,
+      dateFrom,
+      dateTo,
+      currentPage,
+      pageSize,
+    }),
+  ["invoices-list-cache"],
+  {
+    revalidate: 20, // Cache for 20 seconds
+    tags: [cacheTags.invoices],
+  },
+);
+
+export async function getPaginatedInvoices({
+  orgId,
+  status,
+  dateFrom,
+  dateTo,
+  currentPage,
+  pageSize,
+}: {
+  orgId: string;
+  status?: string;
+  dateFrom?: number;
+  dateTo?: number;
+  currentPage: number;
+  pageSize: number;
+}) {
+  try {
+    await requireSuperAdmin();
+    return getCachedPaginatedInvoicesDbData(
+      orgId,
+      status,
+      dateFrom,
+      dateTo,
+      currentPage,
+      pageSize,
+    );
+  } catch (error) {
+    console.error("Database error in getPaginatedInvoices:", error);
+    return [];
+  }
+}
+
 export async function getInvoiceCount({
   orgId,
   status,
@@ -163,8 +218,7 @@ export async function getInvoiceCount({
   return await prisma.invoice.count({ where });
 }
 
-export async function getInvoiceDetails({ invoiceId }: { invoiceId: string }) {
-  await requireSuperAdmin();
+async function fetchInvoiceDetailsDbData({ invoiceId }: { invoiceId: string }) {
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     include: {
@@ -190,6 +244,25 @@ export async function getInvoiceDetails({ invoiceId }: { invoiceId: string }) {
   };
 }
 
+const getCachedInvoiceDetailsDbData = unstable_cache(
+  async (invoiceId: string) => fetchInvoiceDetailsDbData({ invoiceId }),
+  ["invoice-details-cache"],
+  {
+    revalidate: 20, // Cache for 20 seconds
+    tags: [cacheTags.invoices],
+  },
+);
+
+export async function getInvoiceDetails({ invoiceId }: { invoiceId: string }) {
+  try {
+    await requireSuperAdmin();
+    return getCachedInvoiceDetailsDbData(invoiceId);
+  } catch (error) {
+    console.error("Database error in getInvoiceDetails:", error);
+    return null;
+  }
+}
+
 export async function updateInvoiceStatus({
   invoiceId,
   status,
@@ -208,6 +281,7 @@ export async function updateInvoiceStatus({
     },
   });
   revalidatePath(`/${invoice.orgId}/admin/invoices/${invoiceId}`);
+  revalidateTag(cacheTags.invoices, "");
   return { success: true };
 }
 
@@ -226,6 +300,7 @@ export async function removeInvoiceCharge({ chargeId }: { chargeId: string }) {
   });
 
   revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
+  revalidateTag(cacheTags.invoices, "");
   return { success: true };
 }
 
@@ -252,6 +327,7 @@ export async function addOrderToInvoice({
   });
 
   revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
+  revalidateTag(cacheTags.invoices, "");
   return { success: true };
 }
 
@@ -278,6 +354,7 @@ export async function removeOrderFromInvoice({
   });
 
   revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
+  revalidateTag(cacheTags.invoices, "");
   return { success: true };
 }
 
@@ -307,6 +384,7 @@ export async function updateOrderInvoiceCost({
   if (order.invoiceId) {
     revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
   }
+  revalidateTag(cacheTags.invoices, "");
   return { success: true };
 }
 
@@ -332,7 +410,7 @@ export async function createInvoice(args: {
   invoiceNotes?: string;
   dueDate?: number;
 }) {
-  const user = await requireSuperAdmin();
+  await requireSuperAdmin();
 
   // Validate all orders belong to org and are processing or above
   for (const orderId of args.orderIds) {
@@ -425,6 +503,7 @@ export async function createInvoice(args: {
   });
 
   revalidatePath(`/${args.orgId}/admin/invoices`);
+  revalidateTag(cacheTags.invoices, "");
   return invoiceId;
 }
 
@@ -437,7 +516,7 @@ export async function addInvoiceCharge(args: {
   vat: number;
   chargeDate: number;
 }) {
-  const user = await requireSuperAdmin();
+  await requireSuperAdmin();
 
   const invoice = await prisma.invoice.findUnique({
     where: { id: args.invoiceId },
@@ -470,6 +549,7 @@ export async function addInvoiceCharge(args: {
   });
 
   revalidatePath(`/${invoice.orgId}/admin/invoices/${args.invoiceId}`);
+  revalidateTag(cacheTags.invoices, "");
   return chargeId;
 }
 
@@ -481,7 +561,7 @@ export async function updateInvoiceCharge(args: {
   vat: number;
   chargeDate: number;
 }) {
-  const user = await requireSuperAdmin();
+  await requireSuperAdmin();
 
   const charge = await prisma.invoiceCharge.findUnique({
     where: { id: args.chargeId },
@@ -504,5 +584,6 @@ export async function updateInvoiceCharge(args: {
   });
 
   revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
+  revalidateTag(cacheTags.invoices, "");
   return { success: true };
 }

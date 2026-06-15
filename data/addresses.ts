@@ -1,23 +1,44 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { requireUser } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
+
+async function fetchAddressesDbData({
+  orgId,
+  userId,
+}: {
+  orgId: string;
+  userId: string;
+}) {
+  return prisma.address.findMany({
+    where: {
+      orgId,
+      userId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+const getCachedAddressesDbData = unstable_cache(
+  async (orgId: string, userId: string) =>
+    fetchAddressesDbData({ orgId, userId }),
+  ["user-addresses-cache"],
+  {
+    revalidate: 120, // Cache for 2 minutes
+    tags: [cacheTags.addresses],
+  },
+);
 
 export async function getAddresses({ orgId }: { orgId: string }) {
   try {
     const user = await requireUser();
 
-    return await prisma.address.findMany({
-      where: {
-        orgId,
-        userId: user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    return getCachedAddressesDbData(orgId, user.id);
   } catch (error) {
     console.error("Error fetching addresses:", error);
     return [];
@@ -67,6 +88,7 @@ export async function createAddress(args: {
     });
 
     revalidatePath(`/${args.orgId}/checkout`);
+    revalidateTag(cacheTags.addresses, "");
 
     return address.id;
   } catch (error) {

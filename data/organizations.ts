@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { headers } from "next/headers";
 import type {
   OrganizationCreateInput,
@@ -8,6 +8,7 @@ import type {
 } from "@/app/generated/prisma/models";
 import { auth, type Organization } from "@/auth";
 import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
@@ -18,6 +19,121 @@ interface GetOrganizationsArgs {
   query?: string;
 }
 
+async function fetchOrganizationsDbData({
+  userRole,
+  userId,
+  currentPage,
+  entriesPerPage,
+  isActive,
+  query,
+}: {
+  userRole: string;
+  userId: string;
+  currentPage: number;
+  entriesPerPage: number;
+  isActive: boolean;
+  query?: string;
+}) {
+  let totalCount = 0;
+  let organizations: any[] = [];
+
+  if (userRole === "superAdmin") {
+    const whereClause: OrganizationWhereInput = {
+      isActive: isActive ? true : undefined,
+      ...(query
+        ? {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { slug: { contains: query, mode: "insensitive" } },
+          ],
+        }
+        : {}),
+    };
+
+    const [count, orgs] = await Promise.all([
+      prisma.organization.count({
+        where: whereClause,
+      }),
+      prisma.organization.findMany({
+        where: whereClause,
+        take: entriesPerPage,
+        skip: (currentPage - 1) * entriesPerPage,
+        orderBy: { id: "asc" },
+      }),
+    ]);
+    totalCount = count;
+    organizations = orgs;
+  } else {
+    const members = await prisma.member.findMany({
+      where: {
+        userId: userId,
+        organization: {
+          isActive: isActive ? true : undefined,
+          ...(query
+            ? {
+              OR: [
+                { name: { contains: query, mode: "insensitive" } },
+                { slug: { contains: query, mode: "insensitive" } },
+              ],
+            }
+            : {}),
+        },
+      },
+      include: { organization: true },
+    });
+    organizations = members.map((m) => m.organization);
+    totalCount = organizations.length;
+    organizations = organizations.slice(
+      (currentPage - 1) * entriesPerPage,
+      currentPage * entriesPerPage,
+    );
+  }
+
+  const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+  const mappedOrganizations = organizations.map((org) => ({
+    ...org,
+    settings: {
+      primaryColor: org.primaryColor ?? "#0056D2",
+      secondaryColor: org.secondaryColor ?? null,
+      fontFamily: org.fontFamily ?? "",
+      welcomeMessage: org.welcomeMessage ?? "",
+      lowStockThreshold: org.lowStockThreshold ?? 50,
+    },
+  }));
+
+  return {
+    success: true,
+    data: mappedOrganizations,
+    totalPages,
+    totalCount,
+  };
+}
+
+const getCachedOrganizationsDbData = unstable_cache(
+  async (
+    userRole: string,
+    userId: string,
+    currentPage: number,
+    entriesPerPage: number,
+    isActive: boolean,
+    query?: string,
+  ) =>
+    fetchOrganizationsDbData({
+      userRole,
+      userId,
+      currentPage,
+      entriesPerPage,
+      isActive,
+      query,
+    }),
+  ["organizations-list-cache"],
+  {
+    revalidate: 20, // Cache for 20 seconds
+    tags: [cacheTags.organizations],
+  },
+);
+
 export async function getOrganizations({
   currentPage = 1,
   entriesPerPage = 20,
@@ -27,84 +143,14 @@ export async function getOrganizations({
   try {
     const user = await requireUser();
 
-    let totalCount = 0;
-    let organizations = [];
-
-    if (user.role === "superAdmin") {
-      const whereClause: OrganizationWhereInput = {
-        isActive: isActive ? true : undefined,
-        ...(query
-          ? {
-              OR: [
-                { name: { contains: query, mode: "insensitive" } },
-                { slug: { contains: query, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      };
-
-      // Optimization: Run the count and data fetch concurrently
-      const [count, orgs] = await Promise.all([
-        prisma.organization.count({
-          where: whereClause,
-        }),
-        prisma.organization.findMany({
-          where: whereClause,
-          take: entriesPerPage,
-          skip: (currentPage - 1) * entriesPerPage,
-          orderBy: { id: "asc" },
-        }),
-      ]);
-      totalCount = count;
-      organizations = orgs;
-    } else {
-      // Regular user / Org Admin can only see their own organizations
-      const members = await prisma.member.findMany({
-        where: {
-          userId: user.id,
-          organization: {
-            isActive: isActive ? true : undefined,
-            ...(query
-              ? {
-                  OR: [
-                    { name: { contains: query, mode: "insensitive" } },
-                    { slug: { contains: query, mode: "insensitive" } },
-                  ],
-                }
-              : {}),
-          },
-        },
-        include: { organization: true },
-      });
-      organizations = members.map((m) => m.organization);
-      totalCount = organizations.length;
-      // In-memory pagination for member organizations
-      organizations = organizations.slice(
-        (currentPage - 1) * entriesPerPage,
-        currentPage * entriesPerPage,
-      );
-    }
-
-    // Calculate Total Pages
-    const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-    const mappedOrganizations = organizations.map((org) => ({
-      ...org,
-      settings: {
-        primaryColor: org.primaryColor ?? "#0056D2",
-        secondaryColor: org.secondaryColor ?? null,
-        fontFamily: org.fontFamily ?? "",
-        welcomeMessage: org.welcomeMessage ?? "",
-        lowStockThreshold: org.lowStockThreshold ?? 50,
-      },
-    }));
-
-    return {
-      success: true,
-      data: mappedOrganizations,
-      totalPages,
-      totalCount,
-    };
+    return getCachedOrganizationsDbData(
+      user.role ?? "",
+      user.id,
+      currentPage,
+      entriesPerPage,
+      isActive,
+      query,
+    );
   } catch (error) {
     console.error("Database error in getOrganizations:", error);
 
@@ -121,7 +167,7 @@ export async function getOrganizations({
 
 export async function getOrganizationById({ id }: { id: string }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const organization = await prisma.organization.findUnique({
       where: { id },
@@ -195,6 +241,7 @@ export async function createOrganization(
       description: `Created organization "${data.name}"`,
     });
 
+    revalidateTag(cacheTags.organizations, "");
     return org.id;
   } catch (error) {
     console.error("Error in createOrganization:", error);
@@ -213,11 +260,11 @@ export async function updateOrganization(
     const { id, name, ...rest } = data;
     const slug = name
       ? name
-          .toLowerCase()
-          .trim()
-          .replace(/[^\w\s-]/g, "")
-          .replace(/[\s_-]+/g, "-")
-          .replace(/^-+|-+$/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "")
       : undefined;
 
     const existingOrg = await prisma.organization.findUnique({
@@ -250,20 +297,20 @@ export async function updateOrganization(
       entityId: id,
       description: `Updated organization "${name || existingOrg.name}"`,
       changes: {
-        name:
-          name !== undefined ? { from: existingOrg.name, to: name } : undefined,
-        isActive:
-          data.isActive !== undefined
-            ? { from: existingOrg.isActive, to: data.isActive }
-            : undefined,
-        prefix:
-          data.prefix !== undefined
-            ? { from: existingOrg.prefix, to: data.prefix }
-            : undefined,
+        name: name !== undefined
+          ? { from: existingOrg.name, to: name }
+          : undefined,
+        isActive: data.isActive !== undefined
+          ? { from: existingOrg.isActive, to: data.isActive }
+          : undefined,
+        prefix: data.prefix !== undefined
+          ? { from: existingOrg.prefix, to: data.prefix }
+          : undefined,
       },
     });
 
     revalidatePath("/[orgId]/admin/orgs");
+    revalidateTag(cacheTags.organizations, "");
 
     return { success: true };
   } catch (error) {
@@ -298,6 +345,7 @@ export async function deleteOrganization({ id }: { id: string }) {
       description: `Deleted organization "${deleted.organization.name}"`,
     });
 
+    revalidateTag(cacheTags.organizations, "");
     return { success: true };
   } catch (error) {
     console.error("Error in deleteOrganization:", error);

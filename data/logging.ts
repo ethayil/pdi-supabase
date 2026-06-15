@@ -1,12 +1,13 @@
 "use server";
 
+import { unstable_cache } from "next/cache";
 import type {
   ActivityAction,
   MovementType,
-  OrderChangeType,
 } from "@/app/generated/prisma/client";
 import type { ActivityLogWhereInput } from "@/app/generated/prisma/models";
 import { getSession, requireSuperAdmin } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 
 interface GetLogsArgs {
@@ -20,7 +21,10 @@ interface GetLogsArgs {
   endDate?: number;
 }
 
-export type ActivityChanges = Record<string, { from: any; to: any } | undefined>;
+export type ActivityChanges = Record<
+  string,
+  { from: any; to: any } | undefined
+>;
 
 export async function logActivity(params: {
   orgId?: string | null;
@@ -45,7 +49,7 @@ export async function logActivity(params: {
         entityType: params.entityType,
         entityId: params.entityId,
         description: params.description,
-        changes: params.changes ? (params.changes as any) : undefined,
+        changes: params.changes ? (params.changes) : undefined,
       },
     });
     return log.id;
@@ -137,6 +141,115 @@ export async function logOrderChange(params: {
 }
 */
 
+async function fetchLogsDbData({
+  orgId,
+  currentPage,
+  entriesPerPage,
+  userSearch,
+  messageSearch,
+  entityType,
+  startDate,
+  endDate,
+}: {
+  orgId?: string;
+  currentPage: number;
+  entriesPerPage: number;
+  userSearch?: string;
+  messageSearch?: string;
+  entityType?: string;
+  startDate?: number;
+  endDate?: number;
+}) {
+  const where: ActivityLogWhereInput = {};
+  if (orgId && orgId !== "all") where.orgId = orgId;
+  if (entityType && entityType !== "all") where.entityType = entityType;
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) where.createdAt.gte = new Date(startDate);
+    if (endDate) where.createdAt.lte = new Date(endDate);
+  }
+  if (messageSearch) {
+    where.description = {
+      contains: messageSearch,
+      mode: "insensitive",
+    };
+  }
+  if (userSearch) {
+    where.user = {
+      OR: [
+        { name: { contains: userSearch, mode: "insensitive" } },
+        { email: { contains: userSearch, mode: "insensitive" } },
+      ],
+    };
+  }
+
+  const skip = (currentPage - 1) * entriesPerPage;
+  const take = entriesPerPage;
+
+  const [totalCount, logs] = await Promise.all([
+    prisma.activityLog.count({ where }),
+    prisma.activityLog.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: { name: true, email: true },
+        },
+        organization: {
+          select: { name: true },
+        },
+      },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+  const mappedLogs = logs.map((log) => ({
+    ...log,
+    userName: log.user?.name ?? (log.systemSource ? "System" : "Unknown User"),
+    userEmail: log.user?.email ??
+      (log.systemSource ? `Source: ${log.systemSource}` : "Unknown Email"),
+    orgName: log.organization?.name ?? "System",
+  }));
+
+  return {
+    success: true,
+    data: mappedLogs,
+    totalPages,
+    totalCount,
+  };
+}
+
+const getCachedLogsDbData = unstable_cache(
+  async (
+    orgId: string | undefined,
+    currentPage: number,
+    entriesPerPage: number,
+    userSearch?: string,
+    messageSearch?: string,
+    entityType?: string,
+    startDate?: number,
+    endDate?: number,
+  ) =>
+    fetchLogsDbData({
+      orgId,
+      currentPage,
+      entriesPerPage,
+      userSearch,
+      messageSearch,
+      entityType,
+      startDate,
+      endDate,
+    }),
+  ["activity-logs-cache"],
+  {
+    revalidate: 10, // Cache for 10 seconds
+    tags: [cacheTags.logs],
+  },
+);
+
 export async function getLogs({
   orgId,
   currentPage = 1,
@@ -148,70 +261,18 @@ export async function getLogs({
   endDate,
 }: GetLogsArgs = {}) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
-    const where: ActivityLogWhereInput = {};
-    if (orgId && orgId !== "all") where.orgId = orgId;
-    if (entityType && entityType !== "all") where.entityType = entityType;
-    if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt.gte = new Date(startDate);
-      if (endDate) where.createdAt.lte = new Date(endDate);
-    }
-    if (messageSearch) {
-      where.description = {
-        contains: messageSearch,
-        mode: "insensitive",
-      };
-    }
-    if (userSearch) {
-      where.user = {
-        OR: [
-          { name: { contains: userSearch, mode: "insensitive" } },
-          { email: { contains: userSearch, mode: "insensitive" } },
-        ],
-      };
-    }
-
-    const skip = (currentPage - 1) * entriesPerPage;
-    const take = entriesPerPage;
-
-    const [totalCount, logs] = await Promise.all([
-      prisma.activityLog.count({ where }),
-      prisma.activityLog.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { createdAt: "desc" },
-        include: {
-          user: {
-            select: { name: true, email: true },
-          },
-          organization: {
-            select: { name: true },
-          },
-        },
-      }),
-    ]);
-
-    const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-    const mappedLogs = logs.map((log) => ({
-      ...log,
-      userName:
-        log.user?.name ?? (log.systemSource ? "System" : "Unknown User"),
-      userEmail:
-        log.user?.email ??
-        (log.systemSource ? `Source: ${log.systemSource}` : "Unknown Email"),
-      orgName: log.organization?.name ?? "System",
-    }));
-
-    return {
-      success: true,
-      data: mappedLogs,
-      totalPages,
-      totalCount,
-    };
+    return getCachedLogsDbData(
+      orgId,
+      currentPage,
+      entriesPerPage,
+      userSearch,
+      messageSearch,
+      entityType,
+      startDate,
+      endDate,
+    );
   } catch (error) {
     console.error("Failed to get logs:", error);
     return {
@@ -224,33 +285,48 @@ export async function getLogs({
   }
 }
 
+async function fetchProductMovementsDbData(
+  { productId }: { productId: string },
+) {
+  const movements = await prisma.productMovement.findMany({
+    where: { productId },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    include: {
+      user: {
+        select: { name: true, email: true },
+      },
+    },
+  });
+
+  return {
+    success: true,
+    data: movements.map((m) => ({
+      ...m,
+      userName: m.user?.name ?? null,
+      userEmail: m.user?.email ?? null,
+    })),
+    error: undefined as string | undefined,
+  };
+}
+
+const getCachedProductMovementsDbData = unstable_cache(
+  async (productId: string) => fetchProductMovementsDbData({ productId }),
+  ["product-movements-cache"],
+  {
+    revalidate: 10, // Cache for 10 seconds
+    tags: [cacheTags.logs],
+  },
+);
+
 export async function getProductMovements({
   productId,
 }: {
   productId: string;
 }) {
   try {
-    const user = await requireSuperAdmin();
-
-    const movements = await prisma.productMovement.findMany({
-      where: { productId },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      include: {
-        user: {
-          select: { name: true, email: true },
-        },
-      },
-    });
-
-    return {
-      success: true,
-      data: movements.map((m) => ({
-        ...m,
-        userName: m.user?.name ?? null,
-        userEmail: m.user?.email ?? null,
-      })),
-    };
+    await requireSuperAdmin();
+    return getCachedProductMovementsDbData(productId);
   } catch (error) {
     console.error("Failed to get product movements:", error);
     return {

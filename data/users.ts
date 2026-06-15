@@ -1,12 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type { Member, User } from "@/app/generated/prisma/client";
 import type {
   UserUpdateInput,
   UserWhereInput,
 } from "@/app/generated/prisma/models";
 import { requireAdmin, requireSuperAdmin } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
@@ -22,6 +23,90 @@ export type UserWMember = User & {
   organizationName: string;
 };
 
+async function fetchUsersDbData({
+  orgId,
+  currentPage,
+  entriesPerPage,
+  userType,
+}: {
+  orgId?: string;
+  currentPage: number;
+  entriesPerPage: number;
+  userType: string;
+}) {
+  let whereClause: UserWhereInput = {};
+
+  if (userType === "org") {
+    whereClause = {
+      members: {
+        some: {
+          organizationId: orgId,
+        },
+      },
+    };
+  } else if (userType === "unlinked") {
+    whereClause = {
+      members: {
+        none: {},
+      },
+    };
+  } else if (userType === "superadmin") {
+    whereClause = {
+      role: "superAdmin",
+    };
+  }
+
+  const skip = (currentPage - 1) * entriesPerPage;
+  const take = entriesPerPage;
+
+  const [totalCount, users] = await Promise.all([
+    prisma.user.count({ where: whereClause }),
+    prisma.user.findMany({
+      where: whereClause,
+      take: take,
+      skip: skip,
+      orderBy: { id: "asc" },
+      include: {
+        members: {
+          include: {
+            organization: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+  const mappedUsers: UserWMember[] = users.map((u) => ({
+    ...u,
+    orgId: u.members?.[0]?.organizationId ?? "none",
+    organizationName: u.members?.[0]?.organization?.name ?? "none",
+  }));
+
+  return {
+    success: true,
+    data: mappedUsers,
+    totalPages,
+    totalCount,
+  };
+}
+
+const getCachedUsersDbData = unstable_cache(
+  async (
+    orgId: string | undefined,
+    currentPage: number,
+    entriesPerPage: number,
+    userType: string,
+  ) =>
+    fetchUsersDbData({ orgId, currentPage, entriesPerPage, userType }),
+  ["users-list-cache"],
+  {
+    revalidate: 20, // Cache for 20 seconds
+    tags: [cacheTags.users],
+  },
+);
+
 export async function getUsers({
   orgId,
   currentPage = 1,
@@ -29,66 +114,9 @@ export async function getUsers({
   userType = "org",
 }: GetUsersArgs) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
-    let whereClause: UserWhereInput = {};
-
-    if (userType === "org") {
-      whereClause = {
-        members: {
-          some: {
-            organizationId: orgId,
-          },
-        },
-      };
-    } else if (userType === "unlinked") {
-      whereClause = {
-        members: {
-          none: {},
-        },
-      };
-    } else if (userType === "superadmin") {
-      whereClause = {
-        role: "superAdmin",
-      };
-    }
-
-    const skip = (currentPage - 1) * entriesPerPage;
-    const take = entriesPerPage;
-
-    // 🏎️ Optimization: Run the count and data fetch concurrently
-    const [totalCount, users] = await Promise.all([
-      prisma.user.count({ where: whereClause }),
-      prisma.user.findMany({
-        where: whereClause,
-        take: take,
-        skip: skip,
-        orderBy: { id: "asc" },
-        include: {
-          members: {
-            include: {
-              organization: true,
-            },
-          },
-        },
-      }),
-    ]);
-
-    // Calculate Total Pages
-    const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-    const mappedUsers: UserWMember[] = users.map((u) => ({
-      ...u,
-      orgId: u.members?.[0]?.organizationId ?? "none",
-      organizationName: u.members?.[0]?.organization?.name ?? "none",
-    }));
-
-    return {
-      success: true,
-      data: mappedUsers,
-      totalPages,
-      totalCount,
-    };
+    return getCachedUsersDbData(orgId, currentPage, entriesPerPage, userType);
   } catch (error) {
     console.error("Database error in getUsers:", error);
 
@@ -108,7 +136,7 @@ export async function getUserById({ id }: { id: string }): Promise<{
   error?: string;
 }> {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const dbUser = await prisma.user.findUnique({
       where: { id },
@@ -173,8 +201,9 @@ export async function updateUser(data: {
     if (data.name !== undefined) updateData.name = data.name;
     if (data.role !== undefined) updateData.role = data.role;
     if (data.image !== undefined) updateData.image = data.image;
-    if (data.emailVerified !== undefined)
+    if (data.emailVerified !== undefined) {
       updateData.emailVerified = data.emailVerified;
+    }
     if (data.isActive !== undefined) {
       updateData.banned = !data.isActive;
       updateData.banReason = !data.isActive
@@ -253,10 +282,9 @@ export async function updateUser(data: {
     }
 
     // Log Activity
-    const loggedOrgId =
-      data.orgId !== undefined && data.orgId !== "none"
-        ? data.orgId
-        : dbUser.members?.[0]?.organizationId || null;
+    const loggedOrgId = data.orgId !== undefined && data.orgId !== "none"
+      ? data.orgId
+      : dbUser.members?.[0]?.organizationId || null;
 
     await logActivity({
       orgId: loggedOrgId,
@@ -266,29 +294,26 @@ export async function updateUser(data: {
       entityId: data.id,
       description: `Updated user "${dbUser.name || data.id}"`,
       changes: {
-        name:
-          data.name !== undefined
-            ? { from: dbUser.name, to: data.name }
-            : undefined,
-        role:
-          data.role !== undefined
-            ? { from: dbUser.role, to: data.role }
-            : undefined,
-        orgId:
-          data.orgId !== undefined
-            ? {
-                from: dbUser.members?.[0]?.organizationId ?? "none",
-                to: data.orgId,
-              }
-            : undefined,
-        isActive:
-          data.isActive !== undefined
-            ? { from: !dbUser.banned, to: data.isActive }
-            : undefined,
+        name: data.name !== undefined
+          ? { from: dbUser.name, to: data.name }
+          : undefined,
+        role: data.role !== undefined
+          ? { from: dbUser.role, to: data.role }
+          : undefined,
+        orgId: data.orgId !== undefined
+          ? {
+            from: dbUser.members?.[0]?.organizationId ?? "none",
+            to: data.orgId,
+          }
+          : undefined,
+        isActive: data.isActive !== undefined
+          ? { from: !dbUser.banned, to: data.isActive }
+          : undefined,
       },
     });
 
     revalidatePath("/[orgId]/admin/users");
+    revalidateTag(cacheTags.users, "");
 
     return {
       success: true,
@@ -299,27 +324,40 @@ export async function updateUser(data: {
   }
 }
 
+async function fetchOrgUsersDbData({ orgId }: { orgId: string }) {
+  const members = await prisma.member.findMany({
+    where: { organizationId: orgId },
+    include: {
+      user: true,
+    },
+  });
+
+  return members.map((m) => ({
+    ...m.user,
+    role: m.user.role as
+      | "user"
+      | "orgAdmin"
+      | "superAdmin"
+      | "warehouse"
+      | null
+      | undefined,
+  }));
+}
+
+const getCachedOrgUsersDbData = unstable_cache(
+  async (orgId: string) => fetchOrgUsersDbData({ orgId }),
+  ["org-users-cache"],
+  {
+    revalidate: 120, // Cache for 2 minutes
+    tags: [cacheTags.users],
+  },
+);
+
 export async function getOrgUsers({ orgId }: { orgId: string }) {
   try {
-    const loggedInUser = await requireAdmin();
+    await requireAdmin();
 
-    const members = await prisma.member.findMany({
-      where: { organizationId: orgId },
-      include: {
-        user: true,
-      },
-    });
-
-    return members.map((m) => ({
-      ...m.user,
-      role: m.user.role as
-        | "user"
-        | "orgAdmin"
-        | "superAdmin"
-        | "warehouse"
-        | null
-        | undefined,
-    }));
+    return getCachedOrgUsersDbData(orgId);
   } catch (error) {
     console.error("Database error in getOrgUsers:", error);
     return [];
@@ -332,7 +370,7 @@ export type MemberWOrder = Member & {
 
 export async function getOrgMembersWithStats({ orgId }: { orgId: string }) {
   try {
-    const loggedInUser = await requireAdmin();
+    await requireAdmin();
 
     const members = await prisma.member.findMany({
       where: { organizationId: orgId },

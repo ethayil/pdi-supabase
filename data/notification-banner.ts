@@ -1,11 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type {
   BannerCreateInput,
   BannerUpdateInput,
 } from "@/app/generated/prisma/models";
 import { getSession, requireSuperAdmin } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 
 export async function createBanner(
@@ -19,6 +20,7 @@ export async function createBanner(
     });
 
     revalidatePath("/", "layout");
+    revalidateTag(cacheTags.banners, "");
     return banner;
   } catch (error) {
     console.error("Failed to create banner:", error);
@@ -28,13 +30,14 @@ export async function createBanner(
 
 export async function removeBanner({ id }: { id: string }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     await prisma.banner.delete({
       where: { id },
     });
 
     revalidatePath("/", "layout");
+    revalidateTag(cacheTags.banners, "");
     return { success: true };
   } catch (error) {
     console.error("Failed to remove banner:", error);
@@ -50,7 +53,7 @@ export async function toggleBannerActive({
   isActive: boolean;
 }) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const banner = await prisma.banner.update({
       where: { id },
@@ -60,6 +63,7 @@ export async function toggleBannerActive({
     });
 
     revalidatePath("/", "layout");
+    revalidateTag(cacheTags.banners, "");
     return banner;
   } catch (error) {
     console.error("Failed to toggle banner active state:", error);
@@ -69,7 +73,7 @@ export async function toggleBannerActive({
 
 export async function updateBanner(id: string, data: BannerUpdateInput) {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
     const banner = await prisma.banner.update({
       where: { id },
@@ -77,12 +81,31 @@ export async function updateBanner(id: string, data: BannerUpdateInput) {
     });
 
     revalidatePath("/", "layout");
+    revalidateTag(cacheTags.banners, "");
     return banner;
   } catch (error) {
     console.error("Failed to update banner:", error);
     throw error;
   }
 }
+
+async function fetchActiveBannersDbData() {
+  return prisma.banner.findMany({
+    where: {
+      isActive: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
+const getCachedActiveBannersDbData = unstable_cache(
+  async () => fetchActiveBannersDbData(),
+  ["active-banners-cache"],
+  {
+    revalidate: 60, // Cache active banners for 1 minute
+    tags: [cacheTags.banners],
+  },
+);
 
 export async function getVisibleBanners({ orgId }: { orgId?: string } = {}) {
   try {
@@ -91,15 +114,12 @@ export async function getVisibleBanners({ orgId }: { orgId?: string } = {}) {
     const userId = user?.id;
     const now = new Date();
 
-    const banners = await prisma.banner.findMany({
-      where: {
-        isActive: true,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+    const activeBanners = await getCachedActiveBannersDbData();
 
-    return banners.filter((b) => {
+    return activeBanners.filter((b) => {
+      // Expiration check
+      if (b.expiresAt && b.expiresAt <= now) return false;
+
       if (b.targetType === "all") return true;
 
       if (!userId) return false;
@@ -115,13 +135,26 @@ export async function getVisibleBanners({ orgId }: { orgId?: string } = {}) {
   }
 }
 
+async function fetchAllBannersDbData() {
+  return prisma.banner.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+const getCachedAllBannersDbData = unstable_cache(
+  async () => fetchAllBannersDbData(),
+  ["all-banners-cache"],
+  {
+    revalidate: 60, // Cache for 1 minute
+    tags: [cacheTags.banners],
+  }
+);
+
 export async function listAllBanners() {
   try {
-    const user = await requireSuperAdmin();
+    await requireSuperAdmin();
 
-    return await prisma.banner.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    return await getCachedAllBannersDbData();
   } catch (error) {
     console.error("Failed to list all banners:", error);
     return [];

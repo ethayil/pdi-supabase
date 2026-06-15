@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import type { CategoryWhereInput } from "@/app/generated/prisma/models";
 import { requireSuperAdmin, requireUser } from "@/lib/auth/get-session";
+import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 import { logActivity } from "./logging";
 
@@ -12,6 +13,64 @@ interface GetCategoriesArgs {
   entriesPerPage?: number;
   query?: string;
 }
+
+async function fetchCategoriesDbData({
+  orgId,
+  currentPage,
+  entriesPerPage,
+  query,
+}: {
+  orgId: string;
+  currentPage: number;
+  entriesPerPage: number;
+  query?: string;
+}) {
+  const whereClause: CategoryWhereInput = { orgId };
+
+  if (query) {
+    whereClause.name = {
+      contains: query,
+      mode: "insensitive",
+    };
+  }
+
+  const skip = (currentPage - 1) * entriesPerPage;
+  const take = entriesPerPage;
+
+  const [totalCount, categories] = await Promise.all([
+    prisma.category.count({ where: whereClause }),
+    prisma.category.findMany({
+      where: whereClause,
+      skip: skip,
+      take: take,
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+  return {
+    success: true,
+    data: categories,
+    totalPages,
+    totalCount,
+  };
+}
+
+const getCachedCategoriesDbData = unstable_cache(
+  async (
+    orgId: string,
+    currentPage: number,
+    entriesPerPage: number,
+    query?: string,
+  ) =>
+    fetchCategoriesDbData({ orgId, currentPage, entriesPerPage, query }),
+  ["categories-list-cache"],
+  {
+    revalidate: 20, // Cache categories list for 20 seconds
+    tags: [cacheTags.categories],
+  },
+);
 
 export async function getCategories({
   orgId,
@@ -31,36 +90,7 @@ export async function getCategories({
       };
     }
 
-    const whereClause: CategoryWhereInput = { orgId };
-
-    if (query) {
-      whereClause.name = {
-        contains: query,
-        mode: "insensitive",
-      };
-    }
-
-    const skip = (currentPage - 1) * entriesPerPage;
-    const take = entriesPerPage;
-
-    const [totalCount, categories] = await Promise.all([
-      prisma.category.count({ where: whereClause }),
-      prisma.category.findMany({
-        where: whereClause,
-        skip: skip,
-        take: take,
-        orderBy: { name: "asc" },
-      }),
-    ]);
-
-    const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-    return {
-      success: true,
-      data: categories,
-      totalPages,
-      totalCount,
-    };
+    return getCachedCategoriesDbData(orgId, currentPage, entriesPerPage, query);
   } catch (error) {
     console.error("Database error in getCategories:", error);
     return {
@@ -73,14 +103,26 @@ export async function getCategories({
   }
 }
 
+async function fetchActiveCategoriesDbData({ orgId }: { orgId: string }) {
+  return prisma.category.findMany({
+    where: { orgId, isActive: true },
+    orderBy: { name: "asc" },
+  });
+}
+
+const getCachedActiveCategoriesDbData = unstable_cache(
+  async (orgId: string) => fetchActiveCategoriesDbData({ orgId }),
+  ["active-categories-cache"],
+  {
+    revalidate: 60, // Cache categories for 1 minute
+    tags: [cacheTags.categories],
+  },
+);
+
 export async function getActiveCategories({ orgId }: { orgId: string }) {
   try {
     await requireUser();
-
-    return await prisma.category.findMany({
-      where: { orgId, isActive: true },
-      orderBy: { name: "asc" },
-    });
+    return getCachedActiveCategoriesDbData(orgId);
   } catch (error) {
     console.error("Database error in getActiveCategories:", error);
     return [];
@@ -168,6 +210,7 @@ export async function createCategory(values: {
     });
 
     revalidatePath(`/${values.orgId}/admin/categories`);
+    revalidateTag(cacheTags.categories, "");
 
     return { success: true, category };
   } catch (error) {
@@ -240,6 +283,7 @@ export async function updateCategory(values: {
     });
 
     revalidatePath(`/${values.orgId}/admin/categories`);
+    revalidateTag(cacheTags.categories, "");
 
     return { success: true, category };
   } catch (error) {
@@ -277,6 +321,7 @@ export async function deleteCategory({ id }: { id: string }) {
 
     if (category.orgId) {
       revalidatePath(`/${category.orgId}/admin/categories`);
+      revalidateTag(cacheTags.categories, "");
     }
 
     return { success: true };
