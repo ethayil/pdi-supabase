@@ -10,6 +10,7 @@ import {
   Settings,
   ShoppingBag,
   ShoppingCart,
+  Truck,
   University,
   UserCog,
 } from "lucide-react";
@@ -55,6 +56,11 @@ export const adminRoutes = [
     name: "Orders",
     url: "/admin/orders",
     icon: ShoppingBag,
+  },
+  {
+    name: "Despatch",
+    url: "/admin/despatch",
+    icon: Truck,
   },
   {
     name: "Categories",

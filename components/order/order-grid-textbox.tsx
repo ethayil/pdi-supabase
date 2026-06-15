@@ -5,15 +5,17 @@ export default function OrderGridTextBox({
   title,
   value,
   size = "default",
+  className,
   children,
 }: {
   title: string;
   value?: string | null;
   size?: "sm" | "default";
+  className?: string;
   children?: ReactNode;
 }) {
   return (
-    <div>
+    <div className={className}>
       <p className="text-[10px] uppercase font-bold text-muted-foreground">
         {title}
       </p>

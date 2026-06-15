@@ -1,11 +1,29 @@
 "use client";
 
 import { format } from "date-fns";
-import { CalendarIcon, Check, Edit2, X } from "lucide-react";
+import {
+  CalendarIcon,
+  Check,
+  CloudUpload,
+  Edit2,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -45,6 +63,7 @@ export function GeneralInfoSection({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isClearingSync, setIsClearingSync] = useState(false);
   const [formData, setFormData] = useState({
     externalRef: order.externalRef || "",
     poRef: order.poRef || "",
@@ -109,6 +128,24 @@ export function GeneralInfoSection({
   };
 
   const zoneName = getZoneName(order.country);
+
+  const handleClearSync = async () => {
+    if (!isAdmin) return;
+    setIsClearingSync(true);
+    try {
+      await updateOrder({
+        id: order.id,
+        orgId,
+        lwSyncedAt: null,
+      });
+      toast.success("LW sync cleared — order will be re-synced");
+      router.refresh();
+    } catch {
+      toast.error("Failed to clear LW sync");
+    } finally {
+      setIsClearingSync(false);
+    }
+  };
 
   const originalWeight = (order.items ?? []).reduce(
     (acc, item) => acc + (item.product?.weight || 0) * item.quantity,
@@ -326,7 +363,7 @@ export function GeneralInfoSection({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        totalPackages: parseInt(e.target.value) || 1,
+                        totalPackages: parseInt(e.target.value, 2) || 1,
                       })
                     }
                     className="text-sm"
@@ -445,13 +482,13 @@ export function GeneralInfoSection({
                 title="Send Date"
                 value={
                   order.sendDate
-                    ? formattedDate(new Date(order.sendDate))
+                    ? formattedDate(new Date(order.sendDate), "short")
                     : "Not set"
                 }
               />
               <OrderGridTextBox
                 title="Delivery Date"
-                value={formattedDate(new Date(order.deliveryDate))}
+                value={formattedDate(new Date(order.deliveryDate), "short")}
               />
               {isAdmin && (
                 <OrderGridTextBox
@@ -488,6 +525,60 @@ export function GeneralInfoSection({
                   <Badge variant="secondary" className="font-mono text-[10px]">
                     {zoneName}
                   </Badge>
+                </OrderGridTextBox>
+              )}
+              {isAdmin && (
+                <OrderGridTextBox
+                  title="LW Sync"
+                  className="col-span-2 lg:col-span-3"
+                >
+                  {order.lwSyncedAt ? (
+                    <div className="flex items-center gap-1.5">
+                      <CloudUpload className="size-3 text-emerald-500" />
+                      <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                        {formattedDate(new Date(order.lwSyncedAt), "long")}
+                      </span>
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-5 ml-1"
+                              disabled={isClearingSync || isOrderLocked}
+                              title="Clear sync to re-sync with Linnworks"
+                            />
+                          }
+                        >
+                          <RotateCcw className="size-3" />
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Clear LW Sync?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will clear the sync timestamp and the order
+                              will be re-synced with Linnworks on the next sync
+                              cycle.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              variant="destructive"
+                              onClick={handleClearSync}
+                              disabled={isClearingSync}
+                            >
+                              {isClearingSync ? "Clearing…" : "Clear Sync"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">
+                      Not synced
+                    </span>
+                  )}
                 </OrderGridTextBox>
               )}
             </motion.div>

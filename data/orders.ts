@@ -430,6 +430,7 @@ export async function updateOrder(args: {
   poRef?: string | null;
   deliveryDate?: Date | number;
   sendDate?: Date | number | null;
+  lwSyncedAt?: Date | number | null;
   totalPackages?: number;
   weight?: number;
   courierCost?: number;
@@ -460,6 +461,7 @@ export async function updateOrder(args: {
       poRef,
       deliveryDate,
       sendDate,
+      lwSyncedAt,
       totalPackages,
       weight,
       courierCost,
@@ -491,6 +493,11 @@ export async function updateOrder(args: {
     if (sendDate !== undefined) {
       data.sendDate = sendDate
         ? typeof sendDate === "number" ? new Date(sendDate) : sendDate
+        : null;
+    }
+    if (lwSyncedAt !== undefined) {
+      data.lwSyncedAt = lwSyncedAt
+        ? typeof lwSyncedAt === "number" ? new Date(lwSyncedAt) : lwSyncedAt
         : null;
     }
     if (totalPackages !== undefined) data.totalPackages = totalPackages;

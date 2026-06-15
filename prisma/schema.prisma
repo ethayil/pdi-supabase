@@ -315,6 +315,7 @@ model Order {
   weight           Float
   deliveryDate     DateTime
   sendDate         DateTime?
+  lwSyncedAt       DateTime?
   courier          String?
   service          String?
   trackingNumber   String?
