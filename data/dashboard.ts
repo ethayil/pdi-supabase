@@ -19,12 +19,11 @@ export async function getDashboardData({ orgId }: { orgId: string }) {
       return null;
     }
 
-    const role =
-      user.role === "superAdmin"
-        ? "superadmin"
-        : user.role === "orgAdmin"
-          ? "admin"
-          : "user";
+    const role = user.role === "superAdmin"
+      ? "superadmin"
+      : user.role === "orgAdmin"
+      ? "admin"
+      : "user";
 
     const isAdmin = role === "admin" || role === "superadmin";
     const isSuperadmin = role === "superadmin";
@@ -138,7 +137,6 @@ export async function getDashboardData({ orgId }: { orgId: string }) {
 
     const recentOrders = orders.map((o) => ({
       id: o.id,
-      _id: o.id,
       reference: o.reference,
       fullname: o.fullname,
       status: o.status,
@@ -184,7 +182,6 @@ export async function getDashboardData({ orgId }: { orgId: string }) {
 
     const lowStockProducts = lowStockProductsDb.map((p) => ({
       id: p.id,
-      _id: p.id,
       name: p.name,
       sku: p.sku,
       quantity: p.quantity,
@@ -192,7 +189,6 @@ export async function getDashboardData({ orgId }: { orgId: string }) {
 
     const outOfStockProducts = outOfStockProductsDb.map((p) => ({
       id: p.id,
-      _id: p.id,
       name: p.name,
       sku: p.sku,
     }));
@@ -223,3 +219,5 @@ export async function getDashboardData({ orgId }: { orgId: string }) {
     return null;
   }
 }
+
+export type DashboardOrderType = Awaited<ReturnType<typeof getDashboardData>>;

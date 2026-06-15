@@ -1,6 +1,29 @@
 import * as motion from "motion/react-client";
+import { Suspense, use } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GlowingIcon } from "@/components/ui/glowing-icon";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function ResolveValue({
+  value,
+}: {
+  value: React.ReactNode | Promise<React.ReactNode>;
+}) {
+  if (value instanceof Promise) {
+    const resolved = use(value);
+    return (
+      <motion.span
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="inline-block"
+      >
+        {resolved}
+      </motion.span>
+    );
+  }
+  return <>{value}</>;
+}
 
 export function StatCard({
   title,
@@ -11,9 +34,9 @@ export function StatCard({
   delay = 0,
 }: {
   title: string;
-  value: React.ReactNode;
+  value: React.ReactNode | Promise<React.ReactNode>;
   icon: string;
-  sub?: string;
+  sub?: React.ReactNode | Promise<React.ReactNode>;
   color?: string;
   delay?: number;
 }) {
@@ -43,10 +66,25 @@ export function StatCard({
           </CardTitle>
           <GlowingIcon icon={icon} size="sm" color={color} />
         </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="text-xs text-muted-foreground mt-1">{sub ?? ""}</p>
-        </CardContent>
+        <Suspense
+          fallback={
+            <CardContent className="space-y-2">
+              <Skeleton className="h-8 w-16" />
+              {sub !== undefined && <Skeleton className="h-3 w-32 mt-1" />}
+            </CardContent>
+          }
+        >
+          <CardContent>
+            <p className="text-2xl font-bold">
+              <ResolveValue value={value} />
+            </p>
+            {sub !== undefined && (
+              <p className="text-xs text-muted-foreground mt-1">
+                <ResolveValue value={sub} />
+              </p>
+            )}
+          </CardContent>
+        </Suspense>
       </Card>
     </motion.div>
   );
