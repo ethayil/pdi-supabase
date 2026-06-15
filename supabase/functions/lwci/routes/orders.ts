@@ -252,7 +252,10 @@ ordersRouter.post("/get", async (c) => {
 
     console.log("[INFO] Fetching open orders via relational join...");
 
-    // SINGLE database round-trip fetching the entire nested tree
+    // Only fetch processing orders where:
+    // - sendDate is set (orders without sendDate are never forwarded)
+    // - sendDate has arrived (today or earlier)
+    // - not already synced to Linnworks (lwSyncedAt is null)
     const { data: baseOrders, error: ordersError } = await supabase
       .from("order")
       .select(`
@@ -262,7 +265,10 @@ ordersRouter.post("/get", async (c) => {
           product (*)
         )
       `)
-      .eq("status", "processing");
+      .eq("status", "processing")
+      .not("sendDate", "is", null)
+      .lte("sendDate", new Date().toISOString())
+      .is("lwSyncedAt", null);
 
     if (ordersError) {
       console.error(
@@ -341,6 +347,20 @@ ordersRouter.post("/get", async (c) => {
       ],
       PaymentStatus: "PAID",
     }));
+
+    // Stamp lwSyncedAt on all returned orders so they aren't picked up again
+    const orderIds = baseOrders.map((o) => o.id);
+    const { error: syncError } = await supabase
+      .from("order")
+      .update({ lwSyncedAt: new Date().toISOString() })
+      .in("id", orderIds);
+
+    if (syncError) {
+      console.error(
+        "[ERROR] Failed to stamp lwSyncedAt on synced orders:",
+        syncError.message,
+      );
+    }
 
     console.log(`[INFO] Found ${orders.length} processing orders to return.`);
     return c.json({
