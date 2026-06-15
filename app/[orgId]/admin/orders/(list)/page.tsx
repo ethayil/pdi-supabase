@@ -36,37 +36,42 @@ export default async function AdminOrdersPage({
     courier,
   } = await loadOrderParams(searchParams);
 
-  // Fetch initial orders with filters
-  const initialData = await getAdminOrders({
-    orgId: paramOrgId,
-    currentPage,
-    entriesPerPage,
-    status,
-    search: query || undefined,
-    startDate: start ? parseInt(start, 10) : undefined,
-    endDate: end ? parseInt(end, 10) : undefined,
-    courier: courier || undefined,
-    reference: ref || undefined,
-    fullname: name || undefined,
-    postcode: post || undefined,
-  });
+  // Fetch initial orders and active organizations concurrently
+  const [initialData, orgsResponse] = await Promise.all([
+    getAdminOrders({
+      orgId: paramOrgId,
+      currentPage,
+      entriesPerPage,
+      status,
+      search: query || undefined,
+      startDate: start ? parseInt(start, 10) : undefined,
+      endDate: end ? parseInt(end, 10) : undefined,
+      courier: courier || undefined,
+      reference: ref || undefined,
+      fullname: name || undefined,
+      postcode: post || undefined,
+    }),
+    getOrganizations({ entriesPerPage: 1000 }),
+  ]);
 
-  // Fetch active organizations for organization switcher in header
-  const { data: orgs } = await getOrganizations({ entriesPerPage: 1000 });
+  const orgs = orgsResponse?.data || [];
 
   return (
     <>
       <DashboardHeader title="Orders" mobileTitle="Orders">
-        <OrdersHeader organizations={orgs || []} />
+        <OrdersHeader organizations={orgs} />
       </DashboardHeader>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.65, ease: "easeOut" }}
         className="flex-1 overflow-hidden"
       >
-        <OrdersTableWrapper organizationId={orgId} initialData={initialData} />
+        <OrdersTableWrapper
+          organizationId={orgId}
+          initialData={initialData}
+        />
       </motion.div>
     </>
   );

@@ -23,7 +23,7 @@ export default async function ProductsPage({
   const { currentPage, query, categoryId } =
     await loadProductParams(searchParams);
 
-  const initialData = await getProducts({
+  const initialDataPromise = getProducts({
     orgId,
     currentPage,
     entriesPerPage: 12,
@@ -32,16 +32,16 @@ export default async function ProductsPage({
     stockStatus: "active",
   });
 
-  const categories = await getActiveCategories({ orgId });
+  const categoriesPromise = getActiveCategories({ orgId });
 
-  const cartItems = await getCartItems({ orgId });
+  const cartItemsPromise = getCartItems({ orgId });
 
   return (
     <ProductsCatalogWrapper
       organizationId={orgId}
-      initialData={initialData}
-      categories={categories}
-      cartItems={cartItems}
+      initialDataPromise={initialDataPromise}
+      categoriesPromise={categoriesPromise}
+      cartItemsPromise={cartItemsPromise}
       selectedCategoryId={categoryId}
     />
   );

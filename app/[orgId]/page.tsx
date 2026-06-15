@@ -8,8 +8,6 @@ export const metadata: Metadata = {
   description: "PDi Dashboard",
 };
 
-export const revalidate = 120; // Cache the dashboard page for 2 minutes
-
 export default async function DashboardPage({ params }: { params: Params }) {
   const { orgId } = await params;
 

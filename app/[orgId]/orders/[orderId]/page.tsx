@@ -22,7 +22,5 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
     return redirect(`/${orgId}/orders`);
   }
 
-  const isAdmin = user.role === "superAdmin" || user.role === "orgAdmin";
-
   return <OrderDetailView order={order} orgId={orgId} isAdmin={false} />;
 }
