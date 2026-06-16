@@ -10,6 +10,7 @@ import OrganizationSwitcher from "./organization-switcher";
 import { SidebarItems } from "./sidebar-items";
 import { adminRoutes, orgAdminRoutes, userRoutes } from "./sidebar-routes";
 import { SidebarUser } from "./sidebar-user";
+import { SidebarBranding } from "./sidebar-branding";
 
 export function AppSidebar({
   user,
@@ -21,10 +22,7 @@ export function AppSidebar({
 } & React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
-      <OrganizationSwitcher
-        user={user}
-        organizationId={organizationId}
-      />
+      <OrganizationSwitcher user={user} organizationId={organizationId} />
       <SidebarContent>
         <SidebarItems organizationId={organizationId} routes={userRoutes} />
 
@@ -49,6 +47,10 @@ export function AppSidebar({
             />
           </>
         )}
+
+        <div className="mt-auto p-2 group-data-[state=collapsed]:hidden">
+          <SidebarBranding organizationId={organizationId} />
+        </div>
       </SidebarContent>
       <SidebarFooter>
         <SidebarUser user={user} />
