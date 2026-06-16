@@ -1,279 +1,485 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import type { Invoice, Order } from "@/app/generated/prisma/client";
+import {
+  Document,
+  Image,
+  Page,
+  StyleSheet,
+  Text,
+  View,
+} from "@react-pdf/renderer";
+import type { Invoice, Order, Organization } from "@/app/generated/prisma/client";
 import type { InvoiceWCharges } from "@/data/invoices";
 
-// Register fonts if needed
-// Font.register({
-//   family: "Roboto",
-//   src: "https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2",
-// });
+// ─── Colour Tokens ────────────────────────────────────────────────────────────
+const BLUE = "#2B4C7E"; // Muted steel blue
+const LIGHT_BLUE = "#F4F7FA"; // Soft light grey-blue
+const MID_GREY = "#64748B"; // Slate grey
+const DARK = "#1E293B"; // Dark slate
+const LINE = "#E2E8F0"; // Subtle border line
 
-const styles = StyleSheet.create({
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
   page: {
-    padding: 40,
-    fontSize: 10,
+    paddingTop: 36,
+    paddingBottom: 48,
+    paddingHorizontal: 40,
+    fontSize: 9,
     fontFamily: "Helvetica",
+    color: DARK,
+    backgroundColor: "#FFFFFF",
   },
+
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
+    borderBottom: `2px solid ${BLUE}`,
+    paddingBottom: 12,
     marginBottom: 20,
-    paddingBottom: 10,
-    borderBottom: 1,
   },
-  companyInfo: {
+  headerLeft: {
+    flexDirection: "column",
+    gap: 2,
+  },
+  headerLeftLine: {
+    fontSize: 8.5,
+    color: MID_GREY,
+  },
+  logo: {
+    width: 130,
+    height: 19,
+    objectFit: "contain",
+  },
+  companyBlock: {
+    alignItems: "flex-end",
+    marginTop: 6,
+  },
+  companyName: {
     fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: DARK,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
+  companyLine: {
+    fontSize: 8.5,
+    color: MID_GREY,
+    textAlign: "right",
   },
-  section: {
-    marginBottom: 10,
-  },
-  row: {
+
+  // ── Invoice title & meta ──────────────────────────────────────────────────
+  metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 5,
+    marginBottom: 20,
   },
-  label: {
-    fontWeight: "bold",
-    width: "40%",
+  invoiceTitleTop: {
+    fontSize: 22,
+    fontFamily: "Helvetica-Bold",
+    color: BLUE,
+    letterSpacing: 2,
+    marginBottom: 4,
   },
-  value: {
-    width: "60%",
+  orgAddressBlock: {
+    flexDirection: "column",
   },
+  orgAddressTitle: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: MID_GREY,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  orgAddressName: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: DARK,
+    marginBottom: 2,
+  },
+  orgAddressLine: {
+    fontSize: 8.5,
+    color: MID_GREY,
+  },
+  metaTable: {
+    width: 220,
+  },
+  metaLine: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 3,
+  },
+  metaLabel: {
+    fontSize: 8.5,
+    color: MID_GREY,
+    width: 90,
+  },
+  metaValue: {
+    fontSize: 8.5,
+    fontFamily: "Helvetica-Bold",
+    color: DARK,
+    textAlign: "right",
+    flex: 1,
+  },
+
+  // ── Section heading ───────────────────────────────────────────────────────
+  sectionHeading: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: BLUE,
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+
+  // ── Data table ────────────────────────────────────────────────────────────
   table: {
-    marginTop: 20,
     marginBottom: 20,
   },
   tableHeader: {
     flexDirection: "row",
-    borderBottom: 1,
-    paddingBottom: 5,
-    marginBottom: 5,
-    fontWeight: "bold",
-    fontSize: 9,
+    backgroundColor: BLUE,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+    borderRadius: 2,
+  },
+  thCell: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: "#FFFFFF",
   },
   tableRow: {
     flexDirection: "row",
     paddingVertical: 5,
-    fontSize: 9,
+    paddingHorizontal: 6,
+    borderBottom: `1px solid ${LINE}`,
   },
-  col1: { width: "4%", marginRight: 4 },
-  col2: { width: "10%", marginRight: 4 },
-  col3: { width: "13%", marginRight: 4 },
-  col4: { width: "10%", marginRight: 4 },
-  col5: { width: "20%", marginRight: 4 },
-  col6: { width: "13%", marginRight: 4 },
-  col7: { width: "13%", marginRight: 4 },
-  col8: { width: "10%" },
-  totals: {
-    marginTop: 20,
-    paddingTop: 10,
-    borderTop: 1,
+  tableRowAlt: {
+    backgroundColor: LIGHT_BLUE,
   },
-  totalRow: {
+  tdCell: {
+    fontSize: 8.5,
+    color: DARK,
+  },
+
+  // ── Orders table column widths ─────────────────────────────────────────────
+  o1: { width: "5%" },
+  o2: { width: "11%" },
+  o3: { width: "12%" },
+  o4: { width: "10%" },
+  o5: { width: "24%" },
+  o6: { width: "16%" },
+  o8: { width: "11%", textAlign: "right" },
+  o9: { width: "11%", textAlign: "right" },
+
+  // ── Charges table column widths ────────────────────────────────────────────
+  c1: { width: "5%" },
+  c2: { width: "12%" },
+  c3: { width: "13%" },
+  c5: { width: "45%" },
+  c6: { width: "13%", textAlign: "right" },
+  c7: { width: "12%", textAlign: "right" },
+
+  // ── Totals ─────────────────────────────────────────────────────────────────
+  totalsWrapper: {
+    alignItems: "flex-end",
+    marginBottom: 20,
+  },
+  totalsBox: {
+    width: 220,
+    borderTop: `2px solid ${BLUE}`,
+    paddingTop: 8,
+  },
+  totalsRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 5,
+    justifyContent: "space-between",
+    marginBottom: 4,
   },
-  totalLabel: {
-    width: 100,
-    textAlign: "right",
-    marginRight: 10,
+  totalsLabel: {
+    fontSize: 9,
+    color: MID_GREY,
   },
-  totalValue: {
-    width: 100,
-    textAlign: "right",
+  totalsValue: {
+    fontSize: 9,
+    color: DARK,
   },
-  footer: {
-    marginTop: 30,
+  totalsFinalLabel: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: DARK,
+  },
+  totalsFinalValue: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: BLUE,
+  },
+  totalsDivider: {
+    borderBottom: `1px solid ${LINE}`,
+    marginVertical: 4,
+  },
+
+  // ── Notes ────────────────────────────────────────────────────────────────
+  notesBox: {
+    backgroundColor: LIGHT_BLUE,
+    borderRadius: 4,
+    padding: 8,
+    marginBottom: 16,
+  },
+  notesLabel: {
     fontSize: 8,
-    color: "#666",
+    fontFamily: "Helvetica-Bold",
+    color: BLUE,
+    marginBottom: 3,
+  },
+  notesText: {
+    fontSize: 8.5,
+    color: MID_GREY,
+  },
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  footer: {
+    borderTop: `1px solid ${LINE}`,
+    paddingTop: 8,
+    marginTop: "auto",
+  },
+  footerText: {
+    fontSize: 7.5,
+    color: MID_GREY,
+    marginBottom: 2,
   },
 });
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const fmt = (n: number) =>
+  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n);
+
+const fmtDate = (d: Date | number | string | null | undefined) => {
+  if (!d) return "-";
+  return new Date(d).toLocaleDateString("en-GB");
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 interface InvoicePDFProps {
   invoice: Invoice;
+  organization: Organization | null;
   orders: Order[];
   charges: InvoiceWCharges[];
 }
 
-export function InvoicePDF({ invoice, orders, charges }: InvoicePDFProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency: "GBP",
-    }).format(amount);
-  };
+// react-pdf needs an absolute HTTP URL to fetch images client-side
+const LOGO_URL =
+  typeof window !== "undefined"
+    ? `${window.location.origin}/epp-logo.png`
+    : "http://localhost:3000/epp-logo.png";
 
-  const formatDate = (date: Date | number | string) => {
-    return new Date(date).toLocaleDateString("en-GB");
-  };
-
+export function InvoicePDF({
+  invoice,
+  organization,
+  orders,
+  charges,
+}: InvoicePDFProps) {
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.companyInfo}>
-            <Text>e-PickPack Ltd trading as PDi</Text>
-            <Text>5 Rabans Lane</Text>
-            <Text>Aylesbury</Text>
-            <Text>HP19 8RT</Text>
+      <Page size="A4" style={s.page}>
+
+        {/* ── Header ─────────────────────────────────────────────────────── */}
+        <View style={s.header} fixed>
+          {/* Left – Invoice Title + contact info */}
+          <View style={s.headerLeft}>
+            <Text style={s.invoiceTitleTop}>INVOICE</Text>
+            <Text style={s.headerLeftLine}>t: 0044(0)1296 614 300</Text>
+            <Text style={s.headerLeftLine}>e: accounts@pdiuk.com</Text>
           </View>
-          <View>
-            <Text style={{ fontSize: 12, fontWeight: "bold" }}>
-              e-PickPack Ltd
-            </Text>
+
+          {/* Right – logo + company address */}
+          <View style={s.companyBlock}>
+            <Image style={s.logo} src={LOGO_URL} />
+            <View style={{ marginTop: 4 }}>
+              <Text style={s.companyName}>E-PickPack Ltd trading as PDi</Text>
+              <Text style={s.companyLine}>5 Rabans Lane</Text>
+              <Text style={s.companyLine}>Aylesbury</Text>
+              <Text style={s.companyLine}>Buckinghamshire HP19 8RT</Text>
+            </View>
           </View>
         </View>
 
-        {/* Title */}
-        <Text style={styles.title}>INVOICE</Text>
+        {/* ── Recipient Address + Meta ─────────────────────────────────── */}
+        <View style={s.metaRow}>
+          {/* Left – Bill To Address */}
+          {organization ? (
+            <View style={s.orgAddressBlock}>
+              <Text style={s.orgAddressTitle}>Bill To</Text>
+              <Text style={s.orgAddressName}>{organization.name}</Text>
+              {organization.address1 && (
+                <Text style={s.orgAddressLine}>{organization.address1}</Text>
+              )}
+              {organization.address2 && (
+                <Text style={s.orgAddressLine}>{organization.address2}</Text>
+              )}
+              {(organization.town || organization.city) && (
+                <Text style={s.orgAddressLine}>
+                  {[organization.town, organization.city].filter(Boolean).join(", ")}
+                </Text>
+              )}
+              {organization.postcode && (
+                <Text style={s.orgAddressLine}>{organization.postcode}</Text>
+              )}
+              {organization.country && (
+                <Text style={s.orgAddressLine}>{organization.country}</Text>
+              )}
+            </View>
+          ) : (
+            <View style={s.orgAddressBlock} />
+          )}
 
-        {/* Invoice Details */}
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Invoice Number:</Text>
-            <Text style={styles.value}>{invoice.reference}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Invoice Date:</Text>
-            <Text style={styles.value}>{formatDate(invoice.invoiceDate)}</Text>
-          </View>
-          {invoice.dueDate && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Due Date:</Text>
-              <Text style={styles.value}>{formatDate(invoice.dueDate)}</Text>
+          <View style={s.metaTable}>
+            <View style={s.metaLine}>
+              <Text style={s.metaLabel}>Invoice Number:</Text>
+              <Text style={s.metaValue}>{invoice.reference}</Text>
             </View>
-          )}
-          {invoice.poNumber && (
-            <View style={styles.row}>
-              <Text style={styles.label}>PO Number:</Text>
-              <Text style={styles.value}>{invoice.poNumber}</Text>
+            <View style={s.metaLine}>
+              <Text style={s.metaLabel}>Invoice Date:</Text>
+              <Text style={s.metaValue}>{fmtDate(invoice.invoiceDate)}</Text>
             </View>
-          )}
+            {invoice.dueDate && (
+              <View style={s.metaLine}>
+                <Text style={s.metaLabel}>Due Date:</Text>
+                <Text style={s.metaValue}>{fmtDate(invoice.dueDate)}</Text>
+              </View>
+            )}
+            {invoice.poNumber && (
+              <View style={s.metaLine}>
+                <Text style={s.metaLabel}>PO Number:</Text>
+                <Text style={s.metaValue}>{invoice.poNumber}</Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Orders Table */}
+        {/* ── Orders Table ──────────────────────────────────────────────── */}
         {orders.length > 0 && (
-          <View style={styles.table}>
-            <Text style={{ fontWeight: "bold", marginBottom: 10 }}>Orders</Text>
-            <View style={styles.tableHeader}>
-              <Text style={styles.col1}>#</Text>
-              <Text style={styles.col2}>Date</Text>
-              <Text style={styles.col3}>Order#</Text>
-              <Text style={styles.col4}>PO</Text>
-              <Text style={styles.col5}>Consignee</Text>
-              <Text style={styles.col6}>Signed By</Text>
-              <Text style={styles.col7}>Delivery</Text>
-              <Text style={styles.col8}>Amount</Text>
+          <View style={s.table}>
+            <Text style={s.sectionHeading}>Orders</Text>
+            {/* Header */}
+            <View style={s.tableHeader}>
+              <Text style={[s.thCell, s.o1]}>#</Text>
+              <Text style={[s.thCell, s.o2]}>Date</Text>
+              <Text style={[s.thCell, s.o3]}>Order Ref</Text>
+              <Text style={[s.thCell, s.o4]}>PO</Text>
+              <Text style={[s.thCell, s.o5]}>Consignee</Text>
+              <Text style={[s.thCell, s.o6]}>Signed By</Text>
+              <Text style={[s.thCell, s.o8]}>Amount</Text>
+              <Text style={[s.thCell, s.o9]}>VAT</Text>
             </View>
-            {orders.map((order, index: number) => (
-              <View key={order.id} style={styles.tableRow}>
-                <Text style={styles.col1}>{index + 1}</Text>
-                <Text style={styles.col2}>{formatDate(order.createdAt)}</Text>
-                <Text style={styles.col3}>{order.reference}</Text>
-                <Text style={styles.col4}>{order.poRef || "-"}</Text>
-                <Text style={styles.col5}>
-                  {order.fullname}
-                  {order.country && `\n${order.country}`}
-                </Text>
-                <Text style={styles.col6}>{order.signedBy || "-"}</Text>
-                <Text style={styles.col7}>
-                  {order.deliveredAt ? formatDate(order.deliveredAt) : "-"}
-                </Text>
-                <Text style={styles.col8}>
-                  {formatCurrency(
-                    order.invoiceCost ?? (order.courierCost || 0),
+            {/* Rows */}
+            {orders.map((order, i) => (
+              <View
+                key={order.id}
+                style={[s.tableRow, i % 2 !== 0 ? s.tableRowAlt : {}]}
+                wrap={false}
+              >
+                <Text style={[s.tdCell, s.o1]}>{i + 1}</Text>
+                <Text style={[s.tdCell, s.o2]}>{fmtDate(order.createdAt)}</Text>
+                <Text style={[s.tdCell, s.o3]}>{order.reference}</Text>
+                <Text style={[s.tdCell, s.o4]}>{order.poRef || "-"}</Text>
+                <View style={s.o5}>
+                  <Text style={s.tdCell}>{order.fullname}</Text>
+                  {order.country && (
+                    <Text style={[s.tdCell, { color: BLUE }]}>
+                      {order.country}
+                    </Text>
                   )}
+                </View>
+                <View style={s.o6}>
+                  <Text style={s.tdCell}>{order.signedBy || "-"}</Text>
+                  {order.deliveredAt && (
+                    <Text style={[s.tdCell, { fontFamily: "Helvetica-Oblique", color: MID_GREY, marginTop: 1 }]}>
+                      {fmtDate(order.deliveredAt)}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[s.tdCell, s.o8]}>
+                  {fmt(order.invoiceCost ?? order.courierCost ?? 0)}
+                </Text>
+                <Text style={[s.tdCell, s.o9]}>
+                  {fmt(order.courierVAT ?? 0)}
                 </Text>
               </View>
             ))}
           </View>
         )}
 
-        {/* Charges Table */}
+        {/* ── Additional Charges Table ──────────────────────────────────── */}
         {charges.length > 0 && (
-          <View style={styles.table}>
-            <Text style={{ fontWeight: "bold", marginBottom: 10 }}>
-              Additional Charges
-            </Text>
-            <View style={styles.tableHeader}>
-              <Text style={styles.col1}>#</Text>
-              <Text style={styles.col2}>Date</Text>
-              <Text style={styles.col3}>Order Ref</Text>
-              <Text style={styles.col4}>Type</Text>
-              <Text style={styles.col5}>Description</Text>
-              <Text style={styles.col7}>Amount</Text>
-              <Text style={styles.col8}>VAT</Text>
+          <View style={s.table}>
+            <Text style={s.sectionHeading}>Additional Charges</Text>
+            {/* Header */}
+             <View style={s.tableHeader}>
+              <Text style={[s.thCell, s.c1]}>#</Text>
+              <Text style={[s.thCell, s.c2]}>Date</Text>
+              <Text style={[s.thCell, s.c3]}>Order Ref</Text>
+              <Text style={[s.thCell, s.c5]}>Description</Text>
+              <Text style={[s.thCell, s.c6]}>Amount</Text>
+              <Text style={[s.thCell, s.c7]}>VAT</Text>
             </View>
-            {charges.map((charge, index: number) => (
-              <View key={charge.id} style={styles.tableRow}>
-                <Text style={styles.col1}>{index + 1}</Text>
-                <Text style={styles.col2}>{formatDate(charge.chargeDate)}</Text>
-                <Text style={styles.col3}>
+            {/* Rows */}
+            {charges.map((charge, i) => (
+              <View
+                key={charge.id}
+                style={[s.tableRow, i % 2 !== 0 ? s.tableRowAlt : {}]}
+                wrap={false}
+              >
+                <Text style={[s.tdCell, s.c1]}>{i + 1}</Text>
+                <Text style={[s.tdCell, s.c2]}>{fmtDate(charge.chargeDate)}</Text>
+                <Text style={[s.tdCell, s.c3]}>
                   {charge.order?.reference || "-"}
                 </Text>
-                <Text style={styles.col4}>
-                  {charge.chargeType.replace(/_/g, " ")}
-                </Text>
-                <Text style={styles.col5}>{charge.description}</Text>
-                <Text style={styles.col7}>{formatCurrency(charge.cost)}</Text>
-                <Text style={styles.col8}>{formatCurrency(charge.vat)}</Text>
+                <Text style={[s.tdCell, s.c5]}>{charge.description}</Text>
+                <Text style={[s.tdCell, s.c6]}>{fmt(charge.cost)}</Text>
+                <Text style={[s.tdCell, s.c7]}>{fmt(charge.vat)}</Text>
               </View>
             ))}
           </View>
         )}
 
-        {/* Totals */}
-        <View style={styles.totals}>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Subtotal:</Text>
-            <Text style={styles.totalValue}>
-              {formatCurrency(invoice.subtotalCost)}
-            </Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>VAT:</Text>
-            <Text style={styles.totalValue}>
-              {formatCurrency(invoice.vatCost)}
-            </Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text
-              style={[styles.totalLabel, { fontWeight: "bold", fontSize: 12 }]}
-            >
-              Total Due GBP:
-            </Text>
-            <Text
-              style={[styles.totalValue, { fontWeight: "bold", fontSize: 12 }]}
-            >
-              {formatCurrency(invoice.totalCost)}
-            </Text>
+        {/* ── Totals ────────────────────────────────────────────────────── */}
+        <View style={s.totalsWrapper}>
+          <View style={s.totalsBox}>
+            <View style={s.totalsRow}>
+              <Text style={s.totalsLabel}>Subtotal:</Text>
+              <Text style={s.totalsValue}>{fmt(invoice.subtotalCost)}</Text>
+            </View>
+            <View style={s.totalsRow}>
+              <Text style={s.totalsLabel}>VAT:</Text>
+              <Text style={s.totalsValue}>{fmt(invoice.vatCost)}</Text>
+            </View>
+            <View style={s.totalsDivider} />
+            <View style={s.totalsRow}>
+              <Text style={s.totalsFinalLabel}>Total Due GBP:</Text>
+              <Text style={s.totalsFinalValue}>{fmt(invoice.totalCost)}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Notes */}
+        {/* ── Invoice Notes ─────────────────────────────────────────────── */}
         {invoice.invoiceNotes && (
-          <View style={{ marginTop: 20 }}>
-            <Text style={{ fontWeight: "bold", marginBottom: 5 }}>Notes:</Text>
-            <Text style={{ fontSize: 9 }}>{invoice.invoiceNotes}</Text>
+          <View style={s.notesBox}>
+            <Text style={s.notesLabel}>Notes</Text>
+            <Text style={s.notesText}>{invoice.invoiceNotes}</Text>
           </View>
         )}
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text>Terms of Payment: 30 DAYS FROM INVOICE DATE</Text>
-          <Text>
-            All goods are carried in accordance with our standard trading
-            conditions, copies are available on request.
+        {/* ── Footer ────────────────────────────────────────────────────── */}
+        <View style={s.footer} fixed>
+          <Text style={s.footerText}>
+            Terms of Payment: 30 DAYS FROM INVOICE DATE
+          </Text>
+          <Text style={s.footerText}>
+            VAT Number: 923 847 601
+          </Text>
+          <Text style={s.footerText}>
+            All goods are carried in accordance with our standard trading conditions, copies are available on request.
           </Text>
         </View>
+
       </Page>
     </Document>
   );

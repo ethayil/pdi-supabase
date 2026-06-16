@@ -67,11 +67,6 @@ export function CreateInvoiceDialog({
   }, [open, organizationId]);
 
   const handleSubmit = async () => {
-    if (selectedOrders.length === 0) {
-      toast.error("Please select at least one order");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       await createInvoice({
@@ -134,7 +129,8 @@ export function CreateInvoiceDialog({
         <DialogHeader>
           <DialogTitle>Create Invoice</DialogTitle>
           <DialogDescription>
-            Select orders to include in the invoice
+            Select orders to include in the invoice, or leave blank to create an
+            invoice for DDP charges/refunds.
           </DialogDescription>
         </DialogHeader>
 
@@ -176,7 +172,12 @@ export function CreateInvoiceDialog({
 
           {/* Select Orders */}
           <div className="grid gap-2">
-            <Label>Select Orders</Label>
+            <div className="flex gap-2 items-center">
+              <Label>Select Orders</Label>
+              <span className="text-xs text-muted-foreground font-normal">
+                Optional — leave empty for DDP charges/refunds
+              </span>
+            </div>
             <ScrollArea className="h-[300px] border rounded-md p-4">
               {isLoadingOrders || !uninvoicedOrders ? (
                 <div className="flex items-center justify-center py-8">

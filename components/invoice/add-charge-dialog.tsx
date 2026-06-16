@@ -35,6 +35,14 @@ import {
 import { searchOrdersByRef } from "@/data/orders";
 import type { InvoiceChargeType } from "@/types/globals";
 
+const chargeTypes: { value: InvoiceChargeType; label: string }[] = [
+  { value: "ddp", label: "DDP" },
+  { value: "address_update", label: "Address Update" },
+  { value: "redirect", label: "Redirect" },
+  { value: "refund", label: "Refund" },
+  { value: "other", label: "Other" },
+];
+
 interface AddChargeDialogProps {
   invoiceId: string;
   organizationId: string;
@@ -54,8 +62,8 @@ export function AddChargeDialog({
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [chargeType, setChargeType] = useState<InvoiceChargeType>("ddp");
   const [description, setDescription] = useState("");
-  const [cost, setCost] = useState("");
-  const [vat, setVat] = useState("");
+  const [cost, setCost] = useState("0");
+  const [vat, setVat] = useState("0");
   const [chargeDate, setChargeDate] = useState(
     new Date().toISOString().split("T")[0],
   );
@@ -104,9 +112,9 @@ export function AddChargeDialog({
       // Reset for new charge
       setSelectedOrder(null);
       setChargeType("ddp");
-      setDescription("");
-      setCost("");
-      setVat("");
+      setDescription("DDP");
+      setCost("0");
+      setVat("0");
       setChargeDate(new Date().toISOString().split("T")[0]);
       setSearchTerm("");
     }
@@ -115,6 +123,12 @@ export function AddChargeDialog({
   const handleSelectOrder = (order: Order | null) => {
     setSelectedOrder(order);
     setSearchTerm(""); // Clear search after selection
+    if (chargeType !== "other") {
+      const orderRef = order ? ` for ${order.reference}` : "";
+      const label =
+        chargeTypes.find((t) => t.value === chargeType)?.label || chargeType;
+      setDescription(`${label}${orderRef}`);
+    }
   };
 
   const handleSubmit = async () => {
@@ -165,9 +179,9 @@ export function AddChargeDialog({
       setSearchTerm("");
       setSelectedOrder(null);
       setChargeType("ddp");
-      setDescription("");
-      setCost("");
-      setVat("");
+      setDescription("DDP");
+      setCost("0");
+      setVat("0");
       setChargeDate(new Date().toISOString().split("T")[0]);
     } catch (error) {
       toast.error(
@@ -181,14 +195,6 @@ export function AddChargeDialog({
       setIsSubmitting(false);
     }
   };
-
-  const chargeTypes = [
-    { value: "ddp", label: "DDP" },
-    { value: "address_update", label: "Address Update" },
-    { value: "redirect", label: "Redirect" },
-    { value: "refund", label: "Refund" },
-    { value: "other", label: "Other" },
-  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -230,7 +236,15 @@ export function AddChargeDialog({
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6"
-                      onClick={() => setSelectedOrder(null)}
+                      onClick={() => {
+                        setSelectedOrder(null);
+                        if (chargeType !== "other") {
+                          const label =
+                            chargeTypes.find((t) => t.value === chargeType)
+                              ?.label || chargeType;
+                          setDescription(label);
+                        }
+                      }}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -272,7 +286,7 @@ export function AddChargeDialog({
                       <button
                         key={order.id}
                         type="button"
-                        className="p-2 hover:bg-accent cursor-pointer border-b last:border-b-0"
+                        className="w-full p-2 hover:bg-accent cursor-pointer border-b last:border-b-0 text-left"
                         onClick={() => handleSelectOrder(order)}
                       >
                         <div className="flex justify-between items-center">
@@ -315,7 +329,7 @@ export function AddChargeDialog({
           </div>
         )}
 
-        {editCharge && editCharge.order && (
+        {editCharge?.order && (
           <div className="grid gap-2">
             <Label>Related Order</Label>
             <div className="border rounded-md p-2 bg-muted">
@@ -336,7 +350,19 @@ export function AddChargeDialog({
             <Select
               items={chargeTypes}
               value={chargeType}
-              onValueChange={(e) => setChargeType(e as InvoiceChargeType)}
+              onValueChange={(e) => {
+                const newType = e as InvoiceChargeType;
+                setChargeType(newType);
+                if (newType !== "other") {
+                  const orderRef = selectedOrder
+                    ? ` for ${selectedOrder.reference}`
+                    : "";
+                  const label =
+                    chargeTypes.find((t) => t.value === newType)?.label ||
+                    newType;
+                  setDescription(`${label}${orderRef}`);
+                }
+              }}
             >
               <SelectTrigger id="chargeType" className="w-full">
                 <SelectValue />
@@ -395,16 +421,25 @@ export function AddChargeDialog({
         </div>
 
         {/* Description */}
-        <div className="space-y-2 mt-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Enter charge description"
-            rows={2}
-          />
-        </div>
+        {chargeType === "other" || chargeType === "refund" ? (
+          <div className="space-y-2 mt-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter charge description"
+              rows={2}
+            />
+          </div>
+        ) : (
+          <div className="space-y-1 mt-2">
+            <Label>Description Preview</Label>
+            <p className="text-sm bg-muted p-2 rounded-md border text-muted-foreground">
+              {description || "—"}
+            </p>
+          </div>
+        )}
 
         <DialogFooter className="mt-4">
           <Button

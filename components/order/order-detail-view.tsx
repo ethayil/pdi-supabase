@@ -194,7 +194,7 @@ export function OrderDetailView({
         </div>
       </DashboardHeader>
 
-      <main className="grid grid-cols-1 lg:grid-cols-3 gap-2 flex-1 md:p-2">
+      <main className="grid grid-cols-1 lg:grid-cols-3 gap-2 flex-1 md:p-2 overflow-x-hidden">
         {/* Left Column - Order Items & Notes */}
         <div className="lg:col-span-2 space-y-2">
           <motion.div
