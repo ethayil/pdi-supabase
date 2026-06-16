@@ -55,7 +55,7 @@ export function ProductSelect({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className="h-auto py-2 w-full flex justify-between"
+            className="h-auto py-2 w-[99%] flex justify-between"
           >
             {selectedProduct ? (
               <div className="flex items-center gap-3 w-full">
@@ -82,8 +82,12 @@ export function ProductSelect({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         }
+        className=""
       />
-      <PopoverContent className="w-[--anchor-width] p-0" align="start">
+      <PopoverContent
+        className="w-(--anchor-width) max-w-[100vw] p-0"
+        align="start"
+      >
         <Command>
           <CommandInput placeholder="Search products..." />
           <CommandList>

@@ -55,15 +55,15 @@ export function OrderItemsSection({
 
   const isOrderLocked =
     order.status === "cancelled" || order.status === "returned";
-  const isItemsLocked =
-    order.status !== "pending";
+  const isItemsLocked = isAdmin
+    ? order.status !== "pending" && order.status !== "processing"
+    : order.status !== "pending";
 
   const filteredAvailable = availableProducts.filter(
     (p) => !orderItems.some((item) => item.productId === p._id),
   );
 
   const handleUpdateQuantity = async (itemId: string) => {
-    if (!isAdmin) return;
     if (editQuantity < 1) {
       toast.error("Quantity must be at least 1");
       return;
@@ -84,7 +84,6 @@ export function OrderItemsSection({
   };
 
   const handleRemoveItem = async (itemId: string) => {
-    if (!isAdmin) return;
     try {
       await removeOrderItem({ orderItemId: itemId, orderId: order.id, orgId });
       toast.success("Item removed");
@@ -95,7 +94,6 @@ export function OrderItemsSection({
   };
 
   const handleAddItem = async () => {
-    if (!isAdmin) return;
     if (!newProductId) {
       toast.error("Select a product");
       return;
@@ -133,8 +131,7 @@ export function OrderItemsSection({
             <Badge variant="secondary" className="font-mono text-[10px]">
               {orderItems.length} items
             </Badge>
-            {isAdmin &&
-              !isOrderLocked &&
+            {!isOrderLocked &&
               !isItemsLocked &&
               (!isEditing ? (
                 <Button
@@ -322,7 +319,7 @@ export function OrderItemsSection({
                       min={1}
                       value={newQuantity}
                       onChange={(e) =>
-                        setNewQuantity(parseInt(e.target.value) || 1)
+                        setNewQuantity(parseInt(e.target.value, 2) || 1)
                       }
                       className="w-20 text-center"
                     />

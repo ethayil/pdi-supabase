@@ -704,7 +704,7 @@ export async function bulkUpdateProducts({
 
 export async function getAvailableProducts({ orgId }: { orgId: string }) {
   try {
-    await requireGlobalAdmin();
+    await requireUser();
 
     const products = await prisma.product.findMany({
       where: {

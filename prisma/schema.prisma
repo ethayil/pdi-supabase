@@ -340,6 +340,7 @@ model Order {
   history      OrderHistory[]
   movements    ProductMovement[]
 
+  @@index([reference])
   @@index([invoiceId])
   @@index([addressId])
   @@index([orgId])

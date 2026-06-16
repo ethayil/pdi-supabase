@@ -57,6 +57,7 @@ export const VALID_ORDER_STATUS_TRANSITIONS: Record<
     "collected",
   ],
   processing: [
+    "pending",
     "shipped",
     "on_the_way",
     "delay",

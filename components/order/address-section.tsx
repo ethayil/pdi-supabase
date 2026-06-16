@@ -55,8 +55,9 @@ export function AddressSection({
 
   const isOrderLocked =
     order.status === "cancelled" || order.status === "returned";
-  const isAddressLocked =
-    order.status !== "pending";
+  const isAddressLocked = isAdmin
+    ? (order.status !== "pending" && order.status !== "processing")
+    : order.status !== "pending";
 
   // const countryItems = useMemo(
   //   () => countriesData.map((c) => ({ value: c.label, label: c.label })),
@@ -64,7 +65,6 @@ export function AddressSection({
   // );
 
   const handleSave = async () => {
-    if (!isAdmin) return;
     setIsSaving(true);
     try {
       await updateOrder({ id: order.id, orgId, address: formData });
@@ -86,7 +86,7 @@ export function AddressSection({
             <GlowingIcon icon="MapPin" size="sm" color="#ef4444" />
             Address Details
           </h3>
-          {isAdmin && !isOrderLocked && !isAddressLocked && (
+          {!isOrderLocked && !isAddressLocked && (
             <AnimatePresence mode="wait">
               {!isEditing ? (
                 <motion.div

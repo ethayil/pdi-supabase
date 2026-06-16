@@ -451,7 +451,7 @@ export async function updateOrder(args: {
   };
 }) {
   try {
-    await requireGlobalAdmin();
+    const user = await requireUser();
 
     const {
       id,
@@ -477,8 +477,47 @@ export async function updateOrder(args: {
     });
     if (!order) throw new Error("Order not found");
 
-    if (order.status !== "pending" && address !== undefined) {
-      throw new Error("Order address can only be updated in pending status");
+    const isAdmin = user.role === "admin" || user.role === "orgAdmin";
+    const isOwner = order.userId === user.id;
+
+    if (!isAdmin && !isOwner) {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    if (!isAdmin) {
+      // Prevent non-admins from updating admin-only fields
+      if (
+        status !== undefined ||
+        externalRef !== undefined ||
+        poRef !== undefined ||
+        deliveryDate !== undefined ||
+        sendDate !== undefined ||
+        lwSyncedAt !== undefined ||
+        totalPackages !== undefined ||
+        weight !== undefined ||
+        courierCost !== undefined ||
+        courierVAT !== undefined ||
+        invoiceCost !== undefined
+      ) {
+        throw new Error(
+          "Forbidden: Insufficient Permissions to update admin fields",
+        );
+      }
+
+      // Non-admin can only edit if status is pending
+      if (order.status !== "pending") {
+        throw new Error("Order is locked and cannot be updated");
+      }
+    }
+
+    // Admin status lock check for address updates
+    const isLockedForEveryone = order.status !== "pending" &&
+      order.status !== "processing";
+
+    if (isLockedForEveryone && address !== undefined) {
+      throw new Error(
+        "Order address can only be updated in pending or processing status",
+      );
     }
 
     const data: Record<string, unknown> = {};
@@ -677,15 +716,32 @@ export async function updateOrderItem({
   quantity: number;
 }) {
   try {
-    await requireGlobalAdmin();
+    const user = await requireUser();
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
       include: { product: true, order: true },
     });
     if (!item) throw new Error("Order item not found");
-    if (item.order.status !== "pending") {
-      throw new Error("Order items can only be modified in pending status");
+
+    const isAdmin = user.role === "admin" || user.role === "orgAdmin";
+    const isOwner = item.order.userId === user.id;
+
+    if (!isAdmin && !isOwner) {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    if (!isAdmin && item.order.status !== "pending") {
+      throw new Error("Order is locked and items cannot be modified");
+    }
+
+    const isLockedForEveryone = item.order.status !== "pending" &&
+      item.order.status !== "processing";
+
+    if (isLockedForEveryone) {
+      throw new Error(
+        "Order items can only be modified in pending or processing status",
+      );
     }
 
     const diff = quantity - item.quantity;
@@ -726,14 +782,31 @@ export async function addOrderItem({
   quantity: number;
 }) {
   try {
-    await requireGlobalAdmin();
+    const user = await requireUser();
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
     });
     if (!order) throw new Error("Order not found");
-    if (order.status !== "pending") {
-      throw new Error("Order items can only be modified in pending status");
+
+    const isAdmin = user.role === "admin" || user.role === "orgAdmin";
+    const isOwner = order.userId === user.id;
+
+    if (!isAdmin && !isOwner) {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    if (!isAdmin && order.status !== "pending") {
+      throw new Error("Order is locked and items cannot be modified");
+    }
+
+    const isLockedForEveryone = order.status !== "pending" &&
+      order.status !== "processing";
+
+    if (isLockedForEveryone) {
+      throw new Error(
+        "Order items can only be modified in pending or processing status",
+      );
     }
 
     const product = await prisma.product.findUnique({
@@ -748,7 +821,7 @@ export async function addOrderItem({
       }),
       prisma.product.update({
         where: { id: productId },
-        data: { quantity: product.quantity - quantity },
+        data: { quantity: { decrement: quantity } },
       }),
     ]);
 
@@ -773,15 +846,32 @@ export async function removeOrderItem({
   orgId: string;
 }) {
   try {
-    await requireGlobalAdmin();
+    const user = await requireUser();
 
     const item = await prisma.orderItem.findFirst({
       where: { id: orderItemId, orderId },
       include: { order: true },
     });
     if (!item) throw new Error("Order item not found");
-    if (item.order.status !== "pending") {
-      throw new Error("Order items can only be modified in pending status");
+
+    const isAdmin = user.role === "admin" || user.role === "orgAdmin";
+    const isOwner = item.order.userId === user.id;
+
+    if (!isAdmin && !isOwner) {
+      throw new Error("Forbidden: Insufficient Permissions");
+    }
+
+    if (!isAdmin && item.order.status !== "pending") {
+      throw new Error("Order is locked and items cannot be modified");
+    }
+
+    const isLockedForEveryone = item.order.status !== "pending" &&
+      item.order.status !== "processing";
+
+    if (isLockedForEveryone) {
+      throw new Error(
+        "Order items can only be modified in pending or processing status",
+      );
     }
 
     await prisma.$transaction([
@@ -852,7 +942,8 @@ export async function sendOrderNotification({
               sku: i.product.sku,
               quantity: i.quantity,
             })),
-            orderUrl: `${process.env.SITE_URL}/${order.orgId}/orders/${order.id}`,
+            orderUrl:
+              `${process.env.SITE_URL}/${order.orgId}/orders/${order.id}`,
           });
         }
 
@@ -869,7 +960,10 @@ export async function sendOrderNotification({
           });
         }
       } catch (err) {
-        console.error("Error in sendOrderNotification background actions:", err);
+        console.error(
+          "Error in sendOrderNotification background actions:",
+          err,
+        );
       }
     });
 
