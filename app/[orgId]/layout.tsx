@@ -17,7 +17,7 @@ export default async function OrganizationLayout({
   children: React.ReactNode;
   params: Promise<{ orgId: string }>;
 }) {
-  const { user, session } = await getSession();
+  const { user, session, isAdmin } = await getSession();
   if (!user) {
     return redirect("/auth/signin");
   }
@@ -52,10 +52,7 @@ export default async function OrganizationLayout({
 
   // Organization not found or unauthorized
   if (!selectedOrganization) {
-    if (
-      (user.role === "admin" || user.role === "orgAdmin") &&
-      orgs.length > 0
-    ) {
+    if (isAdmin && orgs.length > 0) {
       redirect(`/${orgs[0].id}`);
     }
     return redirectToUserOrg();

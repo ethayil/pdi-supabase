@@ -14,11 +14,9 @@ export const metadata: Metadata = {
 
 export default async function OrdersPage({ params }: { params: Params }) {
   const { orgId } = await params;
-  const { user } = await getSession();
+  const { user, isAdmin } = await getSession();
 
   if (!user) return null;
-
-  const isAdmin = user.role === "admin" || user.role === "orgAdmin";
 
   const [orders, orgUsers] = await Promise.all([
     getOrders({ orgId }),

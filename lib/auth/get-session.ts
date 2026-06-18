@@ -8,7 +8,16 @@ export const getSession = async () => {
     headers: await headers(),
   });
 
-  return { session: session?.session, user: session?.user };
+  const isAdmin = session?.user.role === "admin" ||
+    session?.user.role === "orgAdmin";
+  const isSuperAdmin = session?.user.role === "admin";
+
+  return {
+    session: session?.session,
+    user: session?.user,
+    isAdmin,
+    isSuperAdmin,
+  };
 };
 
 type SessionUser = NonNullable<Awaited<ReturnType<typeof getSession>>["user"]>;

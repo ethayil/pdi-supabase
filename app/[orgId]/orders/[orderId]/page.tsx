@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { OrderDetailView } from "@/components/order/order-detail-view";
 import { getOrderById } from "@/data/orders";
 import { getAvailableProducts } from "@/data/products";
-import { getSession } from "@/lib/auth/get-session";
 import type { Params } from "@/types/globals";
 
 export const metadata: Metadata = {
@@ -13,9 +12,6 @@ export const metadata: Metadata = {
 
 export default async function OrderDetailPage({ params }: { params: Params }) {
   const { orgId, orderId } = await params;
-  const { user } = await getSession();
-
-  if (!user) return redirect(`/${orgId}/orders`);
 
   const order = await getOrderById({ orderId, orgId });
 

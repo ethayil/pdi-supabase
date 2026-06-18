@@ -135,6 +135,12 @@ export const auth = betterAuth({
       },
     },
   },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 1 * 60, // Cache duration in seconds
+    },
+  },
 });
 
 export type User = (typeof auth.$Infer.Session)["user"];
