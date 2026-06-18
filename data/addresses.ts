@@ -13,15 +13,22 @@ async function fetchAddressesDbData({
   orgId: string;
   userId: string;
 }) {
-  return prisma.address.findMany({
-    where: {
-      orgId,
-      userId,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  try {
+    return await prisma.address.findMany({
+      where: {
+        orgId,
+        userId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  } catch (error) {
+    console.error("Error in fetchAddressesDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch addresses from database");
+  }
 }
 
 const getCachedAddressesDbData = unstable_cache(
@@ -38,7 +45,7 @@ export async function getAddresses({ orgId }: { orgId: string }) {
   try {
     const user = await requireUser();
 
-    return getCachedAddressesDbData(orgId, user.id);
+    return await getCachedAddressesDbData(orgId, user.id);
   } catch (error) {
     console.error("Error fetching addresses:", error);
     return [];

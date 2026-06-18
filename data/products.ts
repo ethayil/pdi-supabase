@@ -35,69 +35,76 @@ async function fetchProductsDbData({
   search?: string;
   stockStatus: string;
 }) {
-  // Fetch organization settings for threshold
-  const org = await prisma.organization.findUnique({
-    where: { id: orgId },
-    select: { lowStockThreshold: true },
-  });
-  const lowStockThreshold = org?.lowStockThreshold ?? 50;
+  try {
+    // Fetch organization settings for threshold
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { lowStockThreshold: true },
+    });
+    const lowStockThreshold = org?.lowStockThreshold ?? 50;
 
-  const where: ProductWhereInput = { orgId };
+    const where: ProductWhereInput = { orgId };
 
-  // Stock status mapping to isActive and quantity ranges
-  if (stockStatus === "active") {
-    where.isActive = true;
-  } else if (stockStatus === "inactive") {
-    where.isActive = false;
-  } else if (stockStatus === "out_of_stock") {
-    where.isActive = true;
-    where.quantity = 0;
-  } else if (stockStatus === "low_stock") {
-    where.isActive = true;
-    where.quantity = {
-      gt: 0,
-      lte: lowStockThreshold,
+    // Stock status mapping to isActive and quantity ranges
+    if (stockStatus === "active") {
+      where.isActive = true;
+    } else if (stockStatus === "inactive") {
+      where.isActive = false;
+    } else if (stockStatus === "out_of_stock") {
+      where.isActive = true;
+      where.quantity = 0;
+    } else if (stockStatus === "low_stock") {
+      where.isActive = true;
+      where.quantity = {
+        gt: 0,
+        lte: lowStockThreshold,
+      };
+    }
+
+    // Category filter
+    if (categoryId && categoryId !== "all") {
+      where.categoryId = categoryId;
+    }
+
+    // Search filter
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { sku: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
+
+    const [totalCount, products] = await Promise.all([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { name: "asc" },
+        include: {
+          category: true,
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    return {
+      success: true,
+      data: products,
+      totalPages,
+      totalCount,
+      lowStockThreshold,
     };
+  } catch (error) {
+    console.error("Error in fetchProductsDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch products from database");
   }
-
-  // Category filter
-  if (categoryId && categoryId !== "all") {
-    where.categoryId = categoryId;
-  }
-
-  // Search filter
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { sku: { contains: search, mode: "insensitive" } },
-    ];
-  }
-
-  const skip = (currentPage - 1) * entriesPerPage;
-  const take = entriesPerPage;
-
-  const [totalCount, products] = await Promise.all([
-    prisma.product.count({ where }),
-    prisma.product.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { name: "asc" },
-      include: {
-        category: true,
-      },
-    }),
-  ]);
-
-  const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-  return {
-    success: true,
-    data: products,
-    totalPages,
-    totalCount,
-    lowStockThreshold,
-  };
 }
 
 const getCachedProductsDbData = unstable_cache(
@@ -145,7 +152,7 @@ export async function getProducts({
       };
     }
 
-    return getCachedProductsDbData(
+    return await getCachedProductsDbData(
       orgId,
       currentPage,
       entriesPerPage,

@@ -30,7 +30,17 @@ import {
 } from "@/data/organizations";
 import { useRegisterAction } from "@/hooks/use-command-actions";
 import { useOrgParams } from "@/lib/nuqs/org-params";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { countriesData } from "@/data/countries-data";
 import { createOrgSchema } from "@/schemas/org-schema";
+import { useOrganizationStore } from "@/store/use-organization-store";
 import LoadingButton from "../ui/loading-button";
 
 export default function ManageOrganizationDialog({
@@ -99,6 +109,7 @@ export default function ManageOrganizationDialog({
       city: selectedOrg?.city ?? "",
       postcode: selectedOrg?.postcode ?? "",
       country: selectedOrg?.country ?? "",
+      vat: selectedOrg?.vat ?? "",
       primaryColor: selectedOrg?.primaryColor ?? "#0056D2",
       secondaryColor: selectedOrg?.secondaryColor ?? "",
       fontFamily: selectedOrg?.fontFamily ?? "",
@@ -148,6 +159,8 @@ export default function ManageOrganizationDialog({
 
     try {
       await deleteOrganization({ id: orgId });
+      useOrganizationStore.getState().clearStore();
+      await useOrganizationStore.getState().fetchOrganizations(true);
       toast.success("Organization deleted", { id: toastId });
       onOpenChange(false);
     } catch (error) {
@@ -168,8 +181,11 @@ export default function ManageOrganizationDialog({
     try {
       if (orgId && orgId !== "all") {
         await updateOrganization(values);
+        await useOrganizationStore.getState().fetchOrganizations(true);
+        router.refresh();
       } else {
         const result = await createOrganization(data);
+        await useOrganizationStore.getState().fetchOrganizations(true);
         if (result && !organizationId) {
           router.push(`/${result}`);
         }
@@ -414,11 +430,48 @@ export default function ManageOrganizationDialog({
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="form-country">Country</FieldLabel>
+                    <FieldLabel>Country</FieldLabel>
+                    <Select
+                      name={field.name}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      items={countriesData.map((country) => ({
+                        value: country.label,
+                        label: country.label,
+                      }))}
+                    >
+                      <SelectTrigger aria-invalid={fieldState.invalid}>
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent alignItemWithTrigger={false}>
+                        <SelectGroup>
+                          {countriesData.map((country) => (
+                            <SelectItem
+                              key={country.label}
+                              value={country.label}
+                            >
+                              {country.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="vat"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="form-vat">VAT Number</FieldLabel>
                     <Input
                       {...field}
-                      id="form-country"
-                      placeholder="United Kingdom"
+                      id="form-vat"
+                      placeholder="GB123456789"
                       disabled={isLoading}
                     />
                     {fieldState.invalid && (

@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getUninvoicedOrders } from "@/data/invoices";
 import { formatCurrency } from "@/lib/utils";
 
@@ -38,7 +39,9 @@ export function AddOrderDialog({
   onAddOrder,
 }: AddOrderDialogProps) {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [uninvoicedOrders, setUninvoicedOrders] = useState<Order[] | null>(null);
+  const [uninvoicedOrders, setUninvoicedOrders] = useState<Order[] | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch uninvoiced orders when dialog opens
@@ -90,7 +93,9 @@ export function AddOrderDialog({
               <Select
                 items={uninvoicedOrders.map((order) => ({
                   value: order.id,
-                  label: `${order.reference} - ${order.fullname}`,
+                  label: `${order.reference} - ${order.fullname}${
+                    order.poRef ? ` (PO: ${order.poRef})` : ""
+                  }`,
                 }))}
                 value={selectedOrderId || ""}
                 onValueChange={setSelectedOrderId}
@@ -102,11 +107,29 @@ export function AddOrderDialog({
                 <SelectContent alignItemWithTrigger={false}>
                   {uninvoicedOrders.map((order) => (
                     <SelectItem key={order.id} value={order.id}>
-                      {order.reference} - {order.fullname} (
-                      {formatCurrency(
-                        (order.courierCost || 0) + (order.courierVAT || 0),
-                      )}
-                      )
+                      <div className="flex flex-col text-left py-1 w-full whitespace-normal">
+                        <span className="font-semibold text-sm block">
+                          {order.reference} - {order.fullname}
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {order.poRef && (
+                            <span className="text-xs text-muted-foreground">
+                              PO: {order.poRef}
+                            </span>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            Price:{" "}
+                            {formatCurrency(
+                              (order.courierCost || 0) +
+                                (order.courierVAT || 0),
+                            )}
+                          </span>
+                          <StatusBadge
+                            status={order.status}
+                            className="h-4 px-1.5 text-[9px]"
+                          />
+                        </div>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

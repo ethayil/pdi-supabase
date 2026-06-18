@@ -25,36 +25,43 @@ async function fetchCategoriesDbData({
   entriesPerPage: number;
   query?: string;
 }) {
-  const whereClause: CategoryWhereInput = { orgId };
+  try {
+    const whereClause: CategoryWhereInput = { orgId };
 
-  if (query) {
-    whereClause.name = {
-      contains: query,
-      mode: "insensitive",
+    if (query) {
+      whereClause.name = {
+        contains: query,
+        mode: "insensitive",
+      };
+    }
+
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
+
+    const [totalCount, categories] = await Promise.all([
+      prisma.category.count({ where: whereClause }),
+      prisma.category.findMany({
+        where: whereClause,
+        skip: skip,
+        take: take,
+        orderBy: { name: "asc" },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    return {
+      success: true,
+      data: categories,
+      totalPages,
+      totalCount,
     };
+  } catch (error) {
+    console.error("Error in fetchCategoriesDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch categories from database");
   }
-
-  const skip = (currentPage - 1) * entriesPerPage;
-  const take = entriesPerPage;
-
-  const [totalCount, categories] = await Promise.all([
-    prisma.category.count({ where: whereClause }),
-    prisma.category.findMany({
-      where: whereClause,
-      skip: skip,
-      take: take,
-      orderBy: { name: "asc" },
-    }),
-  ]);
-
-  const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-  return {
-    success: true,
-    data: categories,
-    totalPages,
-    totalCount,
-  };
 }
 
 const getCachedCategoriesDbData = unstable_cache(
@@ -90,7 +97,7 @@ export async function getCategories({
       };
     }
 
-    return getCachedCategoriesDbData(orgId, currentPage, entriesPerPage, query);
+    return await getCachedCategoriesDbData(orgId, currentPage, entriesPerPage, query);
   } catch (error) {
     console.error("Database error in getCategories:", error);
     return {
@@ -104,10 +111,17 @@ export async function getCategories({
 }
 
 async function fetchActiveCategoriesDbData({ orgId }: { orgId: string }) {
-  return prisma.category.findMany({
-    where: { orgId, isActive: true },
-    orderBy: { name: "asc" },
-  });
+  try {
+    return await prisma.category.findMany({
+      where: { orgId, isActive: true },
+      orderBy: { name: "asc" },
+    });
+  } catch (error) {
+    console.error("Error in fetchActiveCategoriesDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch active categories from database");
+  }
 }
 
 const getCachedActiveCategoriesDbData = unstable_cache(
@@ -122,7 +136,7 @@ const getCachedActiveCategoriesDbData = unstable_cache(
 export async function getActiveCategories({ orgId }: { orgId: string }) {
   try {
     await requireUser();
-    return getCachedActiveCategoriesDbData(orgId);
+    return await getCachedActiveCategoriesDbData(orgId);
   } catch (error) {
     console.error("Database error in getActiveCategories:", error);
     return [];

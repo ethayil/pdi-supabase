@@ -90,12 +90,19 @@ export async function updateBanner(id: string, data: BannerUpdateInput) {
 }
 
 async function fetchActiveBannersDbData() {
-  return prisma.banner.findMany({
-    where: {
-      isActive: true,
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  try {
+    return await prisma.banner.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error in fetchActiveBannersDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch active banners from database");
+  }
 }
 
 const getCachedActiveBannersDbData = unstable_cache(
@@ -136,9 +143,16 @@ export async function getVisibleBanners({ orgId }: { orgId?: string } = {}) {
 }
 
 async function fetchAllBannersDbData() {
-  return prisma.banner.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    return await prisma.banner.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error in fetchAllBannersDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch all banners from database");
+  }
 }
 
 const getCachedAllBannersDbData = unstable_cache(

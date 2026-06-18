@@ -16,81 +16,95 @@ export type InvoiceWCharges = InvoiceCharge & {
 async function generateInvoiceReference(
   tx: TransactionClient,
 ): Promise<string> {
-  const counter = await tx.systemCounter.findUnique({
-    where: { counterName: "invoice" },
-  });
-
-  let nextNumber: number;
-
-  if (!counter) {
-    nextNumber = 1;
-    await tx.systemCounter.create({
-      data: {
-        counterName: "invoice",
-        currentValue: nextNumber,
-      },
+  try {
+    const counter = await tx.systemCounter.findUnique({
+      where: { counterName: "invoice" },
     });
-  } else {
-    nextNumber = counter.currentValue + 1;
-    await tx.systemCounter.update({
-      where: { id: counter.id },
-      data: {
-        currentValue: nextNumber,
-      },
-    });
+
+    let nextNumber: number;
+
+    if (!counter) {
+      nextNumber = 1;
+      await tx.systemCounter.create({
+        data: {
+          counterName: "invoice",
+          currentValue: nextNumber,
+        },
+      });
+    } else {
+      nextNumber = counter.currentValue + 1;
+      await tx.systemCounter.update({
+        where: { id: counter.id },
+        data: {
+          currentValue: nextNumber,
+        },
+      });
+    }
+
+    return `INV-${String(nextNumber).padStart(5, "0")}`;
+  } catch (error) {
+    console.error("Error in generateInvoiceReference:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to generate invoice reference");
   }
-
-  return `INV-${String(nextNumber).padStart(5, "0")}`;
 }
 
 async function calculateAndWriteInvoiceTotals(
   tx: TransactionClient,
   invoiceId: string,
 ) {
-  let subtotalCost = 0;
-  let vatCost = 0;
-  let totalWeight = 0;
-  let totalPackages = 0;
+  try {
+    let subtotalCost = 0;
+    let vatCost = 0;
+    let totalWeight = 0;
+    let totalPackages = 0;
 
-  // 1. Calculate from orders
-  const orders = await tx.order.findMany({
-    where: { invoiceId },
-  });
+    // 1. Calculate from orders
+    const orders = await tx.order.findMany({
+      where: { invoiceId },
+    });
 
-  for (const order of orders) {
-    if (order.invoiceCost !== null && order.invoiceCost !== undefined) {
-      subtotalCost += order.invoiceCost;
-    } else {
-      if (order.courierCost) subtotalCost += order.courierCost;
-      if (order.courierVAT) vatCost += order.courierVAT;
+    for (const order of orders) {
+      if (order.invoiceCost !== null && order.invoiceCost !== undefined) {
+        subtotalCost += order.invoiceCost;
+      } else {
+        if (order.courierCost) subtotalCost += order.courierCost;
+        if (order.courierVAT) vatCost += order.courierVAT;
+      }
+      if (order.weight) totalWeight += order.weight;
+      if (order.totalPackages) totalPackages += order.totalPackages;
     }
-    if (order.weight) totalWeight += order.weight;
-    if (order.totalPackages) totalPackages += order.totalPackages;
+
+    // 2. Calculate from charges
+    const charges = await tx.invoiceCharge.findMany({
+      where: { invoiceId },
+    });
+
+    for (const charge of charges) {
+      subtotalCost += charge.cost;
+      vatCost += charge.vat;
+    }
+
+    const totalCost = subtotalCost + vatCost;
+
+    // 3. Update invoice
+    await tx.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        subtotalCost,
+        vatCost,
+        totalCost,
+        totalWeight,
+        totalPackages: totalPackages || orders.length,
+      },
+    });
+  } catch (error) {
+    console.error("Error in calculateAndWriteInvoiceTotals:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to calculate and write invoice totals");
   }
-
-  // 2. Calculate from charges
-  const charges = await tx.invoiceCharge.findMany({
-    where: { invoiceId },
-  });
-
-  for (const charge of charges) {
-    subtotalCost += charge.cost;
-    vatCost += charge.vat;
-  }
-
-  const totalCost = subtotalCost + vatCost;
-
-  // 3. Update invoice
-  await tx.invoice.update({
-    where: { id: invoiceId },
-    data: {
-      subtotalCost,
-      vatCost,
-      totalCost,
-      totalWeight,
-      totalPackages: totalPackages || orders.length,
-    },
-  });
 }
 
 async function fetchPaginatedInvoicesDbData({
@@ -108,34 +122,41 @@ async function fetchPaginatedInvoicesDbData({
   currentPage: number;
   pageSize: number;
 }) {
-  const where: InvoiceWhereInput = { orgId };
-  if (status && status !== "all") {
-    where.status = status as InvoiceStatus;
-  }
-  if (dateFrom || dateTo) {
-    where.invoiceDate = {};
-    if (dateFrom) where.invoiceDate.gte = new Date(dateFrom);
-    if (dateTo) where.invoiceDate.lte = new Date(dateTo);
-  }
+  try {
+    const where: InvoiceWhereInput = { orgId };
+    if (status && status !== "all") {
+      where.status = status as InvoiceStatus;
+    }
+    if (dateFrom || dateTo) {
+      where.invoiceDate = {};
+      if (dateFrom) where.invoiceDate.gte = new Date(dateFrom);
+      if (dateTo) where.invoiceDate.lte = new Date(dateTo);
+    }
 
-  const skip = (currentPage - 1) * pageSize;
+    const skip = (currentPage - 1) * pageSize;
 
-  const invoices = await prisma.invoice.findMany({
-    where,
-    skip,
-    take: pageSize,
-    orderBy: { createdAt: "desc" },
-    include: {
-      orders: {
-        select: { id: true },
+    const invoices = await prisma.invoice.findMany({
+      where,
+      skip,
+      take: pageSize,
+      orderBy: { createdAt: "desc" },
+      include: {
+        orders: {
+          select: { id: true },
+        },
       },
-    },
-  });
+    });
 
-  return invoices.map((invoice) => ({
-    ...invoice,
-    orderCount: invoice.orders.length,
-  }));
+    return invoices.map((invoice) => ({
+      ...invoice,
+      orderCount: invoice.orders.length,
+    }));
+  } catch (error) {
+    console.error("Error in fetchPaginatedInvoicesDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch paginated invoices data");
+  }
 }
 
 const getCachedPaginatedInvoicesDbData = unstable_cache(
@@ -179,7 +200,7 @@ export async function getPaginatedInvoices({
 }) {
   try {
     await requireGlobalAdmin();
-    return getCachedPaginatedInvoicesDbData(
+    return await getCachedPaginatedInvoicesDbData(
       orgId,
       status,
       dateFrom,
@@ -204,44 +225,56 @@ export async function getInvoiceCount({
   dateFrom?: number;
   dateTo?: number;
 }) {
-  await requireGlobalAdmin();
-  const where: InvoiceWhereInput = { orgId };
-  if (status && status !== "all") {
-    where.status = status as InvoiceStatus;
-  }
-  if (dateFrom || dateTo) {
-    where.invoiceDate = {};
-    if (dateFrom) where.invoiceDate.gte = new Date(dateFrom);
-    if (dateTo) where.invoiceDate.lte = new Date(dateTo);
-  }
+  try {
+    await requireGlobalAdmin();
+    const where: InvoiceWhereInput = { orgId };
+    if (status && status !== "all") {
+      where.status = status as InvoiceStatus;
+    }
+    if (dateFrom || dateTo) {
+      where.invoiceDate = {};
+      if (dateFrom) where.invoiceDate.gte = new Date(dateFrom);
+      if (dateTo) where.invoiceDate.lte = new Date(dateTo);
+    }
 
-  return await prisma.invoice.count({ where });
+    return await prisma.invoice.count({ where });
+  } catch (error) {
+    console.error("Database error in getInvoiceCount:", error);
+    return 0;
+  }
 }
 
 async function fetchInvoiceDetailsDbData({ invoiceId }: { invoiceId: string }) {
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: {
-      orders: {
-        include: {
-          items: {
-            include: { product: true },
+  try {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        orders: {
+          include: {
+            items: {
+              include: { product: true },
+            },
           },
         },
+        charges: {
+          include: { order: true },
+        },
       },
-      charges: {
-        include: { order: true },
-      },
-    },
-  });
+    });
 
-  if (!invoice) return null;
+    if (!invoice) return null;
 
-  return {
-    invoice,
-    orders: invoice.orders,
-    charges: invoice.charges,
-  };
+    return {
+      invoice,
+      orders: invoice.orders,
+      charges: invoice.charges,
+    };
+  } catch (error) {
+    console.error("Error in fetchInvoiceDetailsDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch invoice details from database");
+  }
 }
 
 const getCachedInvoiceDetailsDbData = unstable_cache(
@@ -256,7 +289,7 @@ const getCachedInvoiceDetailsDbData = unstable_cache(
 export async function getInvoiceDetails({ invoiceId }: { invoiceId: string }) {
   try {
     await requireGlobalAdmin();
-    return getCachedInvoiceDetailsDbData(invoiceId);
+    return await getCachedInvoiceDetailsDbData(invoiceId);
   } catch (error) {
     console.error("Database error in getInvoiceDetails:", error);
     return null;
@@ -272,36 +305,50 @@ export async function updateInvoiceStatus({
   status: InvoiceStatus;
   paidDate?: number;
 }) {
-  await requireGlobalAdmin();
-  const invoice = await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: {
-      status,
-      paidDate: paidDate ? new Date(paidDate) : null,
-    },
-  });
-  revalidatePath(`/${invoice.orgId}/admin/invoices/${invoiceId}`);
-  revalidateTag(cacheTags.invoices, "");
-  return { success: true };
+  try {
+    await requireGlobalAdmin();
+    const invoice = await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        status,
+        paidDate: paidDate ? new Date(paidDate) : null,
+      },
+    });
+    revalidatePath(`/${invoice.orgId}/admin/invoices/${invoiceId}`);
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in updateInvoiceStatus:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update invoice status");
+  }
 }
 
 export async function removeInvoiceCharge({ chargeId }: { chargeId: string }) {
-  await requireGlobalAdmin();
-  const charge = await prisma.invoiceCharge.findUnique({
-    where: { id: chargeId },
-  });
-  if (!charge) throw new Error("Charge not found");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.invoiceCharge.delete({
+  try {
+    await requireGlobalAdmin();
+    const charge = await prisma.invoiceCharge.findUnique({
       where: { id: chargeId },
     });
-    await calculateAndWriteInvoiceTotals(tx, charge.invoiceId);
-  });
+    if (!charge) throw new Error("Charge not found");
 
-  revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
-  revalidateTag(cacheTags.invoices, "");
-  return { success: true };
+    await prisma.$transaction(async (tx) => {
+      await tx.invoiceCharge.delete({
+        where: { id: chargeId },
+      });
+      await calculateAndWriteInvoiceTotals(tx, charge.invoiceId);
+    });
+
+    revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in removeInvoiceCharge:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to remove invoice charge");
+  }
 }
 
 export async function addOrderToInvoice({
@@ -311,24 +358,31 @@ export async function addOrderToInvoice({
   invoiceId: string;
   orderId: string;
 }) {
-  await requireGlobalAdmin();
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { orgId: true },
-  });
-  if (!order) throw new Error("Order not found");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
+  try {
+    await requireGlobalAdmin();
+    const order = await prisma.order.findUnique({
       where: { id: orderId },
-      data: { invoiceId },
+      select: { orgId: true },
     });
-    await calculateAndWriteInvoiceTotals(tx, invoiceId);
-  });
+    if (!order) throw new Error("Order not found");
 
-  revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
-  revalidateTag(cacheTags.invoices, "");
-  return { success: true };
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: orderId },
+        data: { invoiceId },
+      });
+      await calculateAndWriteInvoiceTotals(tx, invoiceId);
+    });
+
+    revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in addOrderToInvoice:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to add order to invoice");
+  }
 }
 
 export async function removeOrderFromInvoice({
@@ -338,24 +392,31 @@ export async function removeOrderFromInvoice({
   invoiceId: string;
   orderId: string;
 }) {
-  await requireGlobalAdmin();
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { orgId: true },
-  });
-  if (!order) throw new Error("Order not found");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
+  try {
+    await requireGlobalAdmin();
+    const order = await prisma.order.findUnique({
       where: { id: orderId },
-      data: { invoiceId: null },
+      select: { orgId: true },
     });
-    await calculateAndWriteInvoiceTotals(tx, invoiceId);
-  });
+    if (!order) throw new Error("Order not found");
 
-  revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
-  revalidateTag(cacheTags.invoices, "");
-  return { success: true };
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: orderId },
+        data: { invoiceId: null },
+      });
+      await calculateAndWriteInvoiceTotals(tx, invoiceId);
+    });
+
+    revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in removeOrderFromInvoice:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to remove order from invoice");
+  }
 }
 
 export async function updateOrderInvoiceCost({
@@ -365,41 +426,53 @@ export async function updateOrderInvoiceCost({
   orderId: string;
   invoiceCost: number | null;
 }) {
-  await requireGlobalAdmin();
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-  });
-  if (!order) throw new Error("Order not found");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
+  try {
+    await requireGlobalAdmin();
+    const order = await prisma.order.findUnique({
       where: { id: orderId },
-      data: { invoiceCost },
     });
-    if (order.invoiceId) {
-      await calculateAndWriteInvoiceTotals(tx, order.invoiceId);
-    }
-  });
+    if (!order) throw new Error("Order not found");
 
-  if (order.invoiceId) {
-    revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: orderId },
+        data: { invoiceCost },
+      });
+      if (order.invoiceId) {
+        await calculateAndWriteInvoiceTotals(tx, order.invoiceId);
+      }
+    });
+
+    if (order.invoiceId) {
+      revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
+    }
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in updateOrderInvoiceCost:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update order invoice cost");
   }
-  revalidateTag(cacheTags.invoices, "");
-  return { success: true };
 }
 
 export async function getUninvoicedOrders({ orgId }: { orgId: string }) {
-  await requireGlobalAdmin();
-  return await prisma.order.findMany({
-    where: {
-      orgId,
-      invoiceId: null,
-      status: {
-        in: ["processing", "shipped", "delivered"],
+  try {
+    await requireGlobalAdmin();
+    return await prisma.order.findMany({
+      where: {
+        orgId,
+        invoiceId: null,
+        status: {
+          in: ["processing", "shipped", "delivered"],
+        },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Error in getUninvoicedOrders:", error);
+    return [];
+  }
 }
 
 export async function createInvoice(args: {
@@ -410,101 +483,108 @@ export async function createInvoice(args: {
   invoiceNotes?: string;
   dueDate?: number;
 }) {
-  await requireGlobalAdmin();
+  try {
+    await requireGlobalAdmin();
 
-  // Validate all orders belong to org and are processing or above
-  for (const orderId of args.orderIds) {
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-    });
-    if (!order) throw new Error(`Order ${orderId} not found`);
-    if (order.orgId !== args.orgId) {
-      throw new Error("All orders must belong to the same organization");
-    }
-
-    const validStatuses = ["processing", "shipped", "exception", "delivered"];
-    if (!validStatuses.includes(order.status)) {
-      throw new Error(
-        `Order ${order.reference} must be in processing status or above`,
-      );
-    }
-
-    if (order.invoiceId) {
-      throw new Error(`Order ${order.reference} is already invoiced`);
-    }
-  }
-
-  // Generate invoice reference and create invoice in transaction
-  const invoiceId = await prisma.$transaction(async (tx) => {
-    const reference = await generateInvoiceReference(tx);
-
-    let subtotalCost = 0;
-    let vatCost = 0;
-    let totalWeight = 0;
-    let totalPackages = 0;
-
-    // Fetch and calculate totals for orders
-    const orders = await tx.order.findMany({
-      where: {
-        id: { in: args.orderIds },
-      },
-    });
-
-    for (const order of orders) {
-      if (order.invoiceCost !== null && order.invoiceCost !== undefined) {
-        subtotalCost += order.invoiceCost;
-      } else {
-        if (order.courierCost) subtotalCost += order.courierCost;
-        if (order.courierVAT) vatCost += order.courierVAT;
+    // Validate all orders belong to org and are processing or above
+    for (const orderId of args.orderIds) {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+      });
+      if (!order) throw new Error(`Order ${orderId} not found`);
+      if (order.orgId !== args.orgId) {
+        throw new Error("All orders must belong to the same organization");
       }
-      if (order.weight) totalWeight += order.weight;
-      if (order.totalPackages) totalPackages += order.totalPackages;
+
+      const validStatuses = ["processing", "shipped", "exception", "delivered"];
+      if (!validStatuses.includes(order.status)) {
+        throw new Error(
+          `Order ${order.reference} must be in processing status or above`,
+        );
+      }
+
+      if (order.invoiceId) {
+        throw new Error(`Order ${order.reference} is already invoiced`);
+      }
     }
 
-    const totalCost = subtotalCost + vatCost;
+    // Generate invoice reference and create invoice in transaction
+    const invoiceId = await prisma.$transaction(async (tx) => {
+      const reference = await generateInvoiceReference(tx);
 
-    const invoiceDate = new Date();
-    const calculatedDueDate = new Date(
-      invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000,
-    ); // +30 days
-    const finalDueDate = args.dueDate
-      ? new Date(args.dueDate)
-      : calculatedDueDate;
+      let subtotalCost = 0;
+      let vatCost = 0;
+      let totalWeight = 0;
+      let totalPackages = 0;
 
-    const invoice = await tx.invoice.create({
-      data: {
-        orgId: args.orgId,
-        reference,
-        poNumber: args.poNumber || null,
-        status: "draft",
-        invoiceDate,
-        dueDate: finalDueDate,
-        subtotalCost,
-        vatCost,
-        totalCost,
-        totalWeight,
-        totalPackages: totalPackages || args.orderIds.length,
-        internalNotes: args.internalNotes || null,
-        invoiceNotes: args.invoiceNotes || null,
-      },
+      // Fetch and calculate totals for orders
+      const orders = await tx.order.findMany({
+        where: {
+          id: { in: args.orderIds },
+        },
+      });
+
+      for (const order of orders) {
+        if (order.invoiceCost !== null && order.invoiceCost !== undefined) {
+          subtotalCost += order.invoiceCost;
+        } else {
+          if (order.courierCost) subtotalCost += order.courierCost;
+          if (order.courierVAT) vatCost += order.courierVAT;
+        }
+        if (order.weight) totalWeight += order.weight;
+        if (order.totalPackages) totalPackages += order.totalPackages;
+      }
+
+      const totalCost = subtotalCost + vatCost;
+
+      const invoiceDate = new Date();
+      const calculatedDueDate = new Date(
+        invoiceDate.getTime() + 30 * 24 * 60 * 60 * 1000,
+      ); // +30 days
+      const finalDueDate = args.dueDate
+        ? new Date(args.dueDate)
+        : calculatedDueDate;
+
+      const invoice = await tx.invoice.create({
+        data: {
+          orgId: args.orgId,
+          reference,
+          poNumber: args.poNumber || null,
+          status: "draft",
+          invoiceDate,
+          dueDate: finalDueDate,
+          subtotalCost,
+          vatCost,
+          totalCost,
+          totalWeight,
+          totalPackages: totalPackages || args.orderIds.length,
+          internalNotes: args.internalNotes || null,
+          invoiceNotes: args.invoiceNotes || null,
+        },
+      });
+
+      // Update orders with invoiceId
+      await tx.order.updateMany({
+        where: {
+          id: { in: args.orderIds },
+        },
+        data: {
+          invoiceId: invoice.id,
+        },
+      });
+
+      return invoice.id;
     });
 
-    // Update orders with invoiceId
-    await tx.order.updateMany({
-      where: {
-        id: { in: args.orderIds },
-      },
-      data: {
-        invoiceId: invoice.id,
-      },
-    });
-
-    return invoice.id;
-  });
-
-  revalidatePath(`/${args.orgId}/admin/invoices`);
-  revalidateTag(cacheTags.invoices, "");
-  return invoiceId;
+    revalidatePath(`/${args.orgId}/admin/invoices`);
+    revalidateTag(cacheTags.invoices, "");
+    return invoiceId;
+  } catch (error) {
+    console.error("Error in createInvoice:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to create invoice");
+  }
 }
 
 export async function addInvoiceCharge(args: {
@@ -516,41 +596,48 @@ export async function addInvoiceCharge(args: {
   vat: number;
   chargeDate: number;
 }) {
-  await requireGlobalAdmin();
+  try {
+    await requireGlobalAdmin();
 
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: args.invoiceId },
-  });
-  if (!invoice) throw new Error("Invoice not found");
-
-  if (args.orderId) {
-    const order = await prisma.order.findUnique({
-      where: { id: args.orderId },
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: args.invoiceId },
     });
-    if (!order) throw new Error("Order not found");
+    if (!invoice) throw new Error("Invoice not found");
+
+    if (args.orderId) {
+      const order = await prisma.order.findUnique({
+        where: { id: args.orderId },
+      });
+      if (!order) throw new Error("Order not found");
+    }
+
+    const chargeId = await prisma.$transaction(async (tx) => {
+      const charge = await tx.invoiceCharge.create({
+        data: {
+          invoiceId: args.invoiceId,
+          orderId: args.orderId || null,
+          orgId: invoice.orgId,
+          chargeType: args.chargeType,
+          description: args.description,
+          cost: args.cost,
+          vat: args.vat,
+          chargeDate: new Date(args.chargeDate),
+        },
+      });
+
+      await calculateAndWriteInvoiceTotals(tx, args.invoiceId);
+      return charge.id;
+    });
+
+    revalidatePath(`/${invoice.orgId}/admin/invoices/${args.invoiceId}`);
+    revalidateTag(cacheTags.invoices, "");
+    return chargeId;
+  } catch (error) {
+    console.error("Error in addInvoiceCharge:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to add invoice charge");
   }
-
-  const chargeId = await prisma.$transaction(async (tx) => {
-    const charge = await tx.invoiceCharge.create({
-      data: {
-        invoiceId: args.invoiceId,
-        orderId: args.orderId || null,
-        orgId: invoice.orgId,
-        chargeType: args.chargeType,
-        description: args.description,
-        cost: args.cost,
-        vat: args.vat,
-        chargeDate: new Date(args.chargeDate),
-      },
-    });
-
-    await calculateAndWriteInvoiceTotals(tx, args.invoiceId);
-    return charge.id;
-  });
-
-  revalidatePath(`/${invoice.orgId}/admin/invoices/${args.invoiceId}`);
-  revalidateTag(cacheTags.invoices, "");
-  return chargeId;
 }
 
 export async function updateInvoiceCharge(args: {
@@ -561,29 +648,68 @@ export async function updateInvoiceCharge(args: {
   vat: number;
   chargeDate: number;
 }) {
-  await requireGlobalAdmin();
+  try {
+    await requireGlobalAdmin();
 
-  const charge = await prisma.invoiceCharge.findUnique({
-    where: { id: args.chargeId },
-  });
-  if (!charge) throw new Error("Charge not found");
-
-  await prisma.$transaction(async (tx) => {
-    await tx.invoiceCharge.update({
+    const charge = await prisma.invoiceCharge.findUnique({
       where: { id: args.chargeId },
-      data: {
-        chargeType: args.chargeType,
-        description: args.description,
-        cost: args.cost,
-        vat: args.vat,
-        chargeDate: new Date(args.chargeDate),
-      },
+    });
+    if (!charge) throw new Error("Charge not found");
+
+    await prisma.$transaction(async (tx) => {
+      await tx.invoiceCharge.update({
+        where: { id: args.chargeId },
+        data: {
+          chargeType: args.chargeType,
+          description: args.description,
+          cost: args.cost,
+          vat: args.vat,
+          chargeDate: new Date(args.chargeDate),
+        },
+      });
+
+      await calculateAndWriteInvoiceTotals(tx, charge.invoiceId);
     });
 
-    await calculateAndWriteInvoiceTotals(tx, charge.invoiceId);
-  });
+    revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in updateInvoiceCharge:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update invoice charge");
+  }
+}
 
-  revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
-  revalidateTag(cacheTags.invoices, "");
-  return { success: true };
+export async function updateInvoiceDetails({
+  invoiceId,
+  poNumber,
+  invoiceNotes,
+  internalNotes,
+}: {
+  invoiceId: string;
+  poNumber?: string | null;
+  invoiceNotes?: string | null;
+  internalNotes?: string | null;
+}) {
+  try {
+    await requireGlobalAdmin();
+    const invoice = await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        ...(poNumber !== undefined && { poNumber }),
+        ...(invoiceNotes !== undefined && { invoiceNotes }),
+        ...(internalNotes !== undefined && { internalNotes }),
+      },
+    });
+    revalidatePath(`/${invoice.orgId}/admin/invoices/${invoiceId}`);
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in updateInvoiceDetails:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update invoice details");
+  }
 }

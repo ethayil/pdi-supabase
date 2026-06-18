@@ -46,14 +46,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   addOrderToInvoice,
   type InvoiceWCharges,
   removeInvoiceCharge,
   removeOrderFromInvoice,
+  updateInvoiceDetails,
   updateInvoiceStatus,
   updateOrderInvoiceCost,
 } from "@/data/invoices";
+import { updateOrderDescription, updateOrderPoRef } from "@/data/orders";
 import { formatCurrency } from "@/lib/utils";
 import { useOrganizationStore } from "@/store/use-organization-store";
 import { formattedDate } from "@/utils/formatted-date";
@@ -96,6 +99,127 @@ export function InvoiceDetailView({
   >(null);
   const [invoiceCostInput, setInvoiceCostInput] = useState<string>("");
 
+  const [editingDescriptionOrderId, setEditingDescriptionOrderId] = useState<
+    string | null
+  >(null);
+  const [descriptionInput, setDescriptionInput] = useState<string>("");
+  const [editingOrderPoOrderId, setEditingOrderPoOrderId] = useState<
+    string | null
+  >(null);
+  const [orderPoInput, setOrderPoInput] = useState<string>("");
+  const [editingPo, setEditingPo] = useState(false);
+  const [poInput, setPoInput] = useState(invoice.poNumber || "");
+  const [editingInvoiceNotes, setEditingInvoiceNotes] = useState(false);
+  const [invoiceNotesInput, setInvoiceNotesInput] = useState(
+    invoice.invoiceNotes || "",
+  );
+  const [editingInternalNotes, setEditingInternalNotes] = useState(false);
+  const [internalNotesInput, setInternalNotesInput] = useState(
+    invoice.internalNotes || "",
+  );
+
+  const handleSaveOrderPo = async (orderId: string) => {
+    const val = orderPoInput.trim() === "" ? null : orderPoInput;
+    startTransition(async () => {
+      try {
+        await updateOrderPoRef({
+          orderId,
+          poRef: val,
+        });
+        toast.success("Order PO Number updated");
+        setEditingOrderPoOrderId(null);
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to update PO number",
+        );
+      }
+    });
+  };
+
+  const handleSaveDescription = async (orderId: string) => {
+    const val =
+      descriptionInput.trim() === "" ? "Printed Matter" : descriptionInput;
+    startTransition(async () => {
+      try {
+        await updateOrderDescription({
+          orderId,
+          description: val,
+        });
+        toast.success("Order description updated");
+        setEditingDescriptionOrderId(null);
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update description",
+        );
+      }
+    });
+  };
+
+  const handleSavePo = async () => {
+    const val = poInput.trim() === "" ? null : poInput;
+    startTransition(async () => {
+      try {
+        await updateInvoiceDetails({
+          invoiceId: invoice.id,
+          poNumber: val,
+        });
+        toast.success("PO Number updated");
+        setEditingPo(false);
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to update PO number",
+        );
+      }
+    });
+  };
+
+  const handleSaveInvoiceNotes = async () => {
+    const val = invoiceNotesInput.trim() === "" ? null : invoiceNotesInput;
+    startTransition(async () => {
+      try {
+        await updateInvoiceDetails({
+          invoiceId: invoice.id,
+          invoiceNotes: val,
+        });
+        toast.success("Invoice notes updated");
+        setEditingInvoiceNotes(false);
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update invoice notes",
+        );
+      }
+    });
+  };
+
+  const handleSaveInternalNotes = async () => {
+    const val = internalNotesInput.trim() === "" ? null : internalNotesInput;
+    startTransition(async () => {
+      try {
+        await updateInvoiceDetails({
+          invoiceId: invoice.id,
+          internalNotes: val,
+        });
+        toast.success("Internal notes updated");
+        setEditingInternalNotes(false);
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update internal notes",
+        );
+      }
+    });
+  };
+
   const handleStatusChange = async (status: InvoiceStatus) => {
     startTransition(async () => {
       try {
@@ -107,6 +231,7 @@ export function InvoiceDetailView({
         toast.success(`Invoice status updated to ${status}`);
         router.refresh();
       } catch (error) {
+        console.log(error);
         toast.error("Failed to update status");
       }
     });
@@ -129,6 +254,8 @@ export function InvoiceDetailView({
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
     } catch (error) {
+      console.log(error);
+
       toast.error("Failed to generate PDF");
     }
   };
@@ -140,6 +267,8 @@ export function InvoiceDetailView({
         toast.success("Charge removed");
         router.refresh();
       } catch (error) {
+        console.log(error);
+
         toast.error("Failed to remove charge");
       }
     });
@@ -155,8 +284,11 @@ export function InvoiceDetailView({
         toast.success("Order added to invoice");
         setShowAddOrder(false);
         router.refresh();
-      } catch (error: any) {
-        toast.error(error.message || "Failed to add order");
+      } catch (error) {
+        console.error(error);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to add order",
+        );
       }
     });
   };
@@ -172,8 +304,10 @@ export function InvoiceDetailView({
         toast.success("Order removed from invoice");
         setOrderToRemove(null);
         router.refresh();
-      } catch (error: any) {
-        toast.error(error.message || "Failed to remove order");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to remove order",
+        );
       }
     });
   };
@@ -190,8 +324,12 @@ export function InvoiceDetailView({
         toast.success("Invoice cost updated");
         setEditingInvoiceCostOrderId(null);
         router.refresh();
-      } catch (error: any) {
-        toast.error(error.message || "Failed to update invoice cost");
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to update invoice cost",
+        );
       }
     });
   };
@@ -301,24 +439,169 @@ export function InvoiceDetailView({
                         className="flex-1 border p-2 rounded-md hover:bg-primary/10 transition-colors duration-300"
                       >
                         <div className="flex justify-between items-center gap-2 w-full">
-                          {/* Order info with popover */}
-                          <Popover>
-                            <PopoverTrigger className="flex-1 text-left cursor-pointer">
-                              <p className="font-semibold text-sm truncate hover:text-primary transition-colors">
-                                {order.reference}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {order.fullname}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {order.country}
-                              </p>
-                            </PopoverTrigger>
-                            <OrderPopoverContent
-                              order={order}
-                              organizationId={organizationId}
-                            />
-                          </Popover>
+                           {/* Order info with popover */}
+                           <div className="flex-1 text-left flex flex-col justify-start">
+                             <Popover>
+                               <PopoverTrigger className="text-left cursor-pointer hover:text-primary transition-colors inline-block w-fit font-semibold text-sm truncate">
+                                 {order.reference}
+                               </PopoverTrigger>
+                               <OrderPopoverContent
+                                 order={order}
+                                 organizationId={organizationId}
+                               />
+                             </Popover>
+                             <p className="text-xs text-muted-foreground">
+                               {order.fullname}
+                             </p>
+                             <p className="text-xs text-muted-foreground">
+                               {order.country}
+                             </p>
+                             {editingOrderPoOrderId === order.id ? (
+                               <div className="flex items-center gap-1 mt-1">
+                                 <span className="text-xs font-semibold text-muted-foreground mr-1">PO:</span>
+                                 <Input
+                                   type="text"
+                                   value={orderPoInput}
+                                   disabled={isPending}
+                                   onChange={(e) =>
+                                     setOrderPoInput(e.target.value)
+                                   }
+                                   onKeyDown={(e) => {
+                                     if (e.key === "Enter")
+                                       handleSaveOrderPo(order.id);
+                                     if (e.key === "Escape")
+                                       setEditingOrderPoOrderId(null);
+                                   }}
+                                   placeholder="None"
+                                   className="h-6 w-32 text-xs"
+                                   autoFocus
+                                 />
+                                 <Button
+                                   size="icon-sm"
+                                   variant="default"
+                                   disabled={isPending}
+                                   onClick={() =>
+                                     handleSaveOrderPo(order.id)
+                                   }
+                                   className="h-6 w-6"
+                                 >
+                                   <Check className="size-3" />
+                                 </Button>
+                                 <Button
+                                   size="icon-sm"
+                                   variant="ghost"
+                                   disabled={isPending}
+                                   onClick={() =>
+                                     setEditingOrderPoOrderId(null)
+                                   }
+                                   className="h-6 w-6"
+                                 >
+                                   <X className="size-3" />
+                                 </Button>
+                               </div>
+                             ) : order.poRef ? (
+                               <div className="flex items-center gap-1.5 mt-0.5 group/po w-fit">
+                                 <p className="text-xs font-semibold text-muted-foreground">
+                                   PO: {order.poRef}
+                                 </p>
+                                 <Button
+                                   size="icon-sm"
+                                   variant="ghost"
+                                   title="Edit PO Number"
+                                   disabled={isPending}
+                                   onClick={() => {
+                                     setEditingOrderPoOrderId(order.id);
+                                     setOrderPoInput(order.poRef || "");
+                                   }}
+                                   className="h-4 w-4 opacity-0 group-hover/po:opacity-100 transition-opacity p-0 flex items-center justify-center"
+                                 >
+                                   <PencilLine className="size-2.5 text-muted-foreground" />
+                                 </Button>
+                               </div>
+                             ) : (
+                               <div className="flex items-center gap-1.5 mt-0.5 group/po w-fit">
+                                 <p className="text-xs text-muted-foreground italic">
+                                   No PO Number
+                                 </p>
+                                 <Button
+                                   size="icon-sm"
+                                   variant="ghost"
+                                   title="Add PO Number"
+                                   disabled={isPending}
+                                   onClick={() => {
+                                     setEditingOrderPoOrderId(order.id);
+                                     setOrderPoInput("");
+                                   }}
+                                   className="h-4 w-4 opacity-0 group-hover/po:opacity-100 transition-opacity p-0 flex items-center justify-center"
+                                 >
+                                   <PencilLine className="size-2.5 text-muted-foreground" />
+                                 </Button>
+                               </div>
+                             )}
+                             {editingDescriptionOrderId === order.id ? (
+                               <div className="flex items-center gap-1 mt-1">
+                                 <span className="text-[11px] text-muted-foreground italic mr-1">Description:</span>
+                                 <Input
+                                   type="text"
+                                   value={descriptionInput}
+                                   disabled={isPending}
+                                   onChange={(e) =>
+                                     setDescriptionInput(e.target.value)
+                                   }
+                                   onKeyDown={(e) => {
+                                     if (e.key === "Enter")
+                                       handleSaveDescription(order.id);
+                                     if (e.key === "Escape")
+                                       setEditingDescriptionOrderId(null);
+                                   }}
+                                   placeholder="Printed Matter"
+                                   className="h-6 w-32 text-xs"
+                                   autoFocus
+                                 />
+                                 <Button
+                                   size="icon-sm"
+                                   variant="default"
+                                   disabled={isPending}
+                                   onClick={() =>
+                                     handleSaveDescription(order.id)
+                                   }
+                                   className="h-6 w-6"
+                                 >
+                                   <Check className="size-3" />
+                                 </Button>
+                                 <Button
+                                   size="icon-sm"
+                                   variant="ghost"
+                                   disabled={isPending}
+                                   onClick={() =>
+                                     setEditingDescriptionOrderId(null)
+                                   }
+                                   className="h-6 w-6"
+                                 >
+                                   <X className="size-3" />
+                                 </Button>
+                               </div>
+                             ) : (
+                               <div className="flex items-center gap-1 mt-0.5 group/desc w-fit">
+                                 <p className="text-[11px] text-muted-foreground italic">
+                                   Description: {order.description || "Printed Matter"}
+                                 </p>
+                                 <Button
+                                   size="icon-sm"
+                                   variant="ghost"
+                                   title="Edit description"
+                                   disabled={isPending}
+                                   onClick={() => {
+                                     setEditingDescriptionOrderId(order.id);
+                                     setDescriptionInput(order.description || "Printed Matter");
+                                   }}
+                                   className="h-4 w-4 opacity-0 group-hover/desc:opacity-100 transition-opacity p-0 flex items-center justify-center"
+                                 >
+                                   <PencilLine className="size-2.5 text-muted-foreground" />
+                                 </Button>
+                               </div>
+                             )}
+                           </div>
                           <div className="flex-1">
                             {order.courier && (
                               <>
@@ -409,6 +692,7 @@ export function InvoiceDetailView({
                                 <PencilLine className="size-3" />
                               </Button>
                             )}
+
                             <Button
                               size="icon-sm"
                               variant="outline"
@@ -464,6 +748,59 @@ export function InvoiceDetailView({
                     <span className="text-muted-foreground">Reference:</span>
                     <span>{invoice.reference}</span>
                   </div>
+                  <div className="flex justify-between items-center py-0.5">
+                    <span className="text-muted-foreground">PO Number:</span>
+                    {editingPo ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="text"
+                          value={poInput}
+                          disabled={isPending}
+                          onChange={(e) => setPoInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSavePo();
+                            if (e.key === "Escape") setEditingPo(false);
+                          }}
+                          className="h-7 w-40 text-xs"
+                          placeholder="None"
+                          autoFocus
+                        />
+                        <Button
+                          size="icon-sm"
+                          variant="default"
+                          disabled={isPending}
+                          onClick={handleSavePo}
+                        >
+                          <Check className="size-3" />
+                        </Button>
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => setEditingPo(false)}
+                        >
+                          <X className="size-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span>{invoice.poNumber || "-"}</span>
+                        <Button
+                          size="icon-sm"
+                          variant="outline"
+                          title="Edit PO Number"
+                          disabled={isPending}
+                          onClick={() => {
+                            setEditingPo(true);
+                            setPoInput(invoice.poNumber || "");
+                          }}
+                        >
+                          <PencilLine className="size-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Invoice Date:</span>
                     <span>{formattedDate(invoice.invoiceDate, "short")}</span>
@@ -533,39 +870,135 @@ export function InvoiceDetailView({
             </Card>
           </motion.div>
 
-          {/* Notes */}
-          {(invoice.invoiceNotes || invoice.internalNotes) && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.35, delay: 0.4 }}
-            >
-              <Card className="shadow-sm">
-                <CardContent className="p-4 space-y-2">
-                  <h3 className="font-semibold text-sm">Notes</h3>
-                  <Separator />
-                  {invoice.invoiceNotes && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Invoice Notes:</p>
-                      <p className="text-sm text-muted-foreground">
-                        {invoice.invoiceNotes}
-                      </p>
+          {/* Notes Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, delay: 0.4 }}
+          >
+            <Card className="shadow-sm">
+              <CardContent className="p-4 space-y-4">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  Notes
+                </CardTitle>
+                <Separator />
+
+                {/* Invoice Notes (Customer Facing) */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      Invoice Notes (Customer Facing):
+                    </span>
+                    {!editingInvoiceNotes && (
+                      <Button
+                        size="icon-sm"
+                        variant="outline"
+                        title="Edit Invoice Notes"
+                        disabled={isPending}
+                        onClick={() => {
+                          setEditingInvoiceNotes(true);
+                          setInvoiceNotesInput(invoice.invoiceNotes || "");
+                        }}
+                      >
+                        <PencilLine className="size-3" />
+                      </Button>
+                    )}
+                  </div>
+                  {editingInvoiceNotes ? (
+                    <div className="space-y-2 mt-1">
+                      <Textarea
+                        value={invoiceNotesInput}
+                        disabled={isPending}
+                        onChange={(e) => setInvoiceNotesInput(e.target.value)}
+                        placeholder="Notes that will appear on the PDF invoice"
+                        rows={3}
+                        className="text-xs"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => setEditingInvoiceNotes(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={isPending}
+                          onClick={handleSaveInvoiceNotes}
+                        >
+                          Save
+                        </Button>
+                      </div>
                     </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                      {invoice.invoiceNotes || "No customer-facing notes."}
+                    </p>
                   )}
-                  {invoice.internalNotes && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">
-                        Internal Notes:
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {invoice.internalNotes}
-                      </p>
+                </div>
+
+                <Separator />
+
+                {/* Internal Notes (Admin Only) */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      Internal Notes (Admin Only):
+                    </span>
+                    {!editingInternalNotes && (
+                      <Button
+                        size="icon-sm"
+                        variant="outline"
+                        title="Edit Internal Notes"
+                        disabled={isPending}
+                        onClick={() => {
+                          setEditingInternalNotes(true);
+                          setInternalNotesInput(invoice.internalNotes || "");
+                        }}
+                      >
+                        <PencilLine className="size-3" />
+                      </Button>
+                    )}
+                  </div>
+                  {editingInternalNotes ? (
+                    <div className="space-y-2 mt-1">
+                      <Textarea
+                        value={internalNotesInput}
+                        disabled={isPending}
+                        onChange={(e) => setInternalNotesInput(e.target.value)}
+                        placeholder="Notes for internal admin use only"
+                        rows={3}
+                        className="text-xs"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={isPending}
+                          onClick={() => setEditingInternalNotes(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={isPending}
+                          onClick={handleSaveInternalNotes}
+                        >
+                          Save
+                        </Button>
+                      </div>
                     </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                      {invoice.internalNotes || "No internal notes."}
+                    </p>
                   )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
 

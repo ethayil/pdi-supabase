@@ -21,6 +21,10 @@ export const auth = betterAuth({
               type: "string",
               required: false,
             },
+            vat: {
+              type: "string",
+              required: false,
+            },
             isActive: {
               type: "boolean",
               required: false,

@@ -34,62 +34,69 @@ async function fetchUsersDbData({
   entriesPerPage: number;
   userType: string;
 }) {
-  let whereClause: UserWhereInput = {};
+  try {
+    let whereClause: UserWhereInput = {};
 
-  if (userType === "org") {
-    whereClause = {
-      members: {
-        some: {
-          organizationId: orgId,
-        },
-      },
-    };
-  } else if (userType === "unlinked") {
-    whereClause = {
-      members: {
-        none: {},
-      },
-    };
-  } else if (userType === "admin") {
-    whereClause = {
-      role: "admin",
-    };
-  }
-
-  const skip = (currentPage - 1) * entriesPerPage;
-  const take = entriesPerPage;
-
-  const [totalCount, users] = await Promise.all([
-    prisma.user.count({ where: whereClause }),
-    prisma.user.findMany({
-      where: whereClause,
-      take: take,
-      skip: skip,
-      orderBy: { id: "asc" },
-      include: {
+    if (userType === "org") {
+      whereClause = {
         members: {
-          include: {
-            organization: true,
+          some: {
+            organizationId: orgId,
           },
         },
-      },
-    }),
-  ]);
+      };
+    } else if (userType === "unlinked") {
+      whereClause = {
+        members: {
+          none: {},
+        },
+      };
+    } else if (userType === "admin") {
+      whereClause = {
+        role: "admin",
+      };
+    }
 
-  const totalPages = Math.ceil(totalCount / entriesPerPage);
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
 
-  const mappedUsers: UserWMember[] = users.map((u) => ({
-    ...u,
-    orgId: u.members?.[0]?.organizationId ?? "none",
-    organizationName: u.members?.[0]?.organization?.name ?? "none",
-  }));
+    const [totalCount, users] = await Promise.all([
+      prisma.user.count({ where: whereClause }),
+      prisma.user.findMany({
+        where: whereClause,
+        take: take,
+        skip: skip,
+        orderBy: { id: "asc" },
+        include: {
+          members: {
+            include: {
+              organization: true,
+            },
+          },
+        },
+      }),
+    ]);
 
-  return {
-    success: true,
-    data: mappedUsers,
-    totalPages,
-    totalCount,
-  };
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    const mappedUsers: UserWMember[] = users.map((u) => ({
+      ...u,
+      orgId: u.members?.[0]?.organizationId ?? "none",
+      organizationName: u.members?.[0]?.organization?.name ?? "none",
+    }));
+
+    return {
+      success: true,
+      data: mappedUsers,
+      totalPages,
+      totalCount,
+    };
+  } catch (error) {
+    console.error("Error in fetchUsersDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch users from database");
+  }
 }
 
 const getCachedUsersDbData = unstable_cache(
@@ -116,7 +123,7 @@ export async function getUsers({
   try {
     await requireGlobalAdmin();
 
-    return getCachedUsersDbData(orgId, currentPage, entriesPerPage, userType);
+    return await getCachedUsersDbData(orgId, currentPage, entriesPerPage, userType);
   } catch (error) {
     console.error("Database error in getUsers:", error);
 
@@ -325,23 +332,30 @@ export async function updateUser(data: {
 }
 
 async function fetchOrgUsersDbData({ orgId }: { orgId: string }) {
-  const members = await prisma.member.findMany({
-    where: { organizationId: orgId },
-    include: {
-      user: true,
-    },
-  });
+  try {
+    const members = await prisma.member.findMany({
+      where: { organizationId: orgId },
+      include: {
+        user: true,
+      },
+    });
 
-  return members.map((m) => ({
-    ...m.user,
-    role: m.user.role as
-      | "user"
-      | "orgAdmin"
-      | "admin"
-      | "warehouse"
-      | null
-      | undefined,
-  }));
+    return members.map((m) => ({
+      ...m.user,
+      role: m.user.role as
+        | "user"
+        | "orgAdmin"
+        | "admin"
+        | "warehouse"
+        | null
+        | undefined,
+    }));
+  } catch (error) {
+    console.error("Error in fetchOrgUsersDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch organization users from database");
+  }
 }
 
 const getCachedOrgUsersDbData = unstable_cache(
@@ -357,7 +371,7 @@ export async function getOrgUsers({ orgId }: { orgId: string }) {
   try {
     await requireAdmin();
 
-    return getCachedOrgUsersDbData(orgId);
+    return await getCachedOrgUsersDbData(orgId);
   } catch (error) {
     console.error("Database error in getOrgUsers:", error);
     return [];

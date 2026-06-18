@@ -96,51 +96,6 @@ export async function logProductMovement(params: {
   }
 }
 
-/*
-export async function logOrderChange(params: {
-  orgId: string;
-  orderId: string;
-  userId?: string;
-  systemSource?: string;
-  changeType:
-    | "created"
-    | "status_change"
-    | "address_update"
-    | "items_added"
-    | "items_updated"
-    | "items_removed"
-    | "comments_updated"
-    | "tracking_updated";
-  previousValue?: any;
-  newValue?: any;
-  description: string;
-}) {
-  try {
-    const { user } = await getSession();
-    const userId = params.userId || user?.id;
-
-    const change = await prisma.orderHistory.create({
-      data: {
-        orgId: params.orgId,
-        orderId: params.orderId,
-        userId: userId || null,
-        systemSource: params.systemSource || null,
-        changeType: params.changeType as OrderChangeType,
-        previousValue: params.previousValue
-          ? (params.previousValue as any)
-          : undefined,
-        newValue: params.newValue ? (params.newValue as any) : undefined,
-        description: params.description,
-      },
-    });
-    return change.id;
-  } catch (error) {
-    console.error("Failed to log order change:", error);
-    return null;
-  }
-}
-*/
-
 async function fetchLogsDbData({
   orgId,
   currentPage,
@@ -160,66 +115,73 @@ async function fetchLogsDbData({
   startDate?: number;
   endDate?: number;
 }) {
-  const where: ActivityLogWhereInput = {};
-  if (orgId && orgId !== "all") where.orgId = orgId;
-  if (entityType && entityType !== "all") where.entityType = entityType;
-  if (startDate || endDate) {
-    where.createdAt = {};
-    if (startDate) where.createdAt.gte = new Date(startDate);
-    if (endDate) where.createdAt.lte = new Date(endDate);
-  }
-  if (messageSearch) {
-    where.description = {
-      contains: messageSearch,
-      mode: "insensitive",
-    };
-  }
-  if (userSearch) {
-    where.user = {
-      OR: [
-        { name: { contains: userSearch, mode: "insensitive" } },
-        { email: { contains: userSearch, mode: "insensitive" } },
-      ],
-    };
-  }
+  try {
+    const where: ActivityLogWhereInput = {};
+    if (orgId && orgId !== "all") where.orgId = orgId;
+    if (entityType && entityType !== "all") where.entityType = entityType;
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(startDate);
+      if (endDate) where.createdAt.lte = new Date(endDate);
+    }
+    if (messageSearch) {
+      where.description = {
+        contains: messageSearch,
+        mode: "insensitive",
+      };
+    }
+    if (userSearch) {
+      where.user = {
+        OR: [
+          { name: { contains: userSearch, mode: "insensitive" } },
+          { email: { contains: userSearch, mode: "insensitive" } },
+        ],
+      };
+    }
 
-  const skip = (currentPage - 1) * entriesPerPage;
-  const take = entriesPerPage;
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
 
-  const [totalCount, logs] = await Promise.all([
-    prisma.activityLog.count({ where }),
-    prisma.activityLog.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: {
-          select: { name: true, email: true },
+    const [totalCount, logs] = await Promise.all([
+      prisma.activityLog.count({ where }),
+      prisma.activityLog.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: {
+            select: { name: true, email: true },
+          },
+          organization: {
+            select: { name: true },
+          },
         },
-        organization: {
-          select: { name: true },
-        },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  const totalPages = Math.ceil(totalCount / entriesPerPage);
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
 
-  const mappedLogs = logs.map((log) => ({
-    ...log,
-    userName: log.user?.name ?? (log.systemSource ? "System" : "Unknown User"),
-    userEmail: log.user?.email ??
-      (log.systemSource ? `Source: ${log.systemSource}` : "Unknown Email"),
-    orgName: log.organization?.name ?? "System",
-  }));
+    const mappedLogs = logs.map((log) => ({
+      ...log,
+      userName: log.user?.name ?? (log.systemSource ? "System" : "Unknown User"),
+      userEmail: log.user?.email ??
+        (log.systemSource ? `Source: ${log.systemSource}` : "Unknown Email"),
+      orgName: log.organization?.name ?? "System",
+    }));
 
-  return {
-    success: true,
-    data: mappedLogs,
-    totalPages,
-    totalCount,
-  };
+    return {
+      success: true,
+      data: mappedLogs,
+      totalPages,
+      totalCount,
+    };
+  } catch (error) {
+    console.error("Error in fetchLogsDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch logs from database");
+  }
 }
 
 const getCachedLogsDbData = unstable_cache(
@@ -263,7 +225,7 @@ export async function getLogs({
   try {
     await requireGlobalAdmin();
 
-    return getCachedLogsDbData(
+    return await getCachedLogsDbData(
       orgId,
       currentPage,
       entriesPerPage,
@@ -288,26 +250,33 @@ export async function getLogs({
 async function fetchProductMovementsDbData(
   { productId }: { productId: string },
 ) {
-  const movements = await prisma.productMovement.findMany({
-    where: { productId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: {
-      user: {
-        select: { name: true, email: true },
+  try {
+    const movements = await prisma.productMovement.findMany({
+      where: { productId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        user: {
+          select: { name: true, email: true },
+        },
       },
-    },
-  });
+    });
 
-  return {
-    success: true,
-    data: movements.map((m) => ({
-      ...m,
-      userName: m.user?.name ?? null,
-      userEmail: m.user?.email ?? null,
-    })),
-    error: undefined as string | undefined,
-  };
+    return {
+      success: true,
+      data: movements.map((m) => ({
+        ...m,
+        userName: m.user?.name ?? null,
+        userEmail: m.user?.email ?? null,
+      })),
+      error: undefined as string | undefined,
+    };
+  } catch (error) {
+    console.error("Error in fetchProductMovementsDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch product movements from database");
+  }
 }
 
 const getCachedProductMovementsDbData = unstable_cache(
@@ -326,7 +295,7 @@ export async function getProductMovements({
 }) {
   try {
     await requireGlobalAdmin();
-    return getCachedProductMovementsDbData(productId);
+    return await getCachedProductMovementsDbData(productId);
   } catch (error) {
     console.error("Failed to get product movements:", error);
     return {

@@ -29,106 +29,113 @@ async function fetchDespatchOrdersDbData(
   entriesPerPage: number = 20,
   urgency: "all" | "overdue" | "due_today" | "due_soon" | "upcoming" = "all"
 ): Promise<DespatchOrdersResponse> {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-  const endOf5Days = new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000);
+  try {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    const endOf5Days = new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000);
 
-  const baseWhere: any = {
-    status: "processing",
-  };
+    const baseWhere: any = {
+      status: "processing",
+    };
 
-  if (orgId && orgId !== "all") {
-    baseWhere.orgId = orgId;
-  }
+    if (orgId && orgId !== "all") {
+      baseWhere.orgId = orgId;
+    }
 
-  const overdueWhere = {
-    ...baseWhere,
-    sendDate: {
-      lt: today,
-    },
-  };
+    const overdueWhere = {
+      ...baseWhere,
+      sendDate: {
+        lt: today,
+      },
+    };
 
-  const dueTodayWhere = {
-    ...baseWhere,
-    sendDate: {
-      gte: today,
-      lt: tomorrow,
-    },
-  };
+    const dueTodayWhere = {
+      ...baseWhere,
+      sendDate: {
+        gte: today,
+        lt: tomorrow,
+      },
+    };
 
-  const dueSoonWhere = {
-    ...baseWhere,
-    sendDate: {
-      gte: tomorrow,
-      lt: endOf5Days,
-    },
-  };
+    const dueSoonWhere = {
+      ...baseWhere,
+      sendDate: {
+        gte: tomorrow,
+        lt: endOf5Days,
+      },
+    };
 
-  const upcomingWhere = {
-    ...baseWhere,
-    OR: [
-      {
-        sendDate: {
-          gte: endOf5Days,
+    const upcomingWhere = {
+      ...baseWhere,
+      OR: [
+        {
+          sendDate: {
+            gte: endOf5Days,
+          },
         },
+        {
+          sendDate: null,
+        },
+      ],
+    };
+
+    let activeWhere = baseWhere;
+    if (urgency === "overdue") activeWhere = overdueWhere;
+    else if (urgency === "due_today") activeWhere = dueTodayWhere;
+    else if (urgency === "due_soon") activeWhere = dueSoonWhere;
+    else if (urgency === "upcoming") activeWhere = upcomingWhere;
+
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
+
+    const [
+      totalCount,
+      overdueCount,
+      dueTodayCount,
+      dueSoonCount,
+      upcomingCount,
+      allCount,
+      orders,
+    ] = await Promise.all([
+      prisma.order.count({ where: activeWhere }),
+      prisma.order.count({ where: overdueWhere }),
+      prisma.order.count({ where: dueTodayWhere }),
+      prisma.order.count({ where: dueSoonWhere }),
+      prisma.order.count({ where: upcomingWhere }),
+      prisma.order.count({ where: baseWhere }),
+      prisma.order.findMany({
+        where: activeWhere,
+        skip,
+        take,
+        orderBy: [{ sendDate: "asc" }, { createdAt: "asc" }],
+        include: {
+          user: true,
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    return {
+      success: true,
+      data: orders,
+      totalPages,
+      totalCount,
+      counts: {
+        overdue: overdueCount,
+        due_today: dueTodayCount,
+        due_soon: dueSoonCount,
+        upcoming: upcomingCount,
+        all: allCount,
       },
-      {
-        sendDate: null,
-      },
-    ],
-  };
-
-  let activeWhere = baseWhere;
-  if (urgency === "overdue") activeWhere = overdueWhere;
-  else if (urgency === "due_today") activeWhere = dueTodayWhere;
-  else if (urgency === "due_soon") activeWhere = dueSoonWhere;
-  else if (urgency === "upcoming") activeWhere = upcomingWhere;
-
-  const skip = (currentPage - 1) * entriesPerPage;
-  const take = entriesPerPage;
-
-  const [
-    totalCount,
-    overdueCount,
-    dueTodayCount,
-    dueSoonCount,
-    upcomingCount,
-    allCount,
-    orders,
-  ] = await Promise.all([
-    prisma.order.count({ where: activeWhere }),
-    prisma.order.count({ where: overdueWhere }),
-    prisma.order.count({ where: dueTodayWhere }),
-    prisma.order.count({ where: dueSoonWhere }),
-    prisma.order.count({ where: upcomingWhere }),
-    prisma.order.count({ where: baseWhere }),
-    prisma.order.findMany({
-      where: activeWhere,
-      skip,
-      take,
-      orderBy: [{ sendDate: "asc" }, { createdAt: "asc" }],
-      include: {
-        user: true,
-      },
-    }),
-  ]);
-
-  const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-  return {
-    success: true,
-    data: orders,
-    totalPages,
-    totalCount,
-    counts: {
-      overdue: overdueCount,
-      due_today: dueTodayCount,
-      due_soon: dueSoonCount,
-      upcoming: upcomingCount,
-      all: allCount,
-    },
-  };
+    };
+  } catch (error) {
+    console.error("Error in fetchDespatchOrdersDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch despatch orders from database");
+  }
 }
 
 const getCachedDespatchOrders = unstable_cache(
@@ -154,7 +161,7 @@ export async function getDespatchOrders({
 } = {}) {
   try {
     await requireGlobalAdmin();
-    return getCachedDespatchOrders(orgId, currentPage, entriesPerPage, urgency);
+    return await getCachedDespatchOrders(orgId, currentPage, entriesPerPage, urgency);
   } catch (error) {
     console.error("Error in getDespatchOrders:", error);
     return {

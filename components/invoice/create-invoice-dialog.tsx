@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { createInvoice, getUninvoicedOrders } from "@/data/invoices";
 import { formatCurrency } from "@/lib/utils";
@@ -212,17 +213,28 @@ export function CreateInvoiceDialog({
                         htmlFor={order.id}
                         className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                       >
-                        <div className="flex justify-between">
-                          <span>{order.reference}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {order.fullname}
+                        <div className="flex flex-col text-left py-0.5">
+                          <span className="font-semibold text-sm">
+                            {order.reference} - {order.fullname}
                           </span>
-                          <span className="font-semibold">
-                            {formatCurrency(
-                              (order.courierCost || 0) +
-                                (order.courierVAT || 0),
+                          <div className="flex items-center gap-2 mt-1 flex-wrap font-normal">
+                            {order.poRef && (
+                              <span className="text-xs text-muted-foreground">
+                                PO: {order.poRef}
+                              </span>
                             )}
-                          </span>
+                            <span className="text-xs text-muted-foreground">
+                              Price:{" "}
+                              {formatCurrency(
+                                (order.courierCost || 0) +
+                                  (order.courierVAT || 0),
+                              )}
+                            </span>
+                            <StatusBadge
+                              status={order.status}
+                              className="h-4 px-1.5 text-[9px]"
+                            />
+                          </div>
                         </div>
                       </label>
                     </motion.div>

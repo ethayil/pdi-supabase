@@ -327,24 +327,31 @@ async function fetchOrdersDbData({
   userId: string;
   isAdmin: boolean;
 }) {
-  return prisma.order.findMany({
-    where: {
-      orgId,
-      ...(isAdmin ? {} : { userId }),
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    include: {
-      user: true,
-      organization: true,
-      items: {
-        include: {
-          product: true,
+  try {
+    return await prisma.order.findMany({
+      where: {
+        orgId,
+        ...(isAdmin ? {} : { userId }),
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        user: true,
+        organization: true,
+        items: {
+          include: {
+            product: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.error("Error in fetchOrdersDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch orders from database");
+  }
 }
 
 const getCachedOrdersDbData = unstable_cache(
@@ -364,7 +371,7 @@ export async function getOrders({ orgId }: { orgId: string }) {
 
     const isAdmin = user.role === "admin" || user.role === "orgAdmin";
 
-    return getCachedOrdersDbData(orgId, user.id, isAdmin);
+    return await getCachedOrdersDbData(orgId, user.id, isAdmin);
   } catch (error) {
     console.error("Error in getOrders:", error);
     return [];
@@ -1014,75 +1021,82 @@ async function fetchAdminOrdersDbData({
   fullname?: string;
   postcode?: string;
 }) {
-  const where: OrderWhereInput = {};
+  try {
+    const where: OrderWhereInput = {};
 
-  if (orgId && orgId !== "all") {
-    where.orgId = orgId;
-  }
-
-  if (status && status !== "all") {
-    where.status = status as OrderStatus;
-  }
-
-  if (search) {
-    where.OR = [
-      { reference: { contains: search, mode: "insensitive" } },
-      { fullname: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
-      { postcode: { contains: search, mode: "insensitive" } },
-    ];
-  }
-
-  if (reference) {
-    where.reference = { contains: reference, mode: "insensitive" };
-  }
-
-  if (fullname) {
-    where.fullname = { contains: fullname, mode: "insensitive" };
-  }
-
-  if (postcode) {
-    where.postcode = { contains: postcode, mode: "insensitive" };
-  }
-
-  if (courier && courier !== "all") {
-    where.courier = { contains: courier, mode: "insensitive" };
-  }
-
-  if (startDate || endDate) {
-    where.createdAt = {};
-    if (startDate) {
-      where.createdAt.gte = new Date(startDate);
+    if (orgId && orgId !== "all") {
+      where.orgId = orgId;
     }
-    if (endDate) {
-      where.createdAt.lte = new Date(endDate);
+
+    if (status && status !== "all") {
+      where.status = status as OrderStatus;
     }
+
+    if (search) {
+      where.OR = [
+        { reference: { contains: search, mode: "insensitive" } },
+        { fullname: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { postcode: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (reference) {
+      where.reference = { contains: reference, mode: "insensitive" };
+    }
+
+    if (fullname) {
+      where.fullname = { contains: fullname, mode: "insensitive" };
+    }
+
+    if (postcode) {
+      where.postcode = { contains: postcode, mode: "insensitive" };
+    }
+
+    if (courier && courier !== "all") {
+      where.courier = { contains: courier, mode: "insensitive" };
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.createdAt.lte = new Date(endDate);
+      }
+    }
+
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
+
+    const [totalCount, orders] = await Promise.all([
+      prisma.order.count({ where }),
+      prisma.order.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: true,
+        },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    return {
+      success: true,
+      data: orders,
+      totalPages,
+      totalCount,
+    };
+  } catch (error) {
+    console.error("Error in fetchAdminOrdersDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch admin orders from database");
   }
-
-  const skip = (currentPage - 1) * entriesPerPage;
-  const take = entriesPerPage;
-
-  const [totalCount, orders] = await Promise.all([
-    prisma.order.count({ where }),
-    prisma.order.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: "desc" },
-      include: {
-        user: true,
-      },
-    }),
-  ]);
-
-  const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-  return {
-    success: true,
-    data: orders,
-    totalPages,
-    totalCount,
-  };
 }
 
 const getCachedAdminOrdersDbData = unstable_cache(
@@ -1135,7 +1149,7 @@ export async function getAdminOrders({
   try {
     await requireGlobalAdmin();
 
-    return getCachedAdminOrdersDbData(
+    return await getCachedAdminOrdersDbData(
       orgId,
       currentPage,
       entriesPerPage,
@@ -1184,5 +1198,73 @@ export async function searchOrdersByRef({
   } catch (error) {
     console.error("Error searching orders by ref:", error);
     return [];
+  }
+}
+
+export async function updateOrderDescription({
+  orderId,
+  description,
+}: {
+  orderId: string;
+  description: string | null;
+}) {
+  try {
+    await requireGlobalAdmin();
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order) throw new Error("Order not found");
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        description,
+      },
+    });
+
+    if (order.invoiceId) {
+      revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
+    }
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in updateOrderDescription:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update order description");
+  }
+}
+
+export async function updateOrderPoRef({
+  orderId,
+  poRef,
+}: {
+  orderId: string;
+  poRef: string | null;
+}) {
+  try {
+    await requireGlobalAdmin();
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+    });
+    if (!order) throw new Error("Order not found");
+
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        poRef,
+      },
+    });
+
+    if (order.invoiceId) {
+      revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
+    }
+    revalidateTag(cacheTags.invoices, "");
+    return { success: true };
+  } catch (error) {
+    console.error("Error in updateOrderPoRef:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to update order PO reference");
   }
 }

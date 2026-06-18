@@ -104,6 +104,7 @@ model Organization {
   invitations Invitation[]
 
   prefix            String?
+  vat            String?
   isActive          Boolean? @default(true)
   supportEmail      String[]
   supportPhone      String[]
@@ -328,6 +329,7 @@ model Order {
   deliveredAt      DateTime?
   trackingMessage  String?
   searchAll        String?
+  description      String?         @default("Printed Matter")
   updatedAt        DateTime?       @updatedAt
   createdAt        DateTime        @default(now())
 

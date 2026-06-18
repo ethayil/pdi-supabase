@@ -104,9 +104,15 @@ function ResetPasswordContent() {
 
       toast.success("Password reset successfully! You can now sign in.");
       router.push("/auth/signin");
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      toast.error(error.message ?? "Failed to reset password");
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error
+            ? String(error.message)
+            : "Failed to reset password";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

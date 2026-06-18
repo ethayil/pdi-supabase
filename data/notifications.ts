@@ -50,11 +50,18 @@ async function fetchNotificationsDbData({
   userId: string;
   limit: number;
 }) {
-  return prisma.notification.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-  });
+  try {
+    return await prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+  } catch (error) {
+    console.error("Error in fetchNotificationsDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch notifications from database");
+  }
 }
 
 const getCachedNotificationsDbData = unstable_cache(
@@ -75,7 +82,7 @@ export async function getNotifications({
   try {
     const user = await requireUser();
 
-    return getCachedNotificationsDbData(user.id, limit);
+    return await getCachedNotificationsDbData(user.id, limit);
   } catch (error) {
     console.error("Failed to get notifications:", error);
     return [];
@@ -83,9 +90,16 @@ export async function getNotifications({
 }
 
 async function fetchUnreadCountDbData({ userId }: { userId: string }) {
-  return prisma.notification.count({
-    where: { userId, isRead: false },
-  });
+  try {
+    return await prisma.notification.count({
+      where: { userId, isRead: false },
+    });
+  } catch (error) {
+    console.error("Error in fetchUnreadCountDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch unread notification count from database");
+  }
 }
 
 const getCachedUnreadCountDbData = unstable_cache(
@@ -101,7 +115,7 @@ export async function getUnreadCount() {
   try {
     const user = await requireUser();
 
-    return getCachedUnreadCountDbData(user.id);
+    return await getCachedUnreadCountDbData(user.id);
   } catch (error) {
     console.error("Failed to get unread count:", error);
     return 0;

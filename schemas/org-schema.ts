@@ -13,6 +13,7 @@ export const createOrgSchema = z.object({
   city: z.optional(z.string()),
   postcode: z.optional(z.string()),
   country: z.optional(z.string()),
+  vat: z.optional(z.string()),
   primaryColor: z.optional(z.string()),
   secondaryColor: z.optional(z.string()),
   fontFamily: z.optional(z.string()),

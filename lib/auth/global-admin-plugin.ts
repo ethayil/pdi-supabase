@@ -32,6 +32,7 @@ export const globalAdminPlugin = () => {
               city: z.string().optional(),
               postcode: z.string().optional(),
               country: z.string().optional(),
+              vat: z.string().optional(),
               primaryColor: z.string().optional().default("#0056D2"),
               secondaryColor: z.string().optional(),
               fontFamily: z.string().optional(),

@@ -53,43 +53,50 @@ async function fetchOrganizationsDbData({
   totalPages: number;
   totalCount: number;
 }> {
-  const where: OrganizationWhereInput = {
-    isActive: isActive ? true : undefined,
-  };
-
-  if (userRole !== "admin") {
-    where.members = {
-      some: {
-        userId: userId,
-      },
+  try {
+    const where: OrganizationWhereInput = {
+      isActive: isActive ? true : undefined,
     };
+
+    if (userRole !== "admin") {
+      where.members = {
+        some: {
+          userId: userId,
+        },
+      };
+    }
+
+    if (query) {
+      where.OR = [
+        { name: { contains: query, mode: "insensitive" } },
+        { slug: { contains: query, mode: "insensitive" } },
+      ];
+    }
+
+    const [totalCount, organizations] = await Promise.all([
+      prisma.organization.count({ where }),
+      prisma.organization.findMany({
+        where,
+        take: entriesPerPage,
+        skip: (currentPage - 1) * entriesPerPage,
+        orderBy: { id: "asc" },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    return {
+      success: true,
+      data: organizations,
+      totalPages,
+      totalCount,
+    };
+  } catch (error) {
+    console.error("Error in fetchOrganizationsDbData:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to fetch organizations from database");
   }
-
-  if (query) {
-    where.OR = [
-      { name: { contains: query, mode: "insensitive" } },
-      { slug: { contains: query, mode: "insensitive" } },
-    ];
-  }
-
-  const [totalCount, organizations] = await Promise.all([
-    prisma.organization.count({ where }),
-    prisma.organization.findMany({
-      where,
-      take: entriesPerPage,
-      skip: (currentPage - 1) * entriesPerPage,
-      orderBy: { id: "asc" },
-    }),
-  ]);
-
-  const totalPages = Math.ceil(totalCount / entriesPerPage);
-
-  return {
-    success: true,
-    data: organizations,
-    totalPages,
-    totalCount,
-  };
 }
 
 const getCachedOrganizationsDbData = unstable_cache(
@@ -144,7 +151,7 @@ export async function getOrganizations({
       });
     }
 
-    return getCachedOrganizationsDbData(
+    return await getCachedOrganizationsDbData(
       user.role ?? "",
       user.id,
       currentPage,
