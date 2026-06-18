@@ -1,7 +1,8 @@
 "use client";
-import { Button } from "@/components/ui/button";
+
 import { PencilIcon } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
+import { Button } from "@/components/ui/button";
 
 interface TableEditActionProps {
   type: "org" | "user" | "order" | "product" | "category" | "invoice";

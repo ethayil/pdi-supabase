@@ -24,7 +24,7 @@ export default async function OrganizationLayout({
 
   const { orgId } = await params;
 
-  const { data: orgs } = await getOrganizations();
+  const { data: orgs } = await getOrganizations({ bypassCache: true });
 
   // Not authenticated
   if (!user) {
@@ -42,7 +42,8 @@ export default async function OrganizationLayout({
   const redirectToUserOrg = () => {
     if (
       !session?.activeOrganizationId ||
-      session?.activeOrganizationId === "null"
+      session?.activeOrganizationId === "null" ||
+      session?.activeOrganizationId === orgId
     ) {
       redirect("/verify");
     }

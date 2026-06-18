@@ -14,8 +14,15 @@ export default async function VerifyPage() {
     redirect("/auth/signin");
   }
 
+  // console.log("[VerifyPage] DEBUG INFO:", {
+  //   userId: user.id,
+  //   userRole: user.role,
+  //   userBanned: user.banned,
+  //   activeOrganizationId: session?.activeOrganizationId,
+  // });
+
   const activeOrganization = session?.activeOrganizationId;
-  const orgsResult = await getOrganizations();
+  const orgsResult = await getOrganizations({ bypassCache: true });
   const orgs = orgsResult.success ? orgsResult.data : [];
 
   const isAdmin = user.role === "orgAdmin" || user.role === "admin";
@@ -30,9 +37,12 @@ export default async function VerifyPage() {
     );
   }
 
-  // User has organization - redirect to their dashboard
-  if (activeOrganization) {
-    redirect(`/${activeOrganization}`);
+  // User has organization - redirect to their dashboard ONLY if they are a member of it
+  if (activeOrganization && activeOrganization !== "null") {
+    const isMember = orgs.some((org) => org.id === activeOrganization);
+    if (isMember) {
+      redirect(`/${activeOrganization}`);
+    }
   }
 
   // admin without orgId

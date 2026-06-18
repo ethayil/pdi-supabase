@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { headers } from "next/headers";
 import type { Member, User } from "@/app/generated/prisma/client";
 import type {
   UserUpdateInput,
   UserWhereInput,
 } from "@/app/generated/prisma/models";
+import { auth } from "@/auth";
 import { requireAdmin, requireGlobalAdmin } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
@@ -105,8 +107,7 @@ const getCachedUsersDbData = unstable_cache(
     currentPage: number,
     entriesPerPage: number,
     userType: string,
-  ) =>
-    fetchUsersDbData({ orgId, currentPage, entriesPerPage, userType }),
+  ) => fetchUsersDbData({ orgId, currentPage, entriesPerPage, userType }),
   ["users-list-cache"],
   {
     revalidate: 20, // Cache for 20 seconds
@@ -123,7 +124,12 @@ export async function getUsers({
   try {
     await requireGlobalAdmin();
 
-    return await getCachedUsersDbData(orgId, currentPage, entriesPerPage, userType);
+    return await getCachedUsersDbData(
+      orgId,
+      currentPage,
+      entriesPerPage,
+      userType,
+    );
   } catch (error) {
     console.error("Database error in getUsers:", error);
 
@@ -218,74 +224,34 @@ export async function updateUser(data: {
         : null;
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: data.id },
-      data: updateData,
+    // Update user via Better Auth Admin API to ensure session caches are correctly updated/invalidated
+    const updatedUser = await auth.api.adminUpdateUser({
+      body: {
+        userId: data.id,
+        data: {
+          name: data.name,
+          role: data.role,
+          image: data.image === null ? undefined : data.image,
+          emailVerified: data.emailVerified,
+          banned: data.isActive !== undefined ? !data.isActive : undefined,
+          banReason: data.isActive === false
+            ? "Deactivated by administrator"
+            : undefined,
+        },
+      },
+      headers: await headers(),
     });
 
     // Handle organization membership if orgId is explicitly provided
     if (data.orgId !== undefined) {
-      const targetOrgId = data.orgId === "none" ? null : data.orgId;
-
-      // Update active sessions to match the new organization assignment
-      await prisma.session.updateMany({
-        where: { userId: data.id },
-        data: { activeOrganizationId: targetOrgId },
+      await auth.api.adminAssignUserToOrganization({
+        body: {
+          userId: data.id,
+          orgId: data.orgId,
+          role: data.role,
+        },
+        headers: await headers(),
       });
-
-      if (targetOrgId) {
-        // Find existing membership(s)
-        const existingMembers = await prisma.member.findMany({
-          where: { userId: data.id },
-        });
-
-        // Delete memberships in other organizations
-        const otherMembers = existingMembers.filter(
-          (m) => m.organizationId !== targetOrgId,
-        );
-        if (otherMembers.length > 0) {
-          await prisma.member.deleteMany({
-            where: {
-              id: {
-                in: otherMembers.map((m) => m.id),
-              },
-            },
-          });
-        }
-
-        // Add or update target membership
-        const currentMember = existingMembers.find(
-          (m) => m.organizationId === targetOrgId,
-        );
-
-        if (!currentMember) {
-          const crypto = await import("crypto");
-          const memberId = crypto.randomUUID();
-          const targetRole = data.role === "orgAdmin" ? "admin" : "member";
-          await prisma.member.create({
-            data: {
-              id: memberId,
-              userId: data.id,
-              organizationId: targetOrgId,
-              role: targetRole,
-              createdAt: new Date(),
-            },
-          });
-        } else {
-          const targetRole = data.role === "orgAdmin" ? "admin" : "member";
-          if (currentMember.role !== targetRole) {
-            await prisma.member.update({
-              where: { id: currentMember.id },
-              data: { role: targetRole },
-            });
-          }
-        }
-      } else {
-        // If targetOrgId is null/none, remove them from all organizations
-        await prisma.member.deleteMany({
-          where: { userId: data.id },
-        });
-      }
     }
 
     // Log Activity
@@ -321,6 +287,7 @@ export async function updateUser(data: {
 
     revalidatePath("/[orgId]/admin/users");
     revalidateTag(cacheTags.users, "");
+    revalidateTag(cacheTags.organizations, "");
 
     return {
       success: true,

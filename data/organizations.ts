@@ -140,7 +140,6 @@ export async function getOrganizations({
     const user = await requireUser();
 
     if (bypassCache) {
-      revalidateTag(cacheTags.organizations, "");
       return fetchOrganizationsDbData({
         userRole: user.role ?? "",
         userId: user.id,
