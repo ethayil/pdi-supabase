@@ -4,6 +4,7 @@ import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +21,7 @@ import { authClient } from "@/lib/auth/auth-client";
 export default function SignIn() {
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
@@ -39,6 +41,7 @@ export default function SignIn() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
 
     const formData = new FormData(e.target as HTMLFormElement);
     const email = formData.get("email") as string;
@@ -52,15 +55,23 @@ export default function SignIn() {
             email,
             password,
             name,
-            callbackURL: "/verify",
           },
           {
             onError: (error) => {
               setError(error.error.message);
               setLoading(false);
             },
-            onSuccess: (ctx) => {
+            onSuccess: () => {
               setLoading(false);
+              setSuccess(
+                "Verification link sent! Please check your inbox and verify your email to continue.",
+              );
+              toast.success("Account created! Verification email sent.");
+              setFlow("signIn");
+              const formEl = e.target as HTMLFormElement;
+              if (formEl) {
+                formEl.reset();
+              }
             },
           },
         );
@@ -76,7 +87,7 @@ export default function SignIn() {
               setError(error.error.message);
               setLoading(false);
             },
-            onSuccess: (ctx) => {
+            onSuccess: () => {
               setLoading(false);
             },
           },
@@ -144,6 +155,20 @@ export default function SignIn() {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>
+              <AnimatePresence>
+                {success && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: "auto" }}
+                    exit={{ opacity: 0, y: -10, height: 0 }}
+                    className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-2"
+                  >
+                    <p className="text-green-600 dark:text-green-400 font-semibold text-sm wrap-break-word">
+                      {success}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <AnimatePresence mode="popLayout">
                 {flow === "signUp" && (
                   <motion.div
@@ -267,7 +292,11 @@ export default function SignIn() {
               <button
                 type="button"
                 className="text-foreground hover:text-primary font-medium underline decoration-2 underline-offset-2 hover:no-underline cursor-pointer transition-colors"
-                onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
+                onClick={() => {
+                  setError(null);
+                  setSuccess(null);
+                  setFlow(flow === "signIn" ? "signUp" : "signIn");
+                }}
               >
                 {flow === "signIn" ? "Sign up" : "Sign in"}
               </button>
