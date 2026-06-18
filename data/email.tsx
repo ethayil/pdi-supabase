@@ -19,6 +19,18 @@ const transporter = nodemailer.createTransport({
     user: smtpEmail,
     pass: smtpPassword,
   },
+  pool: true,
+  maxConnections: 3,
+  maxMessages: 100,
+  rateLimit: 10,
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000, // 10 seconds
+  socketTimeout: 30000, // 30 seconds
+  tls: {
+    rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== "false",
+  },
+  debug: process.env.SMTP_DEBUG === "true",
+  logger: process.env.SMTP_DEBUG === "true",
 });
 
 function verifySmtpConfig(): boolean {
@@ -38,16 +50,24 @@ export async function sendVerificationEmail({
 }) {
   if (!verifySmtpConfig()) return;
 
-  const emailHtml = await render(<VerificationEmail url={url} />);
+  try {
+    const emailHtml = await render(<VerificationEmail url={url} />);
 
-  const info = await transporter.sendMail({
-    from: `"PDi" <${smtpEmail}>`,
-    to,
-    subject: "Verify your email",
-    html: emailHtml,
-  });
+    const info = await transporter.sendMail({
+      from: `"PDi" <${smtpEmail}>`,
+      to,
+      subject: "Verify your email",
+      html: emailHtml,
+    });
 
-  return info.messageId;
+    console.log(
+      `[SMTP] Verification email sent successfully to ${to}. MessageId: ${info.messageId}`,
+    );
+    return info.messageId;
+  } catch (error) {
+    console.error(`[SMTP] Error sending verification email to ${to}:`, error);
+    throw error;
+  }
 }
 
 export async function sendPasswordResetEmail({
@@ -59,18 +79,26 @@ export async function sendPasswordResetEmail({
 }) {
   if (!verifySmtpConfig()) return;
 
-  const resetUrl = `${siteUrl}/auth/reset-password?email=${encodeURIComponent(to)}&otp=${encodeURIComponent(otp)}`;
+  try {
+    const resetUrl = `${siteUrl}/auth/reset-password?email=${encodeURIComponent(to)}&otp=${encodeURIComponent(otp)}`;
 
-  const emailHtml = await render(<PasswordResetEmail url={resetUrl} />);
+    const emailHtml = await render(<PasswordResetEmail url={resetUrl} />);
 
-  const info = await transporter.sendMail({
-    from: `"PDi" <${smtpEmail}>`,
-    to,
-    subject: "Reset your password",
-    html: emailHtml,
-  });
+    const info = await transporter.sendMail({
+      from: `"PDi" <${smtpEmail}>`,
+      to,
+      subject: "Reset your password",
+      html: emailHtml,
+    });
 
-  return info.messageId;
+    console.log(
+      `[SMTP] Password reset email sent successfully to ${to}. MessageId: ${info.messageId}`,
+    );
+    return info.messageId;
+  } catch (error) {
+    console.error(`[SMTP] Error sending password reset email to ${to}:`, error);
+    throw error;
+  }
 }
 
 export async function sendOrderEmail(args: {
@@ -113,43 +141,54 @@ export async function sendOrderEmail(args: {
 
   const { to, ...templateProps } = args;
 
-  const formattedProps = {
-    ...templateProps,
-    deliveryDate:
-      args.deliveryDate instanceof Date
-        ? args.deliveryDate.getTime()
-        : args.deliveryDate,
-    deliveredAt:
-      args.deliveredAt instanceof Date
-        ? args.deliveredAt.getTime()
-        : args.deliveredAt,
-  };
+  try {
+    const formattedProps = {
+      ...templateProps,
+      deliveryDate:
+        args.deliveryDate instanceof Date
+          ? args.deliveryDate.getTime()
+          : args.deliveryDate,
+      deliveredAt:
+        args.deliveredAt instanceof Date
+          ? args.deliveredAt.getTime()
+          : args.deliveredAt,
+    };
 
-  const emailHtml = await render(<OrderEmail {...formattedProps} />);
+    const emailHtml = await render(<OrderEmail {...formattedProps} />);
 
-  const statusLabels: Record<string, string> = {
-    pending: "Order Received",
-    processing: "Processing",
-    shipped: "Shipped",
-    on_the_way: "On The Way",
-    delay: "Delayed",
-    delivered: "Delivered",
-    collected: "Collected",
-    exception: "Exception — Action Required",
-    cancelled: "Cancelled",
-    returned: "Returned",
-  };
+    const statusLabels: Record<string, string> = {
+      pending: "Order Received",
+      processing: "Processing",
+      shipped: "Shipped",
+      on_the_way: "On The Way",
+      delay: "Delayed",
+      delivered: "Delivered",
+      collected: "Collected",
+      exception: "Exception — Action Required",
+      cancelled: "Cancelled",
+      returned: "Returned",
+    };
 
-  const subject = `Order ${args.reference} — ${statusLabels[args.status] ?? args.status}`;
+    const subject = `Order ${args.reference} — ${statusLabels[args.status] ?? args.status}`;
 
-  const info = await transporter.sendMail({
-    from: `"PDi" <${smtpEmail}>`,
-    to,
-    subject,
-    html: emailHtml,
-  });
+    const info = await transporter.sendMail({
+      from: `"PDi" <${smtpEmail}>`,
+      to,
+      subject,
+      html: emailHtml,
+    });
 
-  return info.messageId;
+    console.log(
+      `[SMTP] Order email (${args.reference}) sent successfully to ${to}. MessageId: ${info.messageId}`,
+    );
+    return info.messageId;
+  } catch (error) {
+    console.error(
+      `[SMTP] Error sending order email (${args.reference}) to ${to}:`,
+      error,
+    );
+    throw error;
+  }
 }
 
 export async function sendCustomEmail(args: {
@@ -163,14 +202,25 @@ export async function sendCustomEmail(args: {
 
   const { to, ...templateProps } = args;
 
-  const emailHtml = await render(<CustomMessageEmail {...templateProps} />);
+  try {
+    const emailHtml = await render(<CustomMessageEmail {...templateProps} />);
 
-  const info = await transporter.sendMail({
-    from: `"PDi" <${smtpEmail}>`,
-    to,
-    subject: args.title,
-    html: emailHtml,
-  });
+    const info = await transporter.sendMail({
+      from: `"PDi" <${smtpEmail}>`,
+      to,
+      subject: args.title,
+      html: emailHtml,
+    });
 
-  return info.messageId;
+    console.log(
+      `[SMTP] Custom email ("${args.title}") sent successfully to ${to}. MessageId: ${info.messageId}`,
+    );
+    return info.messageId;
+  } catch (error) {
+    console.error(
+      `[SMTP] Error sending custom email ("${args.title}") to ${to}:`,
+      error,
+    );
+    throw error;
+  }
 }
