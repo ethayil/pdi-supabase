@@ -5,6 +5,7 @@ import { admin, emailOTP, organization } from "better-auth/plugins";
 import { sendPasswordResetEmail, sendVerificationEmail } from "./data/email";
 import { globalAdminPlugin } from "./lib/auth/global-admin-plugin";
 import prisma from "./lib/prisma";
+import { getSiteUrl } from "./utils/site-url";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -111,7 +112,7 @@ export const auth = betterAuth({
       sendVerificationOnSignUp: true,
       async sendVerificationOTP({ email, otp, type }) {
         if (type === "email-verification") {
-          const siteUrl = process.env.SITE_URL || "http://localhost:3000";
+          const siteUrl = getSiteUrl();
           const url = `${siteUrl}/auth/verify-email?email=${
             encodeURIComponent(email)
           }&otp=${encodeURIComponent(otp)}`;

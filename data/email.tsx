@@ -1,45 +1,13 @@
 import { render } from "@react-email/render";
-import nodemailer from "nodemailer";
-import CustomMessageEmail from "../emails/CustomMessageEmail";
-import OrderEmail from "../emails/OrderEmail";
-import PasswordResetEmail from "../emails/PasswordResetEmail";
-import VerificationEmail from "../emails/VerificationEmail";
+import CustomMessageEmail from "@/emails/CustomMessageEmail";
+import OrderEmail from "@/emails/OrderEmail";
+import PasswordResetEmail from "@/emails/PasswordResetEmail";
+import VerificationEmail from "@/emails/VerificationEmail";
+import { transporter, verifySmtpConfig } from "@/lib/nodemailer";
+import { getSiteUrl } from "@/utils/site-url";
 
 const smtpEmail = process.env.SMTP_EMAIL;
-const smtpPassword = process.env.SMTP_PASSWORD;
-const smtpHost = process.env.SMTP_HOST || "";
-const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
-const siteUrl = process.env.SITE_URL;
-
-const transporter = nodemailer.createTransport({
-  host: smtpHost,
-  port: smtpPort,
-  secure: smtpPort === 465,
-  auth: {
-    user: smtpEmail,
-    pass: smtpPassword,
-  },
-  pool: true,
-  maxConnections: 3,
-  maxMessages: 100,
-  rateLimit: 10,
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000, // 10 seconds
-  socketTimeout: 30000, // 30 seconds
-  tls: {
-    rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== "false",
-  },
-  debug: process.env.SMTP_DEBUG === "true",
-  logger: process.env.SMTP_DEBUG === "true",
-});
-
-function verifySmtpConfig(): boolean {
-  if (!smtpEmail || !smtpPassword) {
-    console.error("SMTP credentials not configured");
-    return false;
-  }
-  return true;
-}
+const siteUrl = getSiteUrl();
 
 export async function sendVerificationEmail({
   to,

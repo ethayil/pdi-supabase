@@ -36,7 +36,7 @@ export function useRegisterAction(action: CommandAction | null) {
   useHotkey(
     (action?.shortcut as RegisterableHotkey) || ("" as RegisterableHotkey),
     stableHandler,
-    { enabled: !!action?.shortcut },
+    { enabled: !!action?.shortcut, conflictBehavior: "allow" },
   );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional omission of 'action' identity to break the infinite re-render loop

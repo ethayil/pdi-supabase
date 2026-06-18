@@ -19,6 +19,7 @@ import {
 } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
+import { getSiteUrl } from "@/utils/site-url";
 import { sendOrderEmail } from "./email";
 import { createNotification } from "./notifications";
 
@@ -296,7 +297,7 @@ export async function createOrder(args: {
           deliveryDate,
           weight: args.weight,
           items: itemsForEmail,
-          orderUrl: `${process.env.SITE_URL}/${args.orgId}/orders/${result.id}`,
+          orderUrl: `${getSiteUrl()}/${args.orgId}/orders/${result.id}`,
         });
       } catch (err) {
         console.error("Error in after background actions:", err);
@@ -950,7 +951,7 @@ export async function sendOrderNotification({
               quantity: i.quantity,
             })),
             orderUrl:
-              `${process.env.SITE_URL}/${order.orgId}/orders/${order.id}`,
+              `${getSiteUrl()}/${order.orgId}/orders/${order.id}`,
           });
         }
 
