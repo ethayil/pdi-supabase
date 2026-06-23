@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { CookieConsent } from "@/components/marketing/cookie-consent";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ export default function RootLayout({
         >
           <NuqsAdapter>{children}</NuqsAdapter>
           <Toaster />
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

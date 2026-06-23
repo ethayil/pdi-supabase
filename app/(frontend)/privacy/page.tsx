@@ -94,22 +94,63 @@ export default function PrivacyPolicy() {
           </h2>
           <ul className="list-disc pl-5 space-y-2 mt-2">
             <li>
-              <strong>Client Information:</strong> Contact names, job titles,
-              business emails, telephone numbers, and billing details provided
-              during account configuration.
+              <strong>Client & User Account Information:</strong> Contact name,
+              business email, telephone number, job title, and billing details provided
+              during account configuration or portal usage.
             </li>
             <li>
-              <strong>Fulfillment Databases:</strong> Address records, student
-              recipient names, and ZIP/postal codes uploaded to the Virtual
-              Warehouse for the purpose of shipping prospectus bundles,
-              brochures, or corporate mailings.
+              <strong>Order & Fulfillment Details:</strong> Recipient names,
+              delivery address records, recipient phone numbers, and recipient email addresses
+              provided when placing logistics and distribution orders (for tracking and dispatch notification purposes).
             </li>
             <li>
-              <strong>Website Analytics:</strong> IP address, browser type, page
-              interactions, and timestamps collected via cookies for service
-              improvements.
+              <strong>Website Cookies:</strong> We only use strictly necessary
+              cookies and storage elements to enable core features like user authentication,
+              secure login, theme preferences, and banner choices. We do not use
+              any marketing or tracking cookies.
             </li>
           </ul>
+        </motion.section>
+
+        <motion.section variants={itemVariants}>
+          <h2 className="text-lg font-bold text-foreground mb-3">
+            <TextRevealEffect text="3.1. Cookies and Local Storage" />
+          </h2>
+          <p className="mb-4">
+            We use a limited number of strictly necessary cookies and local storage items to keep our systems secure, function correctly, and remember your choices. These are detailed below:
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left border border-border rounded-lg overflow-hidden">
+              <thead>
+                <tr className="bg-muted/40 border-b border-border">
+                  <th className="p-3 text-xs font-semibold uppercase tracking-wider text-foreground">Cookie/Storage Item</th>
+                  <th className="p-3 text-xs font-semibold uppercase tracking-wider text-foreground">Type</th>
+                  <th className="p-3 text-xs font-semibold uppercase tracking-wider text-foreground">Duration</th>
+                  <th className="p-3 text-xs font-semibold uppercase tracking-wider text-foreground">Description</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                <tr className="hover:bg-muted/10">
+                  <td className="p-3 font-medium text-foreground">Secure Session</td>
+                  <td className="p-3">Cookie</td>
+                  <td className="p-3">Session / 1 Month</td>
+                  <td className="p-3 text-muted-foreground">Maintains your authenticated session for the client portal.</td>
+                </tr>
+                <tr className="hover:bg-muted/10">
+                  <td className="p-3 font-medium text-foreground">Theme Preference</td>
+                  <td className="p-3">Cookie / Local Storage</td>
+                  <td className="p-3">Persistent</td>
+                  <td className="p-3 text-muted-foreground">Remembers your dark/light/system theme preference.</td>
+                </tr>
+                <tr className="hover:bg-muted/10">
+                  <td className="p-3 font-medium text-foreground">Consent Choice</td>
+                  <td className="p-3">Local Storage</td>
+                  <td className="p-3">Persistent (1 Year)</td>
+                  <td className="p-3 text-muted-foreground">Remembers that you have dismissed this cookie consent banner.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </motion.section>
 
         <motion.section variants={itemVariants}>
