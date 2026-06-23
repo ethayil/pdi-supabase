@@ -116,7 +116,7 @@ export default function ContactUs() {
                   Registered Office
                 </h3>
                 <p className="text-muted-foreground leading-normal">
-                  Hall 1, 5 Rabans Lane,
+                  5 Rabans Lane,
                   <br />
                   Aylesbury, Buckinghamshire,
                   <br />

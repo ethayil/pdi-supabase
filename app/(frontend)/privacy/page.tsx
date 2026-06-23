@@ -40,14 +40,20 @@ export default function PrivacyPolicy() {
       animate="show"
       className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 font-sans"
     >
-      <motion.div variants={itemVariants} className="flex items-center gap-3 mb-6">
+      <motion.div
+        variants={itemVariants}
+        className="flex items-center gap-3 mb-6"
+      >
         <ShieldCheck className="size-8 text-primary" />
         <h1 className="text-3xl font-bold tracking-tight">
           <TextRevealEffect text="Privacy Policy" />
         </h1>
       </motion.div>
-      
-      <motion.p variants={itemVariants} className="text-xs text-muted-foreground mb-8">
+
+      <motion.p
+        variants={itemVariants}
+        className="text-xs text-muted-foreground mb-8"
+      >
         Last updated: June 2026
       </motion.p>
 
@@ -133,11 +139,11 @@ export default function PrivacyPolicy() {
           </h2>
           <p>
             All physical packaging operations and secure server storage are
-            located in Hall 1, 5 Rabans Lane, Aylesbury HP19 8RT, United
-            Kingdom. We do not transfer mailing list records outside the United
-            Kingdom or European Economic Area (EEA) unless explicitly requested
-            by the Data Controller for international carrier routing (e.g.
-            UPS/DHL customs labels).
+            located in 5 Rabans Lane, Aylesbury HP19 8RT, United Kingdom. We do
+            not transfer mailing list records outside the United Kingdom or
+            European Economic Area (EEA) unless explicitly requested by the Data
+            Controller for international carrier routing (e.g. UPS/DHL customs
+            labels).
           </p>
         </motion.section>
 

@@ -40,7 +40,7 @@ export function MarketingFooter() {
               <div className="flex items-start gap-2">
                 <MapPin className="size-3.5 text-primary shrink-0 mt-0.5" />
                 <span>
-                  Hall 1, 5 Rabans Lane
+                  5 Rabans Lane
                   <br />
                   Aylesbury, HP19 8RT
                   <br />

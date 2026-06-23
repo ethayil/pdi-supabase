@@ -224,8 +224,8 @@ export default function AboutUs() {
             PDi is a trading name of E-PickPack Limited, registered in England
             and Wales under Company No. 06404412.
             <br />
-            Registered Office: Hall 1, 5 Rabans Lane, Aylesbury,
-            Buckinghamshire, HP19 8RT, United Kingdom.
+            Registered Office: 5 Rabans Lane, Aylesbury, Buckinghamshire, HP19
+            8RT, United Kingdom.
           </p>
         </div>
 
