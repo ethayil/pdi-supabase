@@ -53,7 +53,6 @@ export const OrderShippingEmail = ({
   city,
   postcode,
   country,
-  deliveryDate,
   weight,
   items = [],
   courier,
@@ -125,25 +124,23 @@ export const OrderShippingEmail = ({
                         ? "Order Collected"
                         : "Your order is on the way"}
                   </Text>
-                  <Text className="m-0 mt-4 font-14 font-sans text-fg-2 leading-relaxed">
+                  <Text className="m-0 my-4 font-14 font-sans text-fg-2 leading-relaxed">
                     Order #{reference} {statusText}.
                     {exceptionReason ? ` Note: ${exceptionReason}` : ""}
                   </Text>
 
-                  <Section className="mt-6">
-                    <Button
-                      href={trackingUrl}
-                      className="inline-block bg-[#1F2222] px-[20px] py-[12px] font-15 font-sans text-white rounded-[8px] leading-6"
-                    >
-                      {isDelivered || isCollected
-                        ? "View order details \u2192"
-                        : "Track your shipment \u2192"}
-                    </Button>
-                  </Section>
+                  <Button
+                    href={trackingUrl}
+                    className="inline-block bg-[#1F2222] px-6 py-2 font-15 font-sans text-white rounded-[8px] leading-6"
+                  >
+                    {isDelivered || isCollected
+                      ? "View order details \u2192"
+                      : "Track your shipment \u2192"}
+                  </Button>
                 </Section>
 
                 {/* Courier / Tracking Details */}
-                <Section className="py-6 border-t border-stroke text-left">
+                <Section className="mt-4 border-t border-stroke text-left">
                   <Text className="m-0 font-16 font-sans text-fg font-semibold">
                     Courier Details
                   </Text>
@@ -259,28 +256,14 @@ export const OrderShippingEmail = ({
                       </Text>
                     </Column>
                   </Row>
-                  {!isDelivered && !isCollected && (
-                    <Row>
-                      <Column>
-                        <Text className="m-0 py-[4px] font-14 font-sans text-fg-2">
-                          Estimated Delivery Date
-                        </Text>
-                      </Column>
-                      <Column align="right">
-                        <Text className="m-0 py-[4px] font-15 font-sans text-fg-2">
-                          {formattedDate(deliveryDate, "short")}
-                        </Text>
-                      </Column>
-                    </Row>
-                  )}
                 </Section>
 
                 {/* Delivery Address */}
-                <Section className="mt-6 pt-6 border-t border-stroke text-left">
+                <Section className="mt-4 border-t border-stroke text-left">
                   <Text className="m-0 font-16 font-sans text-fg font-semibold">
                     Delivery Address
                   </Text>
-                  <Text className="m-0 mt-3 font-14 font-sans text-fg-2 leading-relaxed whitespace-pre-line">
+                  <Text className="m-0 font-14 font-sans text-fg-2 leading-relaxed whitespace-pre-line">
                     {fullname}
                     {"\n"}
                     {address1}
@@ -295,22 +278,20 @@ export const OrderShippingEmail = ({
                   </Text>
                 </Section>
 
-                <Section className="mt-6 border-stroke border-t">
+                <Section className="mt-4 border-stroke border-t">
                   &nbsp;
                 </Section>
-                <Section className="mt-3 text-center">
-                  <Text className="m-0 mx-auto max-w-[340px] font-14 font-sans text-fg-3">
-                    Please note that address modifications are no longer
-                    possible since your shipment has already been dispatched.
-                  </Text>
-                </Section>
+                <Text className="m-0 mx-auto max-w-[340px] font-14 font-sans text-fg-3">
+                  Please note that address modifications are no longer possible
+                  since your shipment has already been dispatched.
+                </Text>
 
                 {/* Common Questions */}
-                <Section className="mt-6 pt-6 border-stroke border-t text-left">
-                  <Text className="m-0 font-16 font-sans text-fg-3">
+                <Section className="mt-4 border-stroke border-t text-left">
+                  <Text className="m-0 font-16 font-sans font-semibold text-fg-3">
                     Common questions
                   </Text>
-                  <Section className="mt-4">
+                  <Section>
                     {techOrderShippingFaqItems.map((item, idx) => (
                       <Section
                         // biome-ignore lint/suspicious/noArrayIndexKey: idx is stable

@@ -32,11 +32,12 @@ export const OrderConfirmationEmail = ({
   city,
   postcode,
   country,
-  deliveryDate,
   weight,
   items = [],
   service,
   courier,
+  externalComments,
+  sendDate,
   orderUrl,
 }: OrderEmailProps) => {
   const displayStatus = status === "processing" ? "Processing" : "Confirmed";
@@ -57,7 +58,6 @@ export const OrderConfirmationEmail = ({
               : rawVendor.charAt(0).toUpperCase() +
                 rawVendor.slice(1).replace(/-/g, " ")
     : undefined;
-
 
   return (
     <Tailwind config={barebonesBoxedTailwindConfig}>
@@ -80,9 +80,9 @@ export const OrderConfirmationEmail = ({
                     Your order has been placed
                   </Text>
                   <Text className="m-0 my-4 font-14 font-sans text-fg-2 leading-relaxed">
-                    Order #{reference} is {displayStatus.toLowerCase()}
-                    —we&apos;re preparing your items for shipment and will email
-                    the moment they leave our warehouse.
+                    Order #{reference} is {displayStatus.toLowerCase()}. We will
+                    email you with tracking information the moment your package
+                    leaves our warehouse.
                   </Text>
 
                   <Section>
@@ -95,9 +95,21 @@ export const OrderConfirmationEmail = ({
                   </Section>
                 </Section>
 
+                {/* External Note */}
+                {externalComments && (
+                  <Section className="my-4 p-4 bg-white border border-stroke rounded-[8px] text-left">
+                    <Text className="m-0 font-14 font-sans text-fg font-semibold mb-1">
+                      Order Notes
+                    </Text>
+                    <Text className="m-0 font-13 font-sans text-fg-2 leading-relaxed">
+                      {externalComments}
+                    </Text>
+                  </Section>
+                )}
+
                 {/* Items List */}
                 {items.length > 0 && (
-                  <Section className="pt-4 text-left">
+                  <Section className="text-left">
                     <Text className="m-0 mb-2 font-16 font-sans text-fg font-semibold">
                       Items in this order
                     </Text>
@@ -151,18 +163,20 @@ export const OrderConfirmationEmail = ({
                       </Text>
                     </Column>
                   </Row>
-                  <Row>
-                    <Column>
-                      <Text className="m-0 font-14 font-sans text-fg-2">
-                        Estimated Delivery
-                      </Text>
-                    </Column>
-                    <Column align="right">
-                      <Text className="m-0 font-15 font-sans text-fg-2">
-                        {formattedDate(deliveryDate, "short")}
-                      </Text>
-                    </Column>
-                  </Row>
+                  {sendDate && (
+                    <Row>
+                      <Column>
+                        <Text className="m-0 font-14 font-sans text-fg-2">
+                          Ship Date
+                        </Text>
+                      </Column>
+                      <Column align="right">
+                        <Text className="m-0 font-15 font-sans text-fg-2">
+                          {formattedDate(sendDate, "short")}
+                        </Text>
+                      </Column>
+                    </Row>
+                  )}
                   {formattedVendorName && (
                     <Row>
                       <Column>
@@ -267,6 +281,7 @@ OrderConfirmationEmail.PreviewProps = {
   ],
   service: "ups-express-standard",
   orderUrl: "https://example.com/orders/ORD-98273-XYZ",
+  externalComments: "Test note on oredr",
 } satisfies OrderEmailProps;
 
 export default OrderConfirmationEmail;

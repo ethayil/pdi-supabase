@@ -298,6 +298,8 @@ export async function createOrder(args: {
           deliveryDate,
           weight: args.weight,
           items: itemsForEmail,
+          externalComments: result.externalComments || undefined,
+          sendDate: result.sendDate || undefined,
           orderUrl: `${getSiteUrl()}/${args.orgId}/orders/${result.id}`,
         });
       } catch (err) {
@@ -952,6 +954,8 @@ export async function sendOrderNotification({
               quantity: i.quantity,
               image: i.product.imgUrl ?? undefined,
             })),
+            externalComments: order.externalComments ?? undefined,
+            sendDate: order.sendDate ?? undefined,
             orderUrl:
               `${getSiteUrl()}/${order.orgId}/orders/${order.id}`,
           });

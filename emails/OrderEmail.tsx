@@ -38,6 +38,8 @@ export interface OrderEmailProps {
   service?: string;
   signedBy?: string;
   deliveredAt?: number;
+  externalComments?: string;
+  sendDate?: number;
   exceptionReason?: string;
   orderUrl: string;
 }

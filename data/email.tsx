@@ -104,6 +104,8 @@ export async function sendOrderEmail(args: {
   signedBy?: string;
   deliveredAt?: number | Date;
   exceptionReason?: string;
+  externalComments?: string;
+  sendDate?: number | Date;
   orderUrl: string;
 }) {
   if (!verifySmtpConfig()) return;
@@ -121,6 +123,10 @@ export async function sendOrderEmail(args: {
         args.deliveredAt instanceof Date
           ? args.deliveredAt.getTime()
           : args.deliveredAt,
+      sendDate:
+        args.sendDate instanceof Date
+          ? args.sendDate.getTime()
+          : args.sendDate,
     };
 
     const emailHtml = await render(<OrderEmail {...formattedProps} />);
