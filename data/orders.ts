@@ -280,6 +280,7 @@ export async function createOrder(args: {
           name: i.product.name,
           sku: i.product.sku,
           quantity: i.quantity,
+          image: i.product.imgUrl ?? undefined,
         }));
 
         // Trigger order confirmation email
@@ -949,6 +950,7 @@ export async function sendOrderNotification({
               name: i.product.name,
               sku: i.product.sku,
               quantity: i.quantity,
+              image: i.product.imgUrl ?? undefined,
             })),
             orderUrl:
               `${getSiteUrl()}/${order.orgId}/orders/${order.id}`,

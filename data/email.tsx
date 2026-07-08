@@ -96,6 +96,7 @@ export async function sendOrderEmail(args: {
     name: string;
     sku?: string;
     quantity: number;
+    image?: string;
   }[];
   courier?: string;
   trackingNumber?: string;

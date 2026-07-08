@@ -1,15 +1,18 @@
 import {
   Body,
+  Button,
   Container,
   Head,
-  Heading,
-  Hr,
   Html,
-  Link,
   Preview,
   Section,
+  Tailwind,
   Text,
-} from "@react-email/components";
+} from "react-email";
+import { EmailFooter } from "./email-footer";
+import { EmailHeader } from "./email-header";
+import { barebonesBoxedTailwindConfig } from "./theme";
+import { BarebonesFonts } from "./theme-fonts";
 
 interface CustomMessageEmailProps {
   title: string;
@@ -24,89 +27,58 @@ export const CustomMessageEmail = ({
   linkUrl,
   senderName = "PDi Admin",
 }: CustomMessageEmailProps) => (
-  <Html>
-    <Head />
-    <Preview>{title}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Section style={section}>
-          <Heading style={h1}>{title}</Heading>
-          <Text style={text}>{message}</Text>
-          {linkUrl && (
-            <Section style={btnContainer}>
-              <Link style={button} href={linkUrl}>
-                View Details
-              </Link>
+  <Tailwind config={barebonesBoxedTailwindConfig}>
+    <Html>
+      <Head>
+        <BarebonesFonts />
+      </Head>
+      <Body className="bg-bg-2 text-center font-sans">
+        <Preview>{title}</Preview>
+        <Container className="mobile:mt-0 mx-auto mt-8 w-full max-w-[640px]">
+          <Section className="bg-bg mobile:px-2 px-6 py-4">
+            {/* Header inside the white container */}
+            <EmailHeader />
+
+            {/* Main Content inside Inner Rounded Gray Box */}
+            <Section className="bg-bg-2 mobile:p-2 rounded-[8px] p-6 text-center">
+              <Section className="max-w-[440px] mx-auto text-center">
+                <Text className="m-0 font-32 font-sans text-fg">{title} </Text>
+                <Text className="m-0 my-4 font-14 font-sans text-fg-2 leading-relaxed">
+                  {message}
+                </Text>
+
+                {linkUrl && (
+                  <Section>
+                    <Button
+                      href={linkUrl}
+                      className="inline-block bg-[#1F2222] px-6 py-2 font-15 font-sans text-white rounded-[8px] leading-6"
+                    >
+                      {"View Details \u2192"}
+                    </Button>
+                  </Section>
+                )}
+              </Section>
+
+              <Text className="font-13 text-fg-3 mx-auto mt-4 max-w-[280px] text-center font-sans">
+                Sent by {senderName} via PDi Notification System
+              </Text>
             </Section>
-          )}
-          <Hr style={hr} />
-          <Text style={footer}>
-            Sent by {senderName} via PDi Notification System
-          </Text>
-        </Section>
-      </Container>
-    </Body>
-  </Html>
+
+            {/* Footer outside the rounded box */}
+            <EmailFooter />
+          </Section>
+        </Container>
+      </Body>
+    </Html>
+  </Tailwind>
 );
 
+CustomMessageEmail.PreviewProps = {
+  title: "Important Notification",
+  message:
+    "This is a custom message sent to you regarding your account. Please click below to verify details.",
+  linkUrl: "https://example.com/",
+  senderName: "PDi Logistics Team",
+} satisfies CustomMessageEmailProps;
+
 export default CustomMessageEmail;
-
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "20px 0 48px",
-  marginBottom: "64px",
-};
-
-const section = {
-  padding: "0 48px",
-};
-
-const h1 = {
-  color: "#333",
-  fontSize: "24px",
-  fontWeight: "bold",
-  margin: "40px 0",
-};
-
-const text = {
-  color: "#333",
-  fontSize: "16px",
-  lineHeight: "24px",
-  textAlign: "left" as const,
-};
-
-const btnContainer = {
-  textAlign: "center" as const,
-  marginTop: "32px",
-  marginBottom: "32px",
-};
-
-const button = {
-  backgroundColor: "#000000",
-  borderRadius: "5px",
-  color: "#fff",
-  fontSize: "16px",
-  fontWeight: "bold",
-  textDecoration: "none",
-  textAlign: "center" as const,
-  display: "inline-block",
-  padding: "12px 24px",
-};
-
-const hr = {
-  borderColor: "#e6ebf1",
-  margin: "20px 0",
-};
-
-const footer = {
-  color: "#8898aa",
-  fontSize: "12px",
-  lineHeight: "16px",
-};

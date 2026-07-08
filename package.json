@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "email:dev": "email dev --dir ./emails"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
