@@ -2,7 +2,11 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { betterAuth } from "better-auth/minimal";
 import { nextCookies } from "better-auth/next-js";
 import { admin, emailOTP, organization } from "better-auth/plugins";
-import { sendPasswordResetEmail, sendVerificationEmail } from "./data/email";
+import {
+  sendAccountVerificationEmail,
+  sendInvitationEmail,
+  sendPasswordResetEmail,
+} from "./data/email";
 import { globalAdminPlugin } from "./lib/auth/global-admin-plugin";
 import prisma from "./lib/prisma";
 import { getSiteUrl } from "./utils/site-url";
@@ -11,10 +15,23 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  emailAndPassword: { enabled: true, requireEmailVerification: true },
+  emailAndPassword: { enabled: true, requireEmailVerification: false },
   plugins: [
     admin(),
     organization({
+      async sendInvitationEmail({ id, role, email, inviter, organization }) {
+        const siteUrl = getSiteUrl();
+        const url = `${siteUrl}/auth/accept-invitation?id=${
+          encodeURIComponent(id)
+        }`;
+        await sendInvitationEmail({
+          to: email,
+          inviterName: inviter?.user?.name || "An administrator",
+          orgName: organization?.name || "PDi",
+          role: role ?? "member",
+          url,
+        });
+      },
       schema: {
         organization: {
           additionalFields: {
@@ -109,14 +126,14 @@ export const auth = betterAuth({
     }),
     emailOTP({
       overrideDefaultEmailVerification: true,
-      sendVerificationOnSignUp: true,
+      sendVerificationOnSignUp: false,
       async sendVerificationOTP({ email, otp, type }) {
         if (type === "email-verification") {
           const siteUrl = getSiteUrl();
           const url = `${siteUrl}/auth/verify-email?email=${
             encodeURIComponent(email)
           }&otp=${encodeURIComponent(otp)}`;
-          await sendVerificationEmail({ to: email, url });
+          await sendAccountVerificationEmail({ to: email, url });
         } else if (type === "forget-password") {
           await sendPasswordResetEmail({ to: email, otp });
         }

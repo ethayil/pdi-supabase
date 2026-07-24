@@ -33,7 +33,7 @@ import { getUserById, type UserWMember, updateUser } from "@/data/users";
 import { authClient } from "@/lib/auth/auth-client";
 import { useUserParams } from "@/lib/nuqs/user-params";
 import { userSchema } from "@/schemas/user-schema";
-import type { UserRole } from "@/types/globals";
+import { USER_ROLES, type UserRole } from "@/types/globals";
 import { UserSessionsList } from "./user-sessions-list";
 
 export default function ManageUserDialog({
@@ -253,13 +253,6 @@ export default function ManageUserDialog({
     if (userId && selectedUser) onOpenChange(true);
   }, [userId, selectedUser]);
 
-  const userRoleOptions = [
-    { value: "user", label: "User" },
-    { value: "orgAdmin", label: "Org Admin" },
-    { value: "admin", label: "Admin" },
-    { value: "warehouse", label: "Warehouse" },
-  ];
-
   const orgOptions = [
     { value: "none", label: "None" },
     ...(organizations?.map((org) => ({
@@ -343,7 +336,7 @@ export default function ManageUserDialog({
                     <Field data-invalid={fieldState.invalid}>
                       <FieldLabel htmlFor="form-role">Role</FieldLabel>
                       <Select
-                        items={userRoleOptions}
+                        items={USER_ROLES}
                         onValueChange={field.onChange}
                         value={field.value?.toString()}
                         disabled={isLoading}
@@ -352,7 +345,7 @@ export default function ManageUserDialog({
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {userRoleOptions.map((role) => (
+                          {USER_ROLES.map((role) => (
                             <SelectItem key={role.value} value={role.value}>
                               {role.label}
                             </SelectItem>

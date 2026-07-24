@@ -2,6 +2,7 @@ import * as motion from "motion/react-client";
 import type { Metadata } from "next";
 import type { SearchParams } from "nuqs/server";
 import { DashboardHeader } from "@/components/dashboard-header";
+import { InviteUserDialog } from "@/components/user/invite-user-dialog";
 import ManageUserDialog from "@/components/user/manage-user-dialog";
 import { TableWrapper } from "@/components/user/user-table-wrapper";
 import { getUsers } from "@/data/users";
@@ -34,7 +35,10 @@ export default async function UsersPage({
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <DashboardHeader title="User Management" mobileTitle="Users">
-        <ManageUserDialog organizationId={orgId} />
+        <div className="flex items-center gap-2">
+          <InviteUserDialog organizationId={orgId} />
+          <ManageUserDialog organizationId={orgId} />
+        </div>
       </DashboardHeader>
 
       <motion.div

@@ -5,6 +5,7 @@ export const publicRoutes = [
   "/privacy",
   "/terms",
   "/services",
+  "/auth/accept-invitation",
 ];
 
 export const authRoutes = [

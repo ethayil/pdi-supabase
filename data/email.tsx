@@ -1,5 +1,6 @@
 import { render } from "@react-email/render";
 import CustomMessageEmail from "@/emails/CustomMessageEmail";
+import InvitationEmail from "@/emails/InvitationEmail";
 import OrderEmail from "@/emails/OrderEmail";
 import PasswordResetEmail from "@/emails/PasswordResetEmail";
 import VerificationEmail from "@/emails/VerificationEmail";
@@ -9,7 +10,7 @@ import { getSiteUrl } from "@/utils/site-url";
 const smtpEmail = process.env.SMTP_EMAIL;
 const siteUrl = getSiteUrl();
 
-export async function sendVerificationEmail({
+export async function sendAccountVerificationEmail({
   to,
   url,
 }: {
@@ -199,3 +200,33 @@ export async function sendCustomEmail(args: {
     throw error;
   }
 }
+
+export async function sendInvitationEmail(args: {
+  to: string;
+  inviterName?: string;
+  orgName?: string;
+  role?: string;
+  url: string;
+}) {
+  if (!verifySmtpConfig()) return;
+
+  try {
+    const emailHtml = await render(<InvitationEmail {...args} />);
+
+    const info = await transporter.sendMail({
+      from: `"PDi" <${smtpEmail}>`,
+      to: args.to,
+      subject: `Invitation to join ${args.orgName || "PDi"}`,
+      html: emailHtml,
+    });
+
+    console.log(
+      `[SMTP] Invitation email sent successfully to ${args.to}. MessageId: ${info.messageId}`,
+    );
+    return info.messageId;
+  } catch (error) {
+    console.error(`[SMTP] Error sending invitation email to ${args.to}:`, error);
+    throw error;
+  }
+}
+

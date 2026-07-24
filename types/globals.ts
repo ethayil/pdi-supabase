@@ -8,7 +8,21 @@ export type Params = Promise<{
   invoiceId: string;
 }>;
 
-export type UserRole = "user" | "orgAdmin" | "admin" | "warehouse";
+export const USER_ROLE_VALUES = [
+  "user",
+  "orgAdmin",
+  "admin",
+  "warehouse",
+] as const;
+
+export type UserRole = (typeof USER_ROLE_VALUES)[number];
+
+export const USER_ROLES: { value: UserRole; label: string }[] = [
+  { value: "user", label: "User" },
+  { value: "orgAdmin", label: "Org Admin" },
+  { value: "admin", label: "Admin" },
+  { value: "warehouse", label: "Warehouse" },
+];
 
 export type InvoiceChargeType =
   | "ddp"
