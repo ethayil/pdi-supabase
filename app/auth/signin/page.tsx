@@ -49,6 +49,7 @@ export default function SignIn() {
     const name = formData.get("name") as string;
 
     try {
+      /*
       if (flow === "signUp") {
         await authClient.signUp.email(
           {
@@ -76,23 +77,24 @@ export default function SignIn() {
           },
         );
       } else {
-        await authClient.signIn.email(
-          {
-            email,
-            password,
-            callbackURL: "/verify",
+      */
+      await authClient.signIn.email(
+        {
+          email,
+          password,
+          callbackURL: "/verify",
+        },
+        {
+          onError: (error) => {
+            setError(error.error.message);
+            setLoading(false);
           },
-          {
-            onError: (error) => {
-              setError(error.error.message);
-              setLoading(false);
-            },
-            onSuccess: () => {
-              setLoading(false);
-            },
+          onSuccess: () => {
+            setLoading(false);
           },
-        );
-      }
+        },
+      );
+      /* } */
       // biome-ignore lint/suspicious/noExplicitAny: <any for error from the authClient>
     } catch (err: any) {
       setError(err?.error?.message || err?.message || "Something went wrong");
@@ -282,7 +284,11 @@ export default function SignIn() {
               </AnimatePresence>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center">
+          <CardFooter className="flex justify-center text-center">
+            <span className="text-muted-foreground text-xs">
+              Registration is by invitation only. Contact your administrator.
+            </span>
+            {/*
             <div className="flex flex-row gap-2 text-sm">
               <span className="text-muted-foreground">
                 {flow === "signIn"
@@ -301,6 +307,7 @@ export default function SignIn() {
                 {flow === "signIn" ? "Sign up" : "Sign in"}
               </button>
             </div>
+            */}
           </CardFooter>
         </Card>
       </motion.div>
