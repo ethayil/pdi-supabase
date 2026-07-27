@@ -42,7 +42,7 @@ import { createOrder } from "@/data/orders";
 import { cn, getErrorMessage } from "@/lib/utils";
 import { orderSchema } from "@/schemas/order-schema";
 import { weightFormat } from "@/utils/weight-format";
-import { CartItemCard } from "./cart-item";
+import { CartItemCard } from "@/components/cart/cart-item";
 import PreviousAddressList from "./previous-address-list";
 import UserSelector from "./user-selector";
 

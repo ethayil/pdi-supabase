@@ -4,11 +4,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type {
-  CartItem,
-  Category,
-  Product,
-} from "@/app/generated/prisma/client";
+import type { Category, Product } from "@/app/generated/prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,12 +17,16 @@ type ProductWithCategory = Product & {
 };
 
 interface CartItemProps {
-  item: CartItem & {
+  item: {
+    id: string;
+    productId?: string;
+    quantity: number;
     product: ProductWithCategory;
   };
+  variant?: "card" | "compact";
 }
 
-export function CartItemCard({ item }: CartItemProps) {
+export function CartItemCard({ item, variant = "card" }: CartItemProps) {
   const [localQuantity, setLocalQuantity] = useState(item.quantity);
   const [prevItemQuantity, setPrevItemQuantity] = useState(item.quantity);
 
@@ -37,7 +37,6 @@ export function CartItemCard({ item }: CartItemProps) {
 
   const debouncedQuantity = useDebounce(localQuantity, 500);
 
-  // Update DB when debounced value changes
   useEffect(() => {
     if (debouncedQuantity !== item.quantity) {
       updateCartQuantity({ id: item.id, quantity: debouncedQuantity }).catch(
@@ -71,6 +70,68 @@ export function CartItemCard({ item }: CartItemProps) {
       );
     }
   };
+
+  if (variant === "compact") {
+    return (
+      <div className="flex items-center gap-4 p-3 border rounded-lg bg-card">
+        <div className="relative h-16 w-16 rounded overflow-hidden shrink-0">
+          <Image
+            src={item.product.imgUrl || "/placeholder.svg"}
+            alt={item.product.name}
+            fill
+            className="object-cover"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-medium text-sm truncate">{item.product.name}</h4>
+          <p className="text-xs text-muted-foreground">
+            SKU: {item.product.sku}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center border rounded">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                type="button"
+                onClick={handleDecrement}
+                disabled={localQuantity <= 1}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="px-2 text-xs font-medium min-w-8 text-center">
+                {localQuantity}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                type="button"
+                onClick={handleIncrement}
+                disabled={localQuantity >= item.product.quantity}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+              type="button"
+              onClick={handleDelete}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-medium">
+            {weightFormat(localQuantity * item.product.weight)}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="p-0 hover:bg-muted/60 transition-colors">

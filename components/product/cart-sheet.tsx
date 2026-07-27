@@ -4,6 +4,7 @@ import { ChevronRightCircle, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { use, useState } from "react";
 import type { Category, Product } from "@/app/generated/prisma/client";
+import { CartItemCard } from "@/components/cart/cart-item";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/sheet";
 import { useRegisterAction } from "@/hooks/use-command-actions";
 import { cn } from "@/lib/utils";
-import { CartItemCard } from "./cart-item";
 
 type ProductWithCategory = Product & {
   category: Category | null;
@@ -83,7 +83,7 @@ export default function CartSheet({
         )}
         <div className="flex-1 overflow-auto px-2 space-y-2">
           {cartItems?.map((item) => (
-            <CartItemCard key={item.id} item={item} />
+            <CartItemCard key={item.id} item={item} variant="compact" />
           ))}
         </div>
         {cartItems.length > 0 && (

@@ -10,27 +10,7 @@ export const metadata: Metadata = {
     "Get in touch with PDi UK's Aylesbury logistics team. Call +44 (0) 1296-601-570 or email contact@e-pickpack.co.uk to optimize your university and corporate distribution.",
 };
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: [0.16, 1, 0.3, 1] as const,
-    },
-  },
-};
+import { containerVariants, itemVariants } from "@/lib/constants/animations";
 
 export default function ContactUs() {
   return (
