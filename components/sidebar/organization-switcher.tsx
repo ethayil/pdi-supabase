@@ -110,7 +110,7 @@ export default function OrganizationSwitcher({
 
   return (
     <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center justify-center px-0.5 py-0 group-data-[state=collapsed]:p-0">
-      <Combobox items={organizations} value={selectedOrganization?.id}>
+      <Combobox items={organizations} value={selectedOrganization?.id ?? ""}>
         <ComboboxTrigger
           render={
             <Button

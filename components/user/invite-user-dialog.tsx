@@ -24,9 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useRouter } from "next/navigation";
 import { createOrgInvitation } from "@/data/invitations";
 import { getOrganizations } from "@/data/organizations";
-import { getUsers, type UserWMember } from "@/data/users";
+import { getUsers, revalidateUsersCache, type UserWMember } from "@/data/users";
 import { USER_ROLES } from "@/types/globals";
 
 interface InviteUserDialogProps {
@@ -94,6 +95,7 @@ export function InviteUserDialog({ organizationId }: InviteUserDialogProps) {
     };
   }, [isOpen, selectedOrgId]);
 
+  const router = useRouter();
   const handleSendInvite = async (targetEmail: string) => {
     if (!targetEmail) return toast.error("Please select or enter an email address");
     if (!selectedOrgId) return toast.error("Please select an organization");
@@ -111,6 +113,9 @@ export function InviteUserDialog({ organizationId }: InviteUserDialogProps) {
       if (!res.success) {
         throw new Error(res.error || "Failed to send invitation");
       }
+
+      await revalidateUsersCache();
+      router.refresh();
 
       toast.success(`Invitation sent successfully to ${targetEmail}`, {
         id: toastId,
@@ -153,12 +158,14 @@ export function InviteUserDialog({ organizationId }: InviteUserDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger>
-        <Button size="sm" className="gap-1.5 cursor-pointer">
-          <UserPlus className="h-4 w-4" />
-          <span>Invite User</span>
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button size="sm" className="gap-1.5 cursor-pointer">
+            <UserPlus className="h-4 w-4" />
+            <span>Invite User</span>
+          </Button>
+        }
+      />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Invite User</DialogTitle>

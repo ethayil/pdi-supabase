@@ -4,15 +4,14 @@ import { FilterIcon, SearchIcon, XCircleIcon } from "lucide-react";
 import { type FormEvent, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Field, FieldLabel } from "@/components/ui/field";
 import {
   InputGroup,
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { Switch } from "@/components/ui/switch";
 import { useRegisterAction } from "@/hooks/use-command-actions";
 import { useOrgParams } from "@/lib/nuqs/org-params";
+import { SwitchField } from "../ui/switch-field";
 
 export default function OrgsHeader({
   startTransition,
@@ -84,23 +83,17 @@ export default function OrgsHeader({
         </Button>
       </ButtonGroup>
 
-      <FieldLabel htmlFor="active-only" className="w-44! h-8!">
-        <Field
-          orientation="horizontal"
-          className="h-full flex items-center justify-between"
-        >
-          <p className="text-sm">
-            Active <span className="hidden sm:inline">Only</span>
-          </p>
-          <Switch
-            id="active-only"
-            checked={isActive}
-            onCheckedChange={(checked) =>
-              setParams({ isActive: checked, currentPage: 1 })
-            }
-          />
-        </Field>
-      </FieldLabel>
+      <ButtonGroup>
+        <SwitchField
+          id="unread-filter"
+          label="Unread only"
+          mobileLabel="Unread"
+          checked={isActive}
+          onCheckedChange={(checked) =>
+            setParams({ isActive: checked, currentPage: 1 })
+          }
+        />
+      </ButtonGroup>
     </form>
   );
 }

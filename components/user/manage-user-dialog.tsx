@@ -32,6 +32,8 @@ import { getOrganizations } from "@/data/organizations";
 import { getUserById, type UserWMember, updateUser } from "@/data/users";
 import { authClient } from "@/lib/auth/auth-client";
 import { useUserParams } from "@/lib/nuqs/user-params";
+import { useRouter } from "next/navigation";
+import { revalidateUsersCache } from "@/data/users";
 import { userSchema } from "@/schemas/user-schema";
 import { USER_ROLES, type UserRole } from "@/types/globals";
 import { UserSessionsList } from "./user-sessions-list";
@@ -46,6 +48,7 @@ export default function ManageUserDialog({
 
   const [{ userId }, setParams] = useUserParams();
 
+  const router = useRouter();
   const [selectedUser, setSelectedUser] = useState<UserWMember | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
 
@@ -185,6 +188,9 @@ export default function ManageUserDialog({
         userId: userId,
       });
       if (error) throw error;
+
+      await revalidateUsersCache();
+      router.refresh();
 
       toast.success("User deleted", { id: toastId });
       onOpenChange(false);

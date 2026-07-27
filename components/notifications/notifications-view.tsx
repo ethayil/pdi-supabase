@@ -16,11 +16,10 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
+import { SwitchField } from "@/components/ui/switch-field";
 import { markAllAsRead, markAsRead } from "@/data/notifications";
 import { useRegisterAction } from "@/hooks/use-command-actions";
 import { cn } from "@/lib/utils";
-import { Field, FieldLabel } from "../ui/field";
 
 interface NotificationsViewProps {
   initialNotifications: Notification[];
@@ -82,30 +81,25 @@ export function NotificationsView({
   return (
     <div className="flex-1 flex flex-col bg-muted/10 overflow-hidden">
       <DashboardHeader title="Notifications" sticky>
-        <div className="flex items-center gap-4 mr-2">
-          <FieldLabel htmlFor="unread-filter" className="w-36! h-8!">
-            <Field
-              orientation="horizontal"
-              className="h-full flex items-center justify-between"
-            >
-              <p className="text-sm">Unread only</p>
-              <Switch
-                id="unread-filter"
-                checked={unreadOnly}
-                onCheckedChange={setUnreadOnly}
-              />
-            </Field>
-          </FieldLabel>
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <SwitchField
+            id="unread-filter"
+            label="Unread only"
+            mobileLabel="Unread"
+            checked={unreadOnly}
+            onCheckedChange={setUnreadOnly}
+          />
 
           {unreadCount > 0 && (
             <Button
               variant="outline"
               size="sm"
               onClick={handleMarkAllAsRead}
-              className="h-8 text-xs font-semibold hover:bg-primary/10 hover:text-primary transition-colors rounded-full"
+              className="h-8 text-xs font-semibold hover:bg-primary/10 hover:text-primary transition-colors rounded-full shrink-0"
             >
               <CheckCheck className="w-3.5 h-3.5 mr-1.5" />
-              Mark all read
+              <span className="hidden sm:inline">Mark all read</span>
+              <span className="sm:hidden">Mark read</span>
             </Button>
           )}
         </div>
@@ -134,7 +128,7 @@ export function NotificationsView({
                           ? "No unread notifications"
                           : "All caught up!"}
                       </p>
-                      <p className="text-sm text-muted-foreground max-w-[250px] mx-auto">
+                      <p className="text-sm text-muted-foreground max-w-62.5 mx-auto">
                         {unreadOnly
                           ? "You are all caught up!"
                           : "No new notifications at the moment. We'll let you know when something comes up!"}
@@ -199,7 +193,7 @@ export function NotificationsView({
                           </p>
 
                           {notification.linkUrl && (
-                            <div className="flex items-center gap-1.5 text-[10px] font-black text-primary pt-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-4px] group-hover:translate-x-0 uppercase tracking-widest">
+                            <div className="flex items-center gap-1.5 text-[10px] font-black text-primary pt-2 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-1 group-hover:translate-x-0 uppercase tracking-widest">
                               View Details
                               <ArrowRight className="size-3 transition-transform -translate-x-4 group-hover:translate-x-2" />
                             </div>

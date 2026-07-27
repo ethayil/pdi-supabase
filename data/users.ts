@@ -366,3 +366,9 @@ export async function getOrgMembersWithStats({ orgId }: { orgId: string }) {
     return [];
   }
 }
+
+export async function revalidateUsersCache() {
+  revalidateTag(cacheTags.users, "");
+  revalidatePath("/[orgId]/admin/users", "layout");
+}
+
