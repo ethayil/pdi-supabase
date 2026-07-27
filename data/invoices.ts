@@ -611,6 +611,11 @@ export async function addInvoiceCharge(args: {
       if (!order) throw new Error("Order not found");
     }
 
+    const finalCost =
+      args.chargeType === "refund" ? -Math.abs(args.cost) : args.cost;
+    const finalVat =
+      args.chargeType === "refund" ? -Math.abs(args.vat) : args.vat;
+
     const chargeId = await prisma.$transaction(async (tx) => {
       const charge = await tx.invoiceCharge.create({
         data: {
@@ -619,8 +624,8 @@ export async function addInvoiceCharge(args: {
           orgId: invoice.orgId,
           chargeType: args.chargeType,
           description: args.description,
-          cost: args.cost,
-          vat: args.vat,
+          cost: finalCost,
+          vat: finalVat,
           chargeDate: new Date(args.chargeDate),
         },
       });
@@ -656,14 +661,19 @@ export async function updateInvoiceCharge(args: {
     });
     if (!charge) throw new Error("Charge not found");
 
+    const finalCost =
+      args.chargeType === "refund" ? -Math.abs(args.cost) : args.cost;
+    const finalVat =
+      args.chargeType === "refund" ? -Math.abs(args.vat) : args.vat;
+
     await prisma.$transaction(async (tx) => {
       await tx.invoiceCharge.update({
         where: { id: args.chargeId },
         data: {
           chargeType: args.chargeType,
           description: args.description,
-          cost: args.cost,
-          vat: args.vat,
+          cost: finalCost,
+          vat: finalVat,
           chargeDate: new Date(args.chargeDate),
         },
       });

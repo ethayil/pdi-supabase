@@ -1,7 +1,8 @@
 "use client";
 
-import { ExternalLink, Mail, MapPin, Package, Phone } from "lucide-react";
+import { ExternalLink, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
+import { Logo } from "@/components/ui/logo";
 
 export function MarketingFooter() {
   const currentYear = new Date().getFullYear();
@@ -12,11 +13,8 @@ export function MarketingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
           {/* Logo & Company details */}
           <div className="space-y-4 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                <Package className="text-primary-foreground text-xl fill-current" />
-              </div>
-              <span className="font-bold text-xl tracking-tight">PDi UK</span>
+            <Link href="/">
+              <Logo />
             </Link>
             <p className="text-xs text-muted-foreground leading-relaxed">
               PDi is a trading name of e-PickPack. Over 20 years of experience

@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  ArrowRightToLineIcon,
   Briefcase,
   ChevronDown,
   GraduationCap,
   Mail,
   Menu,
-  Package,
   Warehouse,
   X,
 } from "lucide-react";
@@ -15,7 +13,7 @@ import * as motion from "motion/react-client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -78,13 +76,8 @@ export function MarketingNav() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="shrink-0 flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-              <Package className="text-primary-foreground text-xl fill-current" />
-            </div>
-            <span className="font-bold text-xl tracking-tight text-foreground">
-              PDi UK
-            </span>
+          <Link href="/" className="shrink-0">
+            <Logo />
           </Link>
 
           {/* Desktop Nav Links */}
