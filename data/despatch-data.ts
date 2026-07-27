@@ -1,7 +1,7 @@
 "use server";
 
 import { unstable_cache } from "next/cache";
-import type { Order, User } from "@/app/generated/prisma/client";
+import type { Order, Prisma, User } from "@/app/generated/prisma/client";
 import { requireGlobalAdmin } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
@@ -27,7 +27,7 @@ async function fetchDespatchOrdersDbData(
   orgId?: string,
   currentPage: number = 1,
   entriesPerPage: number = 20,
-  urgency: "all" | "overdue" | "due_today" | "due_soon" | "upcoming" = "all"
+  urgency: "all" | "overdue" | "due_today" | "due_soon" | "upcoming" = "all",
 ): Promise<DespatchOrdersResponse> {
   try {
     const now = new Date();
@@ -35,7 +35,7 @@ async function fetchDespatchOrdersDbData(
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     const endOf5Days = new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000);
 
-    const baseWhere: any = {
+    const baseWhere: Prisma.OrderWhereInput = {
       status: "processing",
     };
 
@@ -139,8 +139,12 @@ async function fetchDespatchOrdersDbData(
 }
 
 const getCachedDespatchOrders = unstable_cache(
-  async (orgId?: string, currentPage?: number, entriesPerPage?: number, urgency?: any) =>
-    fetchDespatchOrdersDbData(orgId, currentPage, entriesPerPage, urgency),
+  async (
+    orgId?: string,
+    currentPage?: number,
+    entriesPerPage?: number,
+    urgency?: "all" | "overdue" | "due_today" | "due_soon" | "upcoming",
+  ) => fetchDespatchOrdersDbData(orgId, currentPage, entriesPerPage, urgency),
   ["despatch-orders-cache"],
   {
     revalidate: 20,
@@ -161,7 +165,12 @@ export async function getDespatchOrders({
 } = {}) {
   try {
     await requireGlobalAdmin();
-    return await getCachedDespatchOrders(orgId, currentPage, entriesPerPage, urgency);
+    return await getCachedDespatchOrders(
+      orgId,
+      currentPage,
+      entriesPerPage,
+      urgency,
+    );
   } catch (error) {
     console.error("Error in getDespatchOrders:", error);
     return {

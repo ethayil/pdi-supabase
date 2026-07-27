@@ -30,7 +30,7 @@ export const requireUser = async <T extends { shouldThrow?: boolean }>(
   const { user } = await getSession();
   if (!user) {
     if (options?.shouldThrow === false) {
-      return null as any;
+      return null as (T extends { shouldThrow: false } ? SessionUser | null : SessionUser);
     }
     throw new Error("Unauthorized: Access Denied");
   }

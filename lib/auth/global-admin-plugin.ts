@@ -6,7 +6,6 @@ import {
 } from "better-auth/api";
 import { getOrgAdapter } from "better-auth/plugins/organization";
 import { z } from "zod";
-import prisma from "../prisma";
 
 // Create a plugin for your global admin endpoints
 export const globalAdminPlugin = () => {
@@ -60,7 +59,9 @@ export const globalAdminPlugin = () => {
           }
 
           // Get org options from context (set by organization plugin)
-          const orgOptions = (ctx.context as any).orgOptions || {};
+          const orgOptions =
+            (ctx.context as { orgOptions?: Record<string, unknown> })
+              .orgOptions || {};
 
           // Use adapter directly to bypass membership check
           const adapter = getOrgAdapter(ctx.context, orgOptions);
@@ -104,7 +105,9 @@ export const globalAdminPlugin = () => {
           }
 
           // Get org options from context (set by organization plugin)
-          const orgOptions = (ctx.context as any).orgOptions || {};
+          const orgOptions =
+            (ctx.context as { orgOptions?: Record<string, unknown> })
+              .orgOptions || {};
 
           // Use adapter directly to bypass membership check
           const adapter = getOrgAdapter(ctx.context, orgOptions);
@@ -152,53 +155,64 @@ export const globalAdminPlugin = () => {
           }
 
           const { userId, orgId, role } = ctx.body;
-          const orgOptions = (ctx.context as any).orgOptions || {};
+          const orgOptions =
+            (ctx.context as { orgOptions?: Record<string, unknown> })
+              .orgOptions || {};
           const adapter = getOrgAdapter(ctx.context, orgOptions);
 
-          // 1. Get user's current organizations
-          const userOrgs = await adapter.listOrganizations(userId);
+          try {
+            // 1. Get user's current organizations
+            const userOrgs = await adapter.listOrganizations(userId);
 
-          // 2. Remove from all existing organizations
-          for (const org of userOrgs) {
-            const member = await adapter.findMemberByOrgId({
-              userId,
-              organizationId: org.id,
-            });
-            if (member) {
-              await adapter.deleteMember({
-                memberId: member.id,
-                organizationId: org.id,
+            // 2. Remove from all existing organizations
+            for (const org of userOrgs) {
+              const member = await adapter.findMemberByOrgId({
                 userId,
+                organizationId: org.id,
+              });
+              if (member) {
+                await adapter.deleteMember({
+                  memberId: member.id,
+                  organizationId: org.id,
+                  userId,
+                });
+              }
+            }
+
+            // 3. Then add to new organization (if not "none")
+            if (orgId !== "none") {
+              const { auth } = await import("../../auth");
+              await auth.api.addMember({
+                body: {
+                  userId,
+                  role: role === "orgAdmin" ? "admin" : "member",
+                  organizationId: orgId,
+                },
+                headers: ctx.headers,
               });
             }
-          }
 
-          // 3. Then add to new organization (if not "none")
-          if (orgId !== "none") {
-            const { auth } = await import("../../auth");
-            await auth.api.addMember({
-              body: {
-                userId,
-                role: role === "orgAdmin" ? "admin" : "member",
-                organizationId: orgId,
-              },
-              headers: ctx.headers,
+            // 4. Update ALL sessions for this user to have the new active org using Better Auth's internal adapter
+            const internalAdapter = ctx.context.internalAdapter;
+            const sessions = await internalAdapter.listSessions(userId);
+            const targetOrgId = orgId === "none" ? null : orgId;
+            for (const userSession of sessions) {
+              await internalAdapter.updateSession(userSession.token, {
+                activeOrganizationId: targetOrgId,
+              });
+            }
+
+            return ctx.json({
+              success: true,
+            });
+          } catch (err) {
+            throw new APIError("INTERNAL_SERVER_ERROR", {
+              message:
+                err instanceof Error
+                  ? err.message
+                  : "Failed to reassign user organization",
             });
           }
-
-          // 4. Update ALL sessions for this user to have the new active org using Better Auth's internal adapter
-          const internalAdapter = ctx.context.internalAdapter;
-          const sessions = await internalAdapter.listSessions(userId);
-          const targetOrgId = orgId === "none" ? null : orgId;
-          for (const userSession of sessions) {
-            await internalAdapter.updateSession(userSession.token, {
-              activeOrganizationId: targetOrgId,
-            });
-          }
-
-          return ctx.json({
-            success: true,
-          });
         },
       ),
     },
