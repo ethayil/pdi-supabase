@@ -56,7 +56,6 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { couriersData, trackingStatuses } from "@/data/couriers-data";
-import { VALID_ORDER_STATUS_TRANSITIONS } from "@/types/globals";
 import type { OrderWithFullDetails } from "@/data/orders";
 import {
   deleteOrderHistory,
@@ -65,6 +64,7 @@ import {
   updateOrderTracking,
 } from "@/data/orders";
 import { cn } from "@/lib/utils";
+import { VALID_ORDER_STATUS_TRANSITIONS } from "@/types/globals";
 import { formattedDate } from "@/utils/formatted-date";
 import { getTrackingUrl } from "@/utils/tracking-url";
 import OrderGridTextBox from "./order-grid-textbox";
@@ -105,7 +105,8 @@ export function TrackingSection({
   });
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const validNextStates = VALID_ORDER_STATUS_TRANSITIONS[order.status || "pending"] || [];
+  const validNextStates =
+    VALID_ORDER_STATUS_TRANSITIONS[order.status || "pending"] || [];
 
   useEffect(() => {
     if (showHistory) {
@@ -396,13 +397,22 @@ export function TrackingSection({
                           value={format(formData.createdAt, "HH:mm")}
                           onChange={(e) => {
                             const [hours, minutes] = e.target.value.split(":");
-                            const newDate = new Date(formData.createdAt);
-                            newDate.setHours(parseInt(hours));
-                            newDate.setMinutes(parseInt(minutes));
-                            setFormData({
-                              ...formData,
-                              createdAt: newDate.getTime(),
-                            });
+                            if (hours !== undefined && minutes !== undefined) {
+                              const parsedH = parseInt(hours, 10);
+                              const parsedM = parseInt(minutes, 10);
+                              if (
+                                !Number.isNaN(parsedH) &&
+                                !Number.isNaN(parsedM)
+                              ) {
+                                const newDate = new Date(formData.createdAt);
+                                newDate.setHours(parsedH);
+                                newDate.setMinutes(parsedM);
+                                setFormData({
+                                  ...formData,
+                                  createdAt: newDate.getTime(),
+                                });
+                              }
+                            }
                           }}
                         />
                       </div>
@@ -538,7 +548,7 @@ export function TrackingSection({
                       <p className="text-[10px] font-bold uppercase text-muted-foreground">
                         Tracking History
                       </p>
-                      <ScrollArea className="max-h-[300px] overflow-y-auto">
+                      <ScrollArea className="max-h-75 overflow-y-auto">
                         <div className="relative pl-4 space-y-4 before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-muted mr-3">
                           {history
                             .filter((h) => h.changeType === "tracking_updated")
@@ -625,7 +635,7 @@ export function TrackingSection({
                 onChange={(e) =>
                   setEditForm({ ...editForm, description: e.target.value })
                 }
-                className="text-sm min-h-[80px]"
+                className="text-sm min-h-20"
               />
             </div>
             <div className="space-y-1">
@@ -666,9 +676,15 @@ export function TrackingSection({
                     value={format(editForm.createdAt, "HH:mm")}
                     onChange={(e) => {
                       const [h, m] = e.target.value.split(":");
-                      const d = new Date(editForm.createdAt);
-                      d.setHours(parseInt(h), parseInt(m));
-                      setEditForm({ ...editForm, createdAt: d.getTime() });
+                      if (h !== undefined && m !== undefined) {
+                        const parsedH = parseInt(h, 10);
+                        const parsedM = parseInt(m, 10);
+                        if (!Number.isNaN(parsedH) && !Number.isNaN(parsedM)) {
+                          const d = new Date(editForm.createdAt);
+                          d.setHours(parsedH, parsedM);
+                          setEditForm({ ...editForm, createdAt: d.getTime() });
+                        }
+                      }
                     }}
                   />
                 </div>

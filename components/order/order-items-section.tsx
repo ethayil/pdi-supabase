@@ -208,7 +208,7 @@ export function OrderItemsSection({
                           min={1}
                           value={editQuantity}
                           onChange={(e) =>
-                            setEditQuantity(parseInt(e.target.value) || 1)
+                            setEditQuantity(parseInt(e.target.value, 10) || 1)
                           }
                           className="w-14 h-6 text-center text-xs"
                         />
@@ -319,7 +319,7 @@ export function OrderItemsSection({
                       min={1}
                       value={newQuantity}
                       onChange={(e) =>
-                        setNewQuantity(parseInt(e.target.value, 2) || 1)
+                        setNewQuantity(parseInt(e.target.value, 10) || 1)
                       }
                       className="w-20 text-center"
                     />

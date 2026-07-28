@@ -192,6 +192,7 @@ export function GeneralInfoSection({
                   <Button
                     size="sm"
                     variant="ghost"
+                    disabled={isSaving}
                     onClick={() => {
                       setIsEditing(false);
                       setFormData({
@@ -248,6 +249,7 @@ export function GeneralInfoSection({
                     External Ref
                   </Label>
                   <Input
+                    disabled={isSaving}
                     value={formData.externalRef}
                     onChange={(e) =>
                       setFormData({ ...formData, externalRef: e.target.value })
@@ -261,6 +263,7 @@ export function GeneralInfoSection({
                     PO Reference
                   </Label>
                   <Input
+                    disabled={isSaving}
                     value={formData.poRef}
                     onChange={(e) =>
                       setFormData({ ...formData, poRef: e.target.value })
@@ -280,6 +283,7 @@ export function GeneralInfoSection({
                           type="button"
                           variant="outline"
                           size="sm"
+                          disabled={isSaving}
                           className={cn(
                             "w-full justify-start font-normal text-xs h-8",
                             !formData.deliveryDate && "text-muted-foreground",
@@ -322,6 +326,7 @@ export function GeneralInfoSection({
                           type="button"
                           variant="outline"
                           size="sm"
+                          disabled={isSaving}
                           className={cn(
                             "w-full justify-start font-normal text-xs h-8",
                             !formData.sendDate && "text-muted-foreground",
@@ -359,11 +364,12 @@ export function GeneralInfoSection({
                   <Input
                     type="number"
                     min={1}
+                    disabled={isSaving}
                     value={formData.totalPackages}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        totalPackages: parseInt(e.target.value, 2) || 1,
+                        totalPackages: parseInt(e.target.value, 10) || 1,
                       })
                     }
                     className="text-sm"
@@ -377,6 +383,7 @@ export function GeneralInfoSection({
                     type="number"
                     step="0.01"
                     min={0}
+                    disabled={isSaving}
                     value={formData.weight}
                     onChange={(e) =>
                       setFormData({
@@ -396,6 +403,7 @@ export function GeneralInfoSection({
                     type="number"
                     step="0.01"
                     min={0}
+                    disabled={isSaving}
                     value={formData.courierCost}
                     onChange={(e) =>
                       setFormData({
@@ -415,6 +423,7 @@ export function GeneralInfoSection({
                     type="number"
                     step="0.01"
                     min={0}
+                    disabled={isSaving}
                     value={formData.courierVAT}
                     onChange={(e) =>
                       setFormData({
@@ -434,6 +443,7 @@ export function GeneralInfoSection({
                     type="number"
                     step="0.01"
                     min={0}
+                    disabled={isSaving}
                     value={formData.invoiceCost}
                     onChange={(e) =>
                       setFormData({ ...formData, invoiceCost: e.target.value })
@@ -455,6 +465,7 @@ export function GeneralInfoSection({
                       type="button"
                       size="sm"
                       variant="outline"
+                      disabled={isSaving}
                       className="text-xs"
                       onClick={handleAutoCalcPrice}
                     >
