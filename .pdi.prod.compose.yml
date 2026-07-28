@@ -1,6 +1,6 @@
 services:
   pdi-app:
-    image: pdi:0.5.4
+    image: pdi:0.1.7
     env_file:
       - .env
     ports:

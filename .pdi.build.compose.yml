@@ -9,4 +9,4 @@ services:
       - .env
     
     # The name of the image it will create
-    image: pdi:0.5.4
+    image: pdi:0.1.7

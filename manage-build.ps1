@@ -1,6 +1,6 @@
 # 1. Configuration - matches your filenames exactly
 $composeFile = ".pdi.build.compose.yml"
-$envFile = ".env.prod"
+$envFile = ".env"
 $serviceName = "pdi"
 
 # 2. Extract image name from the YAML (e.g., pdi:0.5.1)
