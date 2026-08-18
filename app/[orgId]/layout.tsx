@@ -17,7 +17,7 @@ export default async function OrganizationLayout({
   children: React.ReactNode;
   params: Promise<{ orgId: string }>;
 }) {
-  const { user, session, isAdmin } = await getSession();
+  const { user, isAdmin } = await getSession();
   if (!user) {
     return redirect("/auth/signin");
   }
@@ -26,11 +26,6 @@ export default async function OrganizationLayout({
 
   const { data: orgs } = await getOrganizations({ bypassCache: true });
 
-  // Not authenticated
-  if (!user) {
-    redirect("/auth/signin");
-  }
-
   // User deactivated
   if (user.banned === true) {
     redirect("/verify");
@@ -38,31 +33,12 @@ export default async function OrganizationLayout({
 
   const selectedOrganization = orgs.find((org) => org.id === orgId);
 
-  // Helper to safely redirect to user's org or verify
-  const redirectToUserOrg = () => {
-    if (
-      !session?.activeOrganizationId ||
-      session?.activeOrganizationId === "null" ||
-      session?.activeOrganizationId === orgId
-    ) {
-      redirect("/verify");
-    }
-    redirect(`/${session?.activeOrganizationId}`);
-  };
-
-  // Organization not found or unauthorized
+  // Organization not found or unauthorized for this user
   if (!selectedOrganization) {
     if (isAdmin && orgs.length > 0) {
       redirect(`/${orgs[0].id}`);
     }
-    return redirectToUserOrg();
-  }
-
-  if (
-    user.role === "user" &&
-    selectedOrganization.id !== session?.activeOrganizationId
-  ) {
-    return redirectToUserOrg();
+    redirect("/verify");
   }
 
   // Organization inactive (Lock Screen)

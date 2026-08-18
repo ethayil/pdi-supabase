@@ -1,15 +1,16 @@
 "use server";
 
 import { headers } from "next/headers";
+import { cache } from "react";
 import { auth } from "@/auth";
 
-export const getSession = async () => {
+export const getSession = cache(async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
-  const isAdmin = session?.user.role === "admin" ||
-    session?.user.role === "orgAdmin";
+  const isAdmin =
+    session?.user.role === "admin" || session?.user.role === "orgAdmin";
   const isSuperAdmin = session?.user.role === "admin";
 
   return {
@@ -18,7 +19,7 @@ export const getSession = async () => {
     isAdmin,
     isSuperAdmin,
   };
-};
+});
 
 type SessionUser = NonNullable<Awaited<ReturnType<typeof getSession>>["user"]>;
 
@@ -30,7 +31,9 @@ export const requireUser = async <T extends { shouldThrow?: boolean }>(
   const { user } = await getSession();
   if (!user) {
     if (options?.shouldThrow === false) {
-      return null as (T extends { shouldThrow: false } ? SessionUser | null : SessionUser);
+      return null as T extends { shouldThrow: false }
+        ? SessionUser | null
+        : SessionUser;
     }
     throw new Error("Unauthorized: Access Denied");
   }

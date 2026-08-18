@@ -1,13 +1,12 @@
 "use server";
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
-import { headers } from "next/headers";
 import type { Organization as PrismaOrganization } from "@/app/generated/prisma/client";
 import type {
   OrganizationCreateInput,
   OrganizationWhereInput,
 } from "@/app/generated/prisma/models";
-import { auth, type Organization } from "@/auth";
+import type { Organization } from "@/auth";
 import { requireGlobalAdmin, requireUser } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
@@ -209,7 +208,7 @@ export async function getOrganizationById({ id }: { id: string }) {
 export type CreateOrgData = OrganizationCreateInput;
 
 export async function createOrganization(
-  data: Omit<Organization, "id" | "slug" | "createdAt">,
+  data: Partial<Organization> & { name: string },
 ) {
   try {
     const user = await requireGlobalAdmin();
@@ -221,22 +220,36 @@ export async function createOrganization(
       .replace(/[\s_-]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
-    const org = await auth.api.createOrganization({
-      headers: await headers(),
-      body: {
-        ...data,
+    const id = crypto.randomUUID();
+    const org = await prisma.organization.create({
+      data: {
+        id,
+        name: data.name,
         slug,
-        enableInventory: data.enableInventory ?? true,
-        enableInvoices: data.enableInvoices ?? true,
+        logo: data.logo,
+        prefix: data.prefix,
+        vat: data.vat,
         isActive: data.isActive ?? true,
+        supportEmail: data.supportEmail ?? [],
+        supportPhone: data.supportPhone ?? [],
+        address: data.address,
+        address1: data.address1,
+        address2: data.address2,
+        town: data.town,
+        city: data.city,
+        postcode: data.postcode,
+        country: data.country,
         primaryColor: data.primaryColor ?? "#0056D2",
+        secondaryColor: data.secondaryColor,
+        fontFamily: data.fontFamily,
+        welcomeMessage: data.welcomeMessage,
         lowStockThreshold: data.lowStockThreshold ?? 50,
+        description: data.description,
+        enableInvoices: data.enableInvoices ?? true,
+        enableInventory: data.enableInventory ?? true,
+        createdAt: new Date(),
       },
     });
-
-    if (!org) {
-      throw new Error("Failed to create organization");
-    }
 
     await logActivity({
       orgId: org.id,
@@ -258,7 +271,7 @@ export async function createOrganization(
 }
 
 export async function updateOrganization(
-  data: Omit<Organization, "slug" | "createdAt">,
+  data: Partial<Organization> & { id: string },
 ) {
   try {
     const user = await requireGlobalAdmin();
@@ -266,11 +279,11 @@ export async function updateOrganization(
     const { id, name, ...rest } = data;
     const slug = name
       ? name
-        .toLowerCase()
-        .trim()
-        .replace(/[^\w\s-]/g, "")
-        .replace(/[\s_-]+/g, "-")
-        .replace(/^-+|-+$/g, "")
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, "")
+          .replace(/[\s_-]+/g, "-")
+          .replace(/^-+|-+$/g, "")
       : undefined;
 
     const existingOrg = await prisma.organization.findUnique({
@@ -280,20 +293,13 @@ export async function updateOrganization(
       throw new Error("Organization not found");
     }
 
-    const updated = await auth.api.adminUpdateOrganization({
-      headers: await headers(),
-      body: {
-        organizationId: id,
-        data: {
-          ...rest,
-          ...(name ? { name, slug } : {}),
-        },
+    const updated = await prisma.organization.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(name ? { name, slug } : {}),
       },
     });
-
-    if (!updated) {
-      throw new Error("Failed to update organization");
-    }
 
     await logActivity({
       orgId: id,
@@ -303,15 +309,16 @@ export async function updateOrganization(
       entityId: id,
       description: `Updated organization "${name || existingOrg.name}"`,
       changes: {
-        name: name !== undefined
-          ? { from: existingOrg.name, to: name }
-          : undefined,
-        isActive: data.isActive !== undefined
-          ? { from: existingOrg.isActive, to: data.isActive }
-          : undefined,
-        prefix: data.prefix !== undefined
-          ? { from: existingOrg.prefix, to: data.prefix }
-          : undefined,
+        name:
+          name !== undefined ? { from: existingOrg.name, to: name } : undefined,
+        isActive:
+          data.isActive !== undefined
+            ? { from: existingOrg.isActive, to: data.isActive }
+            : undefined,
+        prefix:
+          data.prefix !== undefined
+            ? { from: existingOrg.prefix, to: data.prefix }
+            : undefined,
       },
     });
 
@@ -331,16 +338,9 @@ export async function deleteOrganization({ id }: { id: string }) {
   try {
     const user = await requireGlobalAdmin();
 
-    const deleted = await auth.api.adminDeleteOrganization({
-      headers: await headers(),
-      body: {
-        organizationId: id,
-      },
+    const deleted = await prisma.organization.delete({
+      where: { id },
     });
-
-    if (!deleted) {
-      throw new Error("Failed to delete organization");
-    }
 
     await logActivity({
       orgId: id,
@@ -348,7 +348,7 @@ export async function deleteOrganization({ id }: { id: string }) {
       action: "delete",
       entityType: "organization",
       entityId: id,
-      description: `Deleted organization "${deleted.organization.name}"`,
+      description: `Deleted organization "${deleted.name}"`,
     });
 
     revalidateTag(cacheTags.organizations, "");

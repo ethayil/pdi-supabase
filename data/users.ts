@@ -244,13 +244,29 @@ export async function updateUser(data: {
 
     // Handle organization membership if orgId is explicitly provided
     if (data.orgId !== undefined) {
-      await auth.api.adminAssignUserToOrganization({
-        body: {
-          userId: data.id,
-          orgId: data.orgId,
-          role: data.role,
-        },
-        headers: await headers(),
+      // Remove from existing organizations
+      await prisma.member.deleteMany({
+        where: { userId: data.id },
+      });
+
+      // Assign to new organization if specified
+      if (data.orgId !== "none") {
+        await prisma.member.create({
+          data: {
+            id: crypto.randomUUID(),
+            organizationId: data.orgId,
+            userId: data.id,
+            role: data.role || dbUser.role || "user",
+            createdAt: new Date(),
+          },
+        });
+      }
+
+      // Update active organization on session
+      const targetOrgId = data.orgId === "none" ? null : data.orgId;
+      await prisma.session.updateMany({
+        where: { userId: data.id },
+        data: { activeOrganizationId: targetOrgId },
       });
     }
 

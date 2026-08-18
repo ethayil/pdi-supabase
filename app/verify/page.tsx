@@ -14,18 +14,9 @@ export default async function VerifyPage() {
     redirect("/auth/signin");
   }
 
-  // console.log("[VerifyPage] DEBUG INFO:", {
-  //   userId: user.id,
-  //   userRole: user.role,
-  //   userBanned: user.banned,
-  //   activeOrganizationId: session?.activeOrganizationId,
-  // });
-
   const activeOrganization = session?.activeOrganizationId;
   const orgsResult = await getOrganizations({ bypassCache: true });
   const orgs = orgsResult.success ? orgsResult.data : [];
-
-  const isAdmin = user.role === "orgAdmin" || user.role === "admin";
 
   // Account deactivated
   if (user.banned === true) {
@@ -37,7 +28,7 @@ export default async function VerifyPage() {
     );
   }
 
-  // User has organization - redirect to their dashboard ONLY if they are a member of it
+  // 1. User has activeOrganization set on session - redirect to dashboard if member
   if (activeOrganization && activeOrganization !== "null") {
     const isMember = orgs.some((org) => org.id === activeOrganization);
     if (isMember) {
@@ -45,21 +36,17 @@ export default async function VerifyPage() {
     }
   }
 
-  // admin without orgId
-  if (isAdmin) {
-    if (orgs.length > 0) {
-      // Redirect to the first organization's admin panel if they are admin
-      // This allows them to manage organizations even if not assigned to one
-      redirect(`/${orgs[0].id}`);
-    }
-
-    if (user.role === "admin") {
-      // No organizations exist, and user is admin - redirect to setup
-      redirect("/admin/setup");
-    }
+  // 2. User has organization membership(s) (even if activeOrganizationId is null on session) - redirect to first org
+  if (orgs.length > 0) {
+    redirect(`/${orgs[0].id}`);
   }
 
-  // Non-admin user without orgId - show waiting page
+  // 3. Super admin without any organizations yet - redirect to setup
+  if (user.role === "admin") {
+    redirect("/admin/setup");
+  }
+
+  // 4. Non-admin user without any organization membership - show waiting page
   return (
     <VerifyCard
       title="Account Pending"

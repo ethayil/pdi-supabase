@@ -17,7 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TextRevealEffect } from "@/components/ui/text-reveal-effects";
-import { acceptInvitationAndSignUp, getPublicInvitation } from "@/data/invitations";
+import {
+  acceptInvitationAndSignUp,
+  acceptOrgInvitation,
+  getPublicInvitation,
+  rejectOrgInvitation,
+} from "@/data/invitations";
 import { authClient } from "@/lib/auth/auth-client";
 
 interface InvitationData {
@@ -93,16 +98,16 @@ function AcceptInvitationContent() {
     setError(null);
 
     try {
-      const { error } = await authClient.organization.acceptInvitation({
+      const res = await acceptOrgInvitation({
         invitationId,
       });
 
-      if (error) {
-        throw new Error(error.message || "Failed to accept invitation.");
+      if (!res.success) {
+        throw new Error(res.error || "Failed to accept invitation.");
       }
 
       toast.success("Invitation accepted! Welcome to the organization.");
-      router.push("/verify");
+      router.push(res.organizationId ? `/${res.organizationId}` : "/verify");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setActionLoading(false);
@@ -115,12 +120,12 @@ function AcceptInvitationContent() {
     setError(null);
 
     try {
-      const { error } = await authClient.organization.rejectInvitation({
+      const res = await rejectOrgInvitation({
         invitationId,
       });
 
-      if (error) {
-        throw new Error(error.message || "Failed to reject invitation.");
+      if (!res.success) {
+        throw new Error(res.error || "Failed to reject invitation.");
       }
 
       toast.info("Invitation declined.");
@@ -164,12 +169,6 @@ function AcceptInvitationContent() {
         }
 
         const targetOrgId = res.organizationId || invitation.organizationId;
-        if (targetOrgId) {
-          await authClient.organization.setActive({
-            organizationId: targetOrgId,
-          });
-        }
-
         toast.success("Account created & joined organization!");
         router.push(targetOrgId ? `/${targetOrgId}` : "/verify");
       } else {
@@ -184,16 +183,16 @@ function AcceptInvitationContent() {
         }
 
         // Accept invitation after sign in
-        const acceptRes = await authClient.organization.acceptInvitation({
+        const acceptRes = await acceptOrgInvitation({
           invitationId,
         });
 
-        if (acceptRes.error) {
-          throw new Error(acceptRes.error.message || "Signed in, but failed to join organization.");
+        if (!acceptRes.success) {
+          throw new Error(acceptRes.error || "Signed in, but failed to join organization.");
         }
 
         toast.success("Signed in & invitation accepted!");
-        router.push("/verify");
+        router.push(acceptRes.organizationId ? `/${acceptRes.organizationId}` : "/verify");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

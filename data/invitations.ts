@@ -2,12 +2,14 @@
 
 import { headers } from "next/headers";
 import { auth } from "@/auth";
-import { requireAdmin } from "@/lib/auth/get-session";
+import { sendInvitationEmail } from "@/data/email";
+import { requireAdmin, requireUser } from "@/lib/auth/get-session";
 import prisma from "@/lib/prisma";
+import { getSiteUrl } from "@/utils/site-url";
 
 export async function createOrgInvitation({
   email,
-  role = "member",
+  role = "user",
   organizationId,
 }: {
   email: string;
@@ -31,34 +33,32 @@ export async function createOrgInvitation({
       return { success: false, error: "Organization not found" };
     }
 
-    // Ensure the inviter Admin has a member record in this organization
-    const existingMember = await prisma.member.findFirst({
-      where: {
-        userId: adminUser.id,
+    const id = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days expiry
+
+    const invitation = await prisma.invitation.create({
+      data: {
+        id,
         organizationId,
+        email: email.toLowerCase().trim(),
+        role: role || "user",
+        status: "pending",
+        expiresAt,
+        inviterId: adminUser.id,
       },
     });
 
-    if (!existingMember) {
-      await prisma.member.create({
-        data: {
-          id: crypto.randomUUID(),
-          organizationId,
-          userId: adminUser.id,
-          role: "admin",
-          createdAt: new Date(),
-        },
-      });
-    }
+    const siteUrl = getSiteUrl();
+    const url = `${siteUrl}/auth/accept-invitation?id=${encodeURIComponent(
+      id,
+    )}`;
 
-    // Call Better Auth createInvitation API
-    const invitation = await auth.api.createInvitation({
-      body: {
-        email: email.toLowerCase().trim(),
-        role: role as "member" | "admin" | "owner",
-        organizationId,
-      },
-      headers: await headers(),
+    await sendInvitationEmail({
+      to: invitation.email,
+      inviterName: adminUser.name || "An administrator",
+      orgName: targetOrg.name || "PDi",
+      role: invitation.role ?? "user",
+      url,
     });
 
     return {
@@ -250,5 +250,110 @@ export async function acceptInvitationAndSignUp({
     };
   }
 }
+
+export async function acceptOrgInvitation({ invitationId }: { invitationId: string }) {
+  try {
+    const user = await requireUser();
+    if (!invitationId) {
+      return { success: false, error: "Invitation ID is required" };
+    }
+
+    const invitation = await prisma.invitation.findUnique({
+      where: { id: invitationId },
+    });
+
+    if (!invitation || invitation.status !== "pending") {
+      return { success: false, error: "Invalid or expired invitation" };
+    }
+
+    if (invitation.expiresAt < new Date()) {
+      return { success: false, error: "Invitation has expired" };
+    }
+
+    const assignedRole = invitation.role || "user";
+
+    // Create member link if not already exists
+    const existingMember = await prisma.member.findFirst({
+      where: {
+        userId: user.id,
+        organizationId: invitation.organizationId,
+      },
+    });
+
+    if (!existingMember) {
+      await prisma.member.create({
+        data: {
+          id: crypto.randomUUID(),
+          organizationId: invitation.organizationId,
+          userId: user.id,
+          role: assignedRole,
+          createdAt: new Date(),
+        },
+      });
+    }
+
+    // Update user role if regular user
+    if (user.role === "user" && assignedRole !== "user") {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: assignedRole },
+      });
+    }
+
+    // Update activeOrganizationId on active sessions
+    await prisma.session.updateMany({
+      where: { userId: user.id },
+      data: { activeOrganizationId: invitation.organizationId },
+    });
+
+    // Mark invitation as accepted
+    await prisma.invitation.update({
+      where: { id: invitation.id },
+      data: { status: "accepted" },
+    });
+
+    return {
+      success: true,
+      organizationId: invitation.organizationId,
+    };
+  } catch (error) {
+    console.error("Error accepting invitation:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to accept invitation",
+    };
+  }
+}
+
+export async function rejectOrgInvitation({ invitationId }: { invitationId: string }) {
+  try {
+    await requireUser();
+    if (!invitationId) {
+      return { success: false, error: "Invitation ID is required" };
+    }
+
+    const invitation = await prisma.invitation.findUnique({
+      where: { id: invitationId },
+    });
+
+    if (!invitation || invitation.status !== "pending") {
+      return { success: false, error: "Invalid or expired invitation" };
+    }
+
+    await prisma.invitation.update({
+      where: { id: invitationId },
+      data: { status: "rejected" },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error rejecting invitation:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to reject invitation",
+    };
+  }
+}
+
 
 
