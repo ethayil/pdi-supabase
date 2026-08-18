@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Organization } from "@/app/generated/prisma/client";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useRouter } from "next/navigation";
 import { createOrgInvitation } from "@/data/invitations";
 import { getOrganizations } from "@/data/organizations";
 import { getUsers, revalidateUsersCache, type UserWMember } from "@/data/users";
@@ -97,7 +97,8 @@ export function InviteUserDialog({ organizationId }: InviteUserDialogProps) {
 
   const router = useRouter();
   const handleSendInvite = async (targetEmail: string) => {
-    if (!targetEmail) return toast.error("Please select or enter an email address");
+    if (!targetEmail)
+      return toast.error("Please select or enter an email address");
     if (!selectedOrgId) return toast.error("Please select an organization");
 
     setIsLoading(true);
@@ -144,7 +145,6 @@ export function InviteUserDialog({ organizationId }: InviteUserDialogProps) {
     e.preventDefault();
     handleSendInvite(existingEmail);
   };
-
 
   const orgOptions = organizations.map((org) => ({
     value: org.id,
@@ -274,7 +274,9 @@ export function InviteUserDialog({ organizationId }: InviteUserDialogProps) {
                   onValueChange={(val) => {
                     if (val) {
                       setSelectedUserId(val);
-                      const targetUser = unlinkedUsers.find((u) => u.id === val);
+                      const targetUser = unlinkedUsers.find(
+                        (u) => u.id === val,
+                      );
                       if (targetUser) {
                         setExistingEmail(targetUser.email);
                       }
