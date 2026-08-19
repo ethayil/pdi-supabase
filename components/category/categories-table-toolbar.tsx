@@ -10,37 +10,39 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { SwitchField } from "@/components/ui/switch-field";
 import { useRegisterAction } from "@/hooks/use-command-actions";
-import { useOrgParams } from "@/lib/nuqs/org-params";
-import { SwitchField } from "../ui/switch-field";
+import { useCategoryParams } from "@/lib/nuqs/category-params";
 
-export default function OrgsHeader({
+export default function CategoriesTableToolbar({
   startTransition,
 }: {
   startTransition?: React.TransitionStartFunction;
 }) {
-  const [{ query, isActive }, setParams] = useOrgParams({ startTransition });
+  const [{ query, isActive }, setParams] = useCategoryParams({
+    startTransition,
+  });
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useRegisterAction({
-    id: "orgs-search",
-    label: "Search Organizations",
+    id: "categories-search",
+    label: "Search Categories",
     shortcut: "/",
     handler: () => searchInputRef.current?.focus(),
     icon: SearchIcon,
-    category: "Organizations",
+    category: "Categories",
   });
 
   useRegisterAction({
-    id: "orgs-toggle-active",
+    id: "categories-toggle-active",
     label: isActive
-      ? "Show Inactive Organizations"
-      : "Show Only Active Organizations",
+      ? "Show Inactive Categories"
+      : "Show Only Active Categories",
     shortcut: "i",
     handler: () => setParams({ isActive: !isActive, currentPage: 1 }),
     icon: FilterIcon,
-    category: "Organizations",
+    category: "Categories",
   });
 
   const handleSearchChange = (val: string) => {
@@ -63,7 +65,7 @@ export default function OrgsHeader({
           <InputGroupInput
             ref={searchInputRef}
             className="w-full"
-            placeholder="Search organizations..."
+            placeholder="Search categories..."
             value={query}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
@@ -86,7 +88,7 @@ export default function OrgsHeader({
 
       <ButtonGroup>
         <SwitchField
-          id="active-filter"
+          id="category-active-filter"
           label="Active only"
           mobileLabel="Active"
           checked={isActive}
@@ -95,6 +97,7 @@ export default function OrgsHeader({
           }
         />
       </ButtonGroup>
+
       <DataTableViewPortalTarget />
     </form>
   );

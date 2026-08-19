@@ -8,7 +8,6 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
 import type { Category, Product } from "@/app/generated/prisma/client";
-import { Button } from "@/components/ui/button";
 import { CheckboxCard } from "@/components/ui/checkbox-card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import {
@@ -22,6 +21,7 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import LoadingButton from "@/components/ui/loading-button";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import {
   Select,
   SelectContent,
@@ -180,10 +180,14 @@ export default function ManageProductDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger render={<Button />}>
-        <PlusIcon className="size-4" />
-        Add
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <ResponsiveButton
+            label="Add Product"
+            icon={<PlusIcon className="size-4" />}
+          />
+        }
+      />
       <DialogContent className="min-w-full sm:min-w-xl md:min-w-2xl lg:min-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-center text-lg">
@@ -370,7 +374,7 @@ export default function ManageProductDialog({
                 )}
               />
 
-               <Controller
+              <Controller
                 name="isActive"
                 control={form.control}
                 render={({ field, fieldState }) => (

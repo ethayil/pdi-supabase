@@ -2,8 +2,6 @@ import { Package } from "lucide-react";
 import { redirect } from "next/navigation";
 import ManageOrganizationDialog from "@/components/organization/manage-organization-dialog";
 
-export const dynamic = "force-dynamic";
-
 import {
   Card,
   CardContent,
@@ -33,7 +31,7 @@ export default async function AdminSetupPage() {
             text="Welcome to PDi UK"
             className="text-4xl md:text-5xl font-bold tracking-tighter"
           />
-          <p className="text-muted-foreground text-lg max-w-[600px] mx-auto animate-in fade-in slide-in-from-top-2 delay-500 duration-1000 fill-mode-both">
+          <p className="text-muted-foreground text-lg max-w-150 mx-auto animate-in fade-in slide-in-from-top-2 delay-500 duration-1000 fill-mode-both">
             Your logistics platform is ready. To get started, you'll need to
             create your first organization.
           </p>

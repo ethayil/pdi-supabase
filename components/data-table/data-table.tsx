@@ -33,6 +33,9 @@ interface DataTableProps<TData = any, TValue = any> {
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
   loading?: boolean;
+  viewOptionsPortalContainer?: HTMLElement | null;
+  viewOptionsPortalId?: string;
+  hideViewOptions?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -46,6 +49,9 @@ export function DataTable<TData, TValue>({
   rowSelection,
   onRowSelectionChange,
   loading = false,
+  viewOptionsPortalContainer,
+  viewOptionsPortalId,
+  hideViewOptions = false,
 }: DataTableProps<TData, TValue>) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     visibleColumns ?? {},
@@ -84,18 +90,22 @@ export function DataTable<TData, TValue>({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex items-center justify-between gap-2"
+          className="w-full flex items-start sm:items-center justify-between gap-2 min-w-0"
         >
-          <div className="flex-1">{headerComponent}</div>
-          <DataTableViewOptions
-            columns={table
-              .getAllColumns()
-              .filter(
-                (column) =>
-                  typeof column.accessorFn !== "undefined" &&
-                  column.getCanHide(),
-              )}
-          />
+          <div className="w-full min-w-0">{headerComponent}</div>
+          {!hideViewOptions && (
+            <DataTableViewOptions
+              portalContainer={viewOptionsPortalContainer}
+              portalId={viewOptionsPortalId}
+              columns={table
+                .getAllColumns()
+                .filter(
+                  (column) =>
+                    typeof column.accessorFn !== "undefined" &&
+                    column.getCanHide(),
+                )}
+            />
+          )}
         </motion.div>
       )}
 

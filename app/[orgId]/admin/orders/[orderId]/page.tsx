@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { OrderDetailView } from "@/components/order/order-detail-view";
 import { getOrderById } from "@/data/orders";
-import { getAvailableProducts } from "@/data/products";
+import { getProducts } from "@/data/products";
 import type { Params } from "@/types/globals";
 
 export const metadata: Metadata = {
-  title: "Order Details | PDi",
-  description: "PDi Order Details",
+  title: "Order Detail | PDi",
+  description: "View order details",
 };
 
 export default async function AdminOrderDetailPage({
@@ -22,7 +22,11 @@ export default async function AdminOrderDetailPage({
     return redirect(`/${orgId}/admin/orders`);
   }
 
-  const dbProducts = await getAvailableProducts({ orgId });
+  const { data: dbProducts } = await getProducts({
+    orgId,
+    stockStatus: "active",
+    entriesPerPage: 1000,
+  });
 
   const availableProducts = dbProducts.map((p) => ({
     _id: p.id,

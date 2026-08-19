@@ -29,17 +29,17 @@ export function SwitchField({
     <FieldLabel
       htmlFor={id}
       className={cn(
-        "cursor-pointer select-none rounded-lg border bg-background/80 transition-colors hover:bg-accent/50 group/switch-field shadow-2xs whitespace-nowrap shrink-0 h-8",
+        "cursor-pointer select-none rounded-lg border border-input bg-background/80 hover:bg-muted/60 transition-colors group/switch-field whitespace-nowrap shrink-0 h-8 px-2.5 flex items-center justify-between gap-2 *:data-[slot=field]:p-0 *:data-[slot=field]:w-auto",
         className,
       )}
     >
       <Field
         orientation="horizontal"
-        className="flex items-center justify-between gap-2.5 h-full w-full"
+        className="flex items-center justify-between gap-2 h-full w-full"
       >
         <span
           className={cn(
-            "text-xs sm:text-sm font-medium leading-none text-foreground",
+            "text-xs sm:text-sm font-normal group-hover/switch-field:text-foreground transition-colors leading-none",
             labelClassName,
           )}
         >
@@ -54,6 +54,7 @@ export function SwitchField({
         </span>
         <Switch
           id={id}
+          size="sm"
           checked={checked}
           onCheckedChange={onCheckedChange}
           disabled={disabled}

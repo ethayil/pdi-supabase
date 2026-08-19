@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { SearchParams } from "nuqs/server";
 import { ProductsCatalogWrapper } from "@/components/product/products-catalog-wrapper";
 import { getCartItems } from "@/data/cart";
-import { getActiveCategories } from "@/data/categories";
+import { getCategories } from "@/data/categories";
 import { getProducts } from "@/data/products";
 import { loadProductParams } from "@/lib/nuqs/product-params";
 import type { Params } from "@/types/globals";
@@ -32,7 +32,11 @@ export default async function ProductsPage({
     stockStatus: "active",
   });
 
-  const categoriesPromise = getActiveCategories({ orgId });
+  const categoriesPromise = getCategories({
+    orgId,
+    isActive: true,
+    entriesPerPage: 1000,
+  }).then((res) => res.data);
 
   const cartItemsPromise = getCartItems({ orgId });
 

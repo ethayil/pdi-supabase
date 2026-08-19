@@ -3,6 +3,7 @@
 import { MousePointerClickIcon, SearchIcon, XCircleIcon } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { Category } from "@/app/generated/prisma/client";
+import { DataTableViewPortalTarget } from "@/components/data-table/data-table-view-options";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import {
@@ -30,7 +31,6 @@ const stockStatusOptions = [
 ];
 
 export default function ProductsTableToolbar({
-  organizationId,
   loading,
   categories = [],
   startTransition,
@@ -188,6 +188,8 @@ export default function ProductsTableToolbar({
               </SelectContent>
             </Select>
           )}
+
+          <DataTableViewPortalTarget />
         </div>
       </div>
     </div>

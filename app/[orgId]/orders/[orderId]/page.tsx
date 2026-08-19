@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { OrderDetailView } from "@/components/order/order-detail-view";
 import { getOrderById } from "@/data/orders";
-import { getAvailableProducts } from "@/data/products";
+import { getProducts } from "@/data/products";
 import type { Params } from "@/types/globals";
 
 export const metadata: Metadata = {
@@ -19,7 +19,11 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
     return redirect(`/${orgId}/orders`);
   }
 
-  const dbProducts = await getAvailableProducts({ orgId });
+  const { data: dbProducts } = await getProducts({
+    orgId,
+    stockStatus: "active",
+    entriesPerPage: 1000,
+  });
 
   const availableProducts = dbProducts.map((p) => ({
     _id: p.id,

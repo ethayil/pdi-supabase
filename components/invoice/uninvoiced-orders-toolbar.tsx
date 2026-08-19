@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DataTableViewPortalTarget } from "@/components/data-table/data-table-view-options";
 import { orderStatuses } from "@/types/globals";
 
 interface UninvoicedOrdersToolbarProps {
@@ -122,6 +123,8 @@ export function UninvoicedOrdersToolbar({
               Clear
             </Button>
           )}
+
+          <DataTableViewPortalTarget />
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   FilterIcon,
@@ -6,101 +6,102 @@ import {
   SearchIcon,
   SlidersHorizontalIcon,
   XCircleIcon,
-} from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { ButtonGroup } from '@/components/ui/button-group'
-import { Input } from '@/components/ui/input'
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { DataTableViewPortalTarget } from "@/components/data-table/data-table-view-options";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { Input } from "@/components/ui/input";
 import {
   InputGroup,
   InputGroupButton,
   InputGroupInput,
-} from '@/components/ui/input-group'
-import { Label } from '@/components/ui/label'
+} from "@/components/ui/input-group";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover'
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { couriersData } from '@/data/couriers-data'
-import { useRegisterAction } from '@/hooks/use-command-actions'
-import { useOrderParams } from '@/lib/nuqs/order-params'
-import { orderStatuses } from '@/types/globals'
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { couriersData } from "@/data/couriers-data";
+import { useRegisterAction } from "@/hooks/use-command-actions";
+import { useOrderParams } from "@/lib/nuqs/order-params";
+import { orderStatuses } from "@/types/globals";
 
 export default function OrdersTableToolbar({
   loading,
   startTransition,
 }: {
-  loading: boolean
-  startTransition: React.TransitionStartFunction
+  loading: boolean;
+  startTransition: React.TransitionStartFunction;
 }) {
   const [{ status, query, courier, ref, name, post }, setParams] =
-    useOrderParams({ startTransition })
+    useOrderParams({ startTransition });
 
-  const [localSearch, setLocalSearch] = useState(query)
-  const [isStatusOpen, setIsStatusOpen] = useState(false)
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
-  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [localSearch, setLocalSearch] = useState(query);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Register shortcuts
   useRegisterAction({
-    id: 'orders-search',
-    label: 'Search Orders',
-    shortcut: '/',
+    id: "orders-search",
+    label: "Search Orders",
+    shortcut: "/",
     handler: () => searchInputRef.current?.focus(),
     icon: SearchIcon,
-    category: 'Orders',
-  })
+    category: "Orders",
+  });
 
   useRegisterAction({
-    id: 'orders-status',
-    label: 'Filter by Status',
-    shortcut: 'a',
+    id: "orders-status",
+    label: "Filter by Status",
+    shortcut: "a",
     handler: () => setIsStatusOpen(true),
     icon: SlidersHorizontalIcon,
-    category: 'Orders',
-  })
+    category: "Orders",
+  });
 
   useRegisterAction({
-    id: 'orders-filters',
-    label: 'Advanced Filters',
-    shortcut: 'f',
+    id: "orders-filters",
+    label: "Advanced Filters",
+    shortcut: "f",
     handler: () => setIsAdvancedOpen(true),
     icon: SlidersHorizontalIcon,
-    category: 'Orders',
-  })
+    category: "Orders",
+  });
 
   useRegisterAction({
-    id: 'clear-filters',
-    label: 'Clear Advanced Filters',
-    shortcut: 'c',
+    id: "clear-filters",
+    label: "Clear Advanced Filters",
+    shortcut: "c",
     handler: () => clearAdvancedFilters(),
     icon: FilterXIcon,
-    category: 'Orders',
-  })
+    category: "Orders",
+  });
 
   // Keep existing effects
   useEffect(() => {
-    setLocalSearch(query)
-  }, [query])
+    setLocalSearch(query);
+  }, [query]);
 
   const handleSearch = (e: React.SubmitEvent) => {
-    e.preventDefault()
-    setParams({ query: localSearch || null, currentPage: 1 })
-  }
+    e.preventDefault();
+    setParams({ query: localSearch || null, currentPage: 1 });
+  };
 
   const clearSearch = () => {
-    setLocalSearch('')
-    setParams({ query: null, currentPage: 1 })
-  }
+    setLocalSearch("");
+    setParams({ query: null, currentPage: 1 });
+  };
 
   const clearAdvancedFilters = () => {
     setParams({
@@ -110,27 +111,27 @@ export default function OrdersTableToolbar({
       ref: null,
       name: null,
       post: null,
-    })
-  }
+    });
+  };
 
   const orderStatusOptions = [
-    { label: 'All Statuses', value: 'all' },
+    { label: "All Statuses", value: "all" },
     ...orderStatuses.map((s) => ({
       label:
-        s.replace(/_/g, ' ').charAt(0).toUpperCase() +
-        s.replace(/_/g, ' ').slice(1),
+        s.replace(/_/g, " ").charAt(0).toUpperCase() +
+        s.replace(/_/g, " ").slice(1),
       value: s,
     })),
-  ]
+  ];
 
-  const couriers = [...couriersData, { label: 'All', value: 'all' }]
+  const couriers = [...couriersData, { label: "All", value: "all" }];
   const hasFilters =
-    courier || ref || name || post || (status && status !== 'all')
+    courier || ref || name || post || (status && status !== "all");
 
   return (
     <div className="flex flex-col gap-2 w-full">
       <div className="flex flex-wrap items-center gap-2">
-        <form onSubmit={handleSearch} className="flex-1 min-w-[200px]">
+        <form onSubmit={handleSearch} className="flex-1 min-w-50">
           <ButtonGroup className="w-full">
             <InputGroup>
               <InputGroupInput
@@ -141,8 +142,8 @@ export default function OrdersTableToolbar({
                 disabled={loading}
                 onChange={(e) => setLocalSearch(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    e.currentTarget.blur()
+                  if (e.key === "Escape") {
+                    e.currentTarget.blur();
                   }
                 }}
               />
@@ -175,11 +176,11 @@ export default function OrdersTableToolbar({
               onOpenChange={setIsStatusOpen}
               onValueChange={(value) => {
                 setParams({
-                  status: value === 'all' ? null : value,
+                  status: value === "all" ? null : value,
                   currentPage: 1,
-                })
+                });
               }}
-              value={status || 'all'}
+              value={status || "all"}
             >
               <SelectTrigger className="h-8 flex-1 sm:w-40">
                 <SelectValue placeholder="Status" />
@@ -241,7 +242,7 @@ export default function OrdersTableToolbar({
                           <p>Customer Name</p>
                           <Input
                             placeholder="Customer Name..."
-                            value={name ?? ''}
+                            value={name ?? ""}
                             onChange={(e) =>
                               setParams({ name: e.target.value })
                             }
@@ -269,11 +270,11 @@ export default function OrdersTableToolbar({
                         items={couriers}
                         onValueChange={(v) => {
                           setParams({
-                            courier: v === 'all' ? null : v,
+                            courier: v === "all" ? null : v,
                             currentPage: 1,
-                          })
+                          });
                         }}
-                        value={courier || 'All'}
+                        value={courier || "All"}
                       >
                         <SelectTrigger className="h-8 w-full">
                           <SelectValue placeholder="Select Courier" />
@@ -300,8 +301,9 @@ export default function OrdersTableToolbar({
               </PopoverContent>
             </Popover>
           )}
+          <DataTableViewPortalTarget />
         </div>
       </div>
     </div>
-  )
+  );
 }

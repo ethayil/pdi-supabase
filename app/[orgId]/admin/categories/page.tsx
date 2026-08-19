@@ -1,21 +1,17 @@
 import * as motion from "motion/react-client";
 import type { Metadata } from "next";
-import { createLoader, type SearchParams } from "nuqs/server";
+import type { SearchParams } from "nuqs/server";
 import { CategoriesTableWrapper } from "@/components/category/categories-table-wrapper";
 import ManageCategoryDialog from "@/components/category/manage-category-dialog";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { getCategories } from "@/data/categories";
-import { commonParsers, commonUrlKeys } from "@/lib/nuqs/global-params";
+import { loadCategoryParams } from "@/lib/nuqs/category-params";
 import type { Params } from "@/types/globals";
 
 export const metadata: Metadata = {
   title: "Categories | PDi",
   description: "PDi Categories",
 };
-
-const loadCategoryParams = createLoader(commonParsers, {
-  urlKeys: commonUrlKeys,
-});
 
 export default async function CategoriesPage({
   params,
@@ -25,7 +21,7 @@ export default async function CategoriesPage({
   searchParams: Promise<SearchParams>;
 }) {
   const { orgId } = await params;
-  const { currentPage, entriesPerPage, query } =
+  const { currentPage, entriesPerPage, query, isActive } =
     await loadCategoryParams(searchParams);
 
   const initialData = await getCategories({
@@ -33,6 +29,7 @@ export default async function CategoriesPage({
     currentPage,
     entriesPerPage,
     query: query || undefined,
+    isActive,
   });
 
   return (

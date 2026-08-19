@@ -2,7 +2,7 @@
 
 import { MousePointerClickIcon, Plus } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import {
   Select,
   SelectContent,
@@ -77,13 +77,12 @@ export default function InvoicesHeader({
         </SelectContent>
       </Select>
 
-      <Button
+      <ResponsiveButton
         variant="default"
+        label="Add Invoice"
+        icon={<Plus className="size-4" />}
         onClick={() => setShowCreateDialog(true)}
-      >
-        <Plus className="size-4 mr-2" />
-        Add Invoice
-      </Button>
+      />
 
       <CreateInvoiceDialog
         organizationId={orgId && orgId !== "all" ? orgId : organizationId}

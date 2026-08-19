@@ -5,7 +5,7 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import BulkProductUpload from "@/components/product/bulk-product-upload";
 import ManageProductDialog from "@/components/product/manage-product-dialog";
 import { ProductsTableWrapper } from "@/components/product/products-table-wrapper";
-import { getAllCategories } from "@/data/categories";
+import { getCategories } from "@/data/categories";
 import { getProducts } from "@/data/products";
 import { loadProductParams } from "@/lib/nuqs/product-params";
 import type { Params } from "@/types/globals";
@@ -35,7 +35,8 @@ export default async function ProductsPage({
     stockStatus,
   });
 
-  const categories = await getAllCategories({ orgId });
+  const categoriesRes = await getCategories({ orgId, entriesPerPage: 1000 });
+  const categories = categoriesRes.data;
 
   return (
     <>

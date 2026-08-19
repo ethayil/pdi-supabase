@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import type { SearchParams } from "nuqs/server";
+import { createLoader, parseAsString } from "nuqs/server";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { MemberSelect } from "@/components/order/member-select";
 import { OrderList } from "@/components/order/order-list";
 import { getOrders } from "@/data/orders";
 import { getOrgUsers } from "@/data/users";
 import { getSession } from "@/lib/auth/get-session";
+import { paginationParsers, paginationUrlKeys } from "@/lib/nuqs/global-params";
 import type { Params } from "@/types/globals";
 
 export const metadata: Metadata = {
@@ -12,14 +15,40 @@ export const metadata: Metadata = {
   description: "PDi Orders",
 };
 
-export default async function OrdersPage({ params }: { params: Params }) {
+const loadOrdersParams = createLoader(
+  {
+    ...paginationParsers,
+    member: parseAsString.withDefault(""),
+  },
+  {
+    urlKeys: {
+      ...paginationUrlKeys,
+    },
+  },
+);
+
+export default async function OrdersPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: Promise<SearchParams>;
+}) {
   const { orgId } = await params;
   const { user, isAdmin } = await getSession();
+  const { currentPage, entriesPerPage, member } = await loadOrdersParams(
+    searchParams,
+  );
 
   if (!user) return null;
 
-  const [orders, orgUsers] = await Promise.all([
-    getOrders({ orgId }),
+  const [ordersResult, orgUsers] = await Promise.all([
+    getOrders({
+      orgId,
+      currentPage,
+      entriesPerPage,
+      filterUserId: member || undefined,
+    }),
     isAdmin ? getOrgUsers({ orgId }) : Promise.resolve([]),
   ]);
 
@@ -31,8 +60,9 @@ export default async function OrdersPage({ params }: { params: Params }) {
       <OrderList
         orgId={orgId}
         isAdmin={isAdmin}
-        currentUserId={user.id}
-        orders={orders}
+        orders={ordersResult.data}
+        totalPages={ordersResult.totalPages}
+        totalCount={ordersResult.totalCount}
       />
     </div>
   );

@@ -9,7 +9,6 @@ import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
 import type { Organization } from "@/app/generated/prisma/client";
-import { Button } from "@/components/ui/button";
 import { CheckboxCard } from "@/components/ui/checkbox-card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import {
@@ -22,14 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  createOrganization,
-  deleteOrganization,
-  getOrganizationById,
-  updateOrganization,
-} from "@/data/organizations";
-import { useRegisterAction } from "@/hooks/use-command-actions";
-import { useOrgParams } from "@/lib/nuqs/org-params";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import {
   Select,
   SelectContent,
@@ -39,8 +31,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { countriesData } from "@/data/countries-data";
+import {
+  createOrganization,
+  deleteOrganization,
+  getOrganizationById,
+  updateOrganization,
+} from "@/data/organizations";
+import { useRegisterAction } from "@/hooks/use-command-actions";
+import { useOrgParams } from "@/lib/nuqs/org-params";
 import { createOrgSchema } from "@/schemas/org-schema";
 import { useOrganizationStore } from "@/store/use-organization-store";
+import { Button } from "../ui/button";
 import LoadingButton from "../ui/loading-button";
 
 export default function ManageOrganizationDialog({
@@ -219,10 +220,14 @@ export default function ManageOrganizationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger render={<Button />}>
-        <PlusIcon className="size-4" />
-        Add
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <ResponsiveButton
+            label="Add Organization"
+            icon={<PlusIcon className="size-4" />}
+          />
+        }
+      />
       <DialogContent className="min-w-full sm:min-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center text-lg">

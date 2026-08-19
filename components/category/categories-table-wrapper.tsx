@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import type { Category } from "@/app/generated/prisma/client";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import CategoriesTableToolbar from "./categories-table-toolbar";
 import { columns } from "./columns";
 
 interface CategoriesTableWrapperProps {
@@ -25,6 +26,9 @@ export const CategoriesTableWrapper = ({
       columns={columns}
       data={initialData.data ?? []}
       loading={isPending}
+      headerComponent={
+        <CategoriesTableToolbar startTransition={startTransition} />
+      }
       paginationComponent={
         <DataTablePagination
           totalPages={initialData.totalPages}

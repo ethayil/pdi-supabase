@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
-import { Button } from "@/components/ui/button";
 import { CheckboxCard } from "@/components/ui/checkbox-card";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
 import {
@@ -20,6 +19,7 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import LoadingButton from "@/components/ui/loading-button";
+import { ResponsiveButton } from "@/components/ui/responsive-button";
 import {
   createCategory,
   deleteCategory,
@@ -166,10 +166,14 @@ export default function ManageCategoryDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger render={<Button />}>
-        <PlusIcon className="size-4" />
-        Add
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <ResponsiveButton
+            label="Add Category"
+            icon={<PlusIcon className="size-4" />}
+          />
+        }
+      />
       <DialogContent className="min-w-full sm:min-w-lg">
         <DialogHeader>
           <DialogTitle className="text-center text-lg">
