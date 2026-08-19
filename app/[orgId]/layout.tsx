@@ -1,6 +1,5 @@
-// export const dynamic = "force-dynamic";
-
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import VerifyCard from "@/components/auth/verify-card";
 import { CommandPalette } from "@/components/command-palette";
 import { BannerNotification } from "@/components/notifications/banner-notification";
@@ -10,7 +9,23 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getOrganizations } from "@/data/organizations";
 import { getSession } from "@/lib/auth/get-session";
 
-export default async function OrganizationLayout({
+export default function OrganizationLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ orgId: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <OrganizationLayoutContent params={params}>
+        {children}
+      </OrganizationLayoutContent>
+    </Suspense>
+  );
+}
+
+async function OrganizationLayoutContent({
   children,
   params,
 }: {

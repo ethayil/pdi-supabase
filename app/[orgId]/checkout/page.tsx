@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import type { User } from "@/auth";
 import CheckoutForm from "@/components/checkout/checkout-form";
 import { CheckoutSkeleton } from "@/components/checkout/checkout-skeleton";
 import { DashboardHeader } from "@/components/dashboard-header";
@@ -15,7 +14,18 @@ export const metadata: Metadata = {
   description: "PDi Checkout",
 };
 
-export default async function CheckoutPage({ params }: { params: Params }) {
+export default function CheckoutPage({ params }: { params: Params }) {
+  return (
+    <>
+      <DashboardHeader title="Checkout" sticky />
+      <Suspense fallback={<CheckoutSkeleton />}>
+        <CheckoutFormLoader params={params} />
+      </Suspense>
+    </>
+  );
+}
+
+async function CheckoutFormLoader({ params }: { params: Params }) {
   const { orgId } = await params;
   const { user } = await getSession();
 
@@ -23,23 +33,6 @@ export default async function CheckoutPage({ params }: { params: Params }) {
     return null;
   }
 
-  return (
-    <>
-      <DashboardHeader title="Checkout" sticky />
-      <Suspense fallback={<CheckoutSkeleton />}>
-        <CheckoutFormLoader orgId={orgId} user={user} />
-      </Suspense>
-    </>
-  );
-}
-
-async function CheckoutFormLoader({
-  orgId,
-  user,
-}: {
-  orgId: string;
-  user: User;
-}) {
   const addresses = await getAddresses({ orgId });
   const cartItems = await getCartItems({ orgId });
 

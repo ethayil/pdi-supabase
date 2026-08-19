@@ -1,12 +1,21 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { GridBackgroundPattern } from "@/components/ui/text-reveal-effects";
 import { getSession } from "@/lib/auth/get-session";
 
-export default async function AdminLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <Suspense fallback={null}>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </Suspense>
+  );
+}
+
+async function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { user } = await getSession();
   if (!user) {
     redirect("/auth/signin");

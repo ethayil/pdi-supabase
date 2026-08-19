@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
-
-export const dynamic = "force-dynamic";
-
+import { Suspense } from "react";
 import VerifyCard from "@/components/auth/verify-card";
 import { getOrganizations } from "@/data/organizations";
 import { getSession } from "@/lib/auth/get-session";
 
-export default async function VerifyPage() {
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyContent />
+    </Suspense>
+  );
+}
+
+async function VerifyContent() {
   const { user, session } = await getSession();
 
   // Not authenticated

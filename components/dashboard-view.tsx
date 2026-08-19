@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDashboardData } from "@/data/dashboard";
 import { getSession } from "@/lib/auth/get-session";
+import type { Params } from "@/types/globals";
 import { InvoiceSummaryCard } from "./dashboard/invoice-summary-card";
 import {
   OrderStatusList,
@@ -26,10 +27,11 @@ const formatCurrency = (v: number) =>
   );
 
 export async function DashboardView({
-  organizationId,
+  params,
 }: {
-  organizationId: string;
+  params: Params;
 }) {
+  const { orgId: organizationId } = await params;
   const { user } = await getSession();
   if (!user) return null;
 
