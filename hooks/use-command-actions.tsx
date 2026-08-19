@@ -1,7 +1,7 @@
 "use client";
 
 import { type RegisterableHotkey, useHotkey } from "@tanstack/react-hotkeys";
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { type CommandAction, useCommandStore } from "@/store/use-command-store";
 
 export type { CommandAction };
@@ -21,21 +21,14 @@ export function useRegisterAction(action: CommandAction | null) {
   const registerAction = useCommandStore((state) => state.registerAction);
   const unregisterAction = useCommandStore((state) => state.unregisterAction);
 
-  // Keep the latest handler in a ref to avoid stale closure issues
-  // while keeping the registration stable.
-  const handlerRef = useRef(action?.handler);
-  useEffect(() => {
-    handlerRef.current = action?.handler;
-  }, [action?.handler]);
-
-  // Create a stable wrapper handler that calls the latest handler from the ref.
-  const stableHandler = useCallback(() => {
-    handlerRef.current?.();
-  }, []);
+  // useEffectEvent always sees the freshest action.handler without needing ref syncing
+  const onExecuteAction = useEffectEvent(() => {
+    action?.handler?.();
+  });
 
   useHotkey(
     (action?.shortcut as RegisterableHotkey) || ("" as RegisterableHotkey),
-    stableHandler,
+    onExecuteAction,
     { enabled: !!action?.shortcut, conflictBehavior: "allow" },
   );
 
@@ -44,7 +37,7 @@ export function useRegisterAction(action: CommandAction | null) {
     if (action) {
       registerAction({
         ...action,
-        handler: stableHandler,
+        handler: onExecuteAction,
       });
       return () => unregisterAction(action.id);
     }
@@ -56,6 +49,5 @@ export function useRegisterAction(action: CommandAction | null) {
     action?.isGlobal,
     registerAction,
     unregisterAction,
-    stableHandler,
   ]);
 }

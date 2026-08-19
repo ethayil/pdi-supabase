@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type RegisterableHotkey, useHotkey } from "@tanstack/react-hotkeys";
 import { CalendarIcon, CalendarSyncIcon, PlusIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Activity, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -54,6 +54,7 @@ export default function ManageProductDialog({
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const [{ productId }, setParams] = useProductParams();
@@ -197,7 +198,7 @@ export default function ManageProductDialog({
         <DialogDescription className="sr-only">
           {productId ? "Update " : "Create New"} product
         </DialogDescription>
-        <Tabs defaultValue="details" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {productId && (
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="details">Product Details</TabsTrigger>
@@ -205,243 +206,247 @@ export default function ManageProductDialog({
             </TabsList>
           )}
 
-          <TabsContent value="details">
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Controller
-                  name="name"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-name">Name</FieldLabel>
-                      <Input
-                        {...field}
-                        id="form-name"
-                        aria-invalid={fieldState.invalid}
-                        placeholder="Product Name"
-                        disabled={isLoading}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  name="sku"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-sku">SKU</FieldLabel>
-                      <Input
-                        {...field}
-                        id="form-sku"
-                        aria-invalid={fieldState.invalid}
-                        placeholder="Stock Keeping Unit"
-                        disabled={isLoading}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Controller
-                  name="categoryId"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-category">Category</FieldLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isLoading}
-                        items={categories?.map((category) => ({
-                          value: category.id,
-                          label: category.name,
-                        }))}
-                      >
-                        <SelectTrigger id="form-category">
-                          <SelectValue placeholder="Select Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Categories</SelectLabel>
-                            {categories?.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  name="imgUrl"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-img">Image URL</FieldLabel>
-                      <Input
-                        {...field}
-                        id="form-img"
-                        aria-invalid={fieldState.invalid}
-                        placeholder="https://example.com/image.png"
-                        disabled={isLoading}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Controller
-                  name="weight"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-weight">Weight (gm)</FieldLabel>
-                      <Input
-                        {...field}
-                        type="number"
-                        step="0.01"
-                        id="form-weight"
-                        aria-invalid={fieldState.invalid}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                        disabled={isLoading}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  name="quantity"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-quantity">Quantity</FieldLabel>
-                      <Input
-                        {...field}
-                        type="number"
-                        id="form-quantity"
-                        aria-invalid={fieldState.invalid}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                        disabled={isLoading}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-              </div>
-
-              <Controller
-                name="description"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="form-description">
-                      Description
-                    </FieldLabel>
-                    <Textarea
-                      {...field}
-                      id="form-description"
-                      aria-invalid={fieldState.invalid}
-                      placeholder="Product Description"
-                      disabled={isLoading}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
+          <Activity mode={activeTab === "details" ? "visible" : "hidden"}>
+            <TabsContent value="details">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Controller
+                    name="name"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-name">Name</FieldLabel>
+                        <Input
+                          {...field}
+                          id="form-name"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="Product Name"
+                          disabled={isLoading}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
                     )}
-                  </Field>
-                )}
-              />
-
-              <Controller
-                name="isActive"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field
-                    orientation="horizontal"
-                    data-invalid={fieldState.invalid}
-                  >
-                    <CheckboxCard
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      title="Is Active"
-                      description="Show or hide product from user"
-                      disabled={isLoading}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </Field>
-                )}
-              />
-
-              <div className="text-xs space-y-1 text-muted-foreground">
-                {productId && selectedProduct?.updatedAt && (
-                  <div className="flex items-center gap-2">
-                    <CalendarSyncIcon className="size-3" />
-                    <p>
-                      Updated:{" "}
-                      <span className="text-blue-400">
-                        {formattedDate(selectedProduct?.updatedAt)}
-                      </span>
-                    </p>
-                  </div>
-                )}
-                {productId && selectedProduct?.createdAt && (
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon className="size-3" />
-                    <p>
-                      Created:{" "}
-                      <span className="text-blue-400">
-                        {formattedDate(selectedProduct.createdAt)}
-                      </span>
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <LoadingButton
-                  title={productId ? "Update" : "Create"}
-                  isLoading={isLoading}
-                  stretch
-                />
-                {productId && (
-                  <DeleteConfirmationDialog
-                    type="product"
-                    entityName={form.getValues("name")}
-                    onDelete={handleDelete}
                   />
-                )}
-              </div>
-            </form>
-          </TabsContent>
+
+                  <Controller
+                    name="sku"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-sku">SKU</FieldLabel>
+                        <Input
+                          {...field}
+                          id="form-sku"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="Stock Keeping Unit"
+                          disabled={isLoading}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Controller
+                    name="categoryId"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-category">Category</FieldLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isLoading}
+                          items={categories?.map((category) => ({
+                            value: category.id,
+                            label: category.name,
+                          }))}
+                        >
+                          <SelectTrigger id="form-category">
+                            <SelectValue placeholder="Select Category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>Categories</SelectLabel>
+                              {categories?.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name="imgUrl"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-img">Image URL</FieldLabel>
+                        <Input
+                          {...field}
+                          id="form-img"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="https://example.com/image.png"
+                          disabled={isLoading}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Controller
+                    name="weight"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-weight">Weight (gm)</FieldLabel>
+                        <Input
+                          {...field}
+                          type="number"
+                          step="0.01"
+                          id="form-weight"
+                          aria-invalid={fieldState.invalid}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          disabled={isLoading}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name="quantity"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-quantity">Quantity</FieldLabel>
+                        <Input
+                          {...field}
+                          type="number"
+                          id="form-quantity"
+                          aria-invalid={fieldState.invalid}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          disabled={isLoading}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+                </div>
+
+                <Controller
+                  name="description"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="form-description">
+                        Description
+                      </FieldLabel>
+                      <Textarea
+                        {...field}
+                        id="form-description"
+                        aria-invalid={fieldState.invalid}
+                        placeholder="Product Description"
+                        disabled={isLoading}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name="isActive"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field
+                      orientation="horizontal"
+                      data-invalid={fieldState.invalid}
+                    >
+                      <CheckboxCard
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        title="Is Active"
+                        description="Show or hide product from user"
+                        disabled={isLoading}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <div className="text-xs space-y-1 text-muted-foreground">
+                  {productId && selectedProduct?.updatedAt && (
+                    <div className="flex items-center gap-2">
+                      <CalendarSyncIcon className="size-3" />
+                      <p>
+                        Updated:{" "}
+                        <span className="text-blue-400">
+                          {formattedDate(selectedProduct?.updatedAt)}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  {productId && selectedProduct?.createdAt && (
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="size-3" />
+                      <p>
+                        Created:{" "}
+                        <span className="text-blue-400">
+                          {formattedDate(selectedProduct.createdAt)}
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <LoadingButton
+                    title={productId ? "Update" : "Create"}
+                    isLoading={isLoading}
+                    stretch
+                  />
+                  {productId && (
+                    <DeleteConfirmationDialog
+                      type="product"
+                      entityName={form.getValues("name")}
+                      onDelete={handleDelete}
+                    />
+                  )}
+                </div>
+              </form>
+            </TabsContent>
+          </Activity>
 
           {productId && (
-            <TabsContent value="history">
-              <StockMovementHistory productId={productId} />
-            </TabsContent>
+            <Activity mode={activeTab === "history" ? "visible" : "hidden"}>
+              <TabsContent value="history">
+                <StockMovementHistory productId={productId} />
+              </TabsContent>
+            </Activity>
           )}
         </Tabs>
       </DialogContent>

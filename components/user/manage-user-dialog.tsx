@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Activity, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -29,11 +30,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getOrganizations } from "@/data/organizations";
-import { getUserById, type UserWMember, updateUser } from "@/data/users";
+import {
+  getUserById,
+  revalidateUsersCache,
+  type UserWMember,
+  updateUser,
+} from "@/data/users";
 import { authClient } from "@/lib/auth/auth-client";
 import { useUserParams } from "@/lib/nuqs/user-params";
-import { useRouter } from "next/navigation";
-import { revalidateUsersCache } from "@/data/users";
 import { userSchema } from "@/schemas/user-schema";
 import { USER_ROLES, type UserRole } from "@/types/globals";
 import { UserSessionsList } from "./user-sessions-list";
@@ -41,10 +45,11 @@ import { UserSessionsList } from "./user-sessions-list";
 export default function ManageUserDialog({
   organizationId,
 }: {
-  organizationId: string;
-}) {
+  organizationId?: string;
+} = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
 
   const [{ userId }, setParams] = useUserParams();
 
@@ -278,7 +283,8 @@ export default function ManageUserDialog({
         </DialogDescription>
 
         <Tabs
-          defaultValue="details"
+          value={activeTab}
+          onValueChange={setActiveTab}
           className="w-full flex flex-col flex-1 min-h-0"
         >
           <TabsList className="grid w-full grid-cols-2 mb-4 shrink-0">
@@ -288,211 +294,217 @@ export default function ManageUserDialog({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="details" className="flex-1 min-h-0">
-            <ScrollArea className="h-[75vh] lg:h-[70vh] pr-4">
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <Controller
-                  name="name"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-name">Name</FieldLabel>
-                      <Input
-                        {...field}
-                        id="form-name"
-                        aria-invalid={fieldState.invalid}
-                        placeholder="Name"
-                        autoFocus
-                        disabled={isLoading}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
+          <Activity mode={activeTab === "details" ? "visible" : "hidden"}>
+            <TabsContent value="details" className="flex-1 min-h-0">
+              <ScrollArea className="h-[75vh] lg:h-[70vh] pr-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
+                  <Controller
+                    name="name"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-name">Name</FieldLabel>
+                        <Input
+                          {...field}
+                          id="form-name"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="Name"
+                          autoFocus
+                          disabled={isLoading}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
 
-                <Controller
-                  name="email"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-email">Email</FieldLabel>
-                      <Input
-                        {...field}
-                        id="form-email"
-                        aria-invalid={fieldState.invalid}
-                        placeholder="email@example.com"
-                        disabled={isLoading || !!userId}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
+                  <Controller
+                    name="email"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-email">Email</FieldLabel>
+                        <Input
+                          {...field}
+                          id="form-email"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="Email"
+                          disabled={isLoading || !!userId}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
 
-                <Controller
-                  name="role"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-role">Role</FieldLabel>
-                      <Select
-                        items={USER_ROLES}
-                        onValueChange={field.onChange}
-                        value={field.value?.toString()}
-                        disabled={isLoading}
-                      >
-                        <SelectTrigger id="form-role">
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {USER_ROLES.map((role) => (
-                            <SelectItem key={role.value} value={role.value}>
-                              {role.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  name="orgId"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-orgId">Organization</FieldLabel>
-                      <Select
-                        items={orgOptions}
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={isLoading}
-                      >
-                        <SelectTrigger id="form-orgId">
-                          <SelectValue placeholder="Select an organization" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {orgOptions?.map((org) => (
-                            <SelectItem key={org.value} value={org.value}>
-                              {org.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  name="image"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="form-image">Avatar URL</FieldLabel>
-                      <Input
-                        {...field}
-                        id="form-image"
-                        aria-invalid={fieldState.invalid}
-                        placeholder="https://..."
-                        disabled={isLoading}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                <Controller
-                  name="isActive"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field
-                      orientation="horizontal"
-                      data-invalid={fieldState.invalid}
-                    >
-                      <CheckboxCard
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        title="Account Active"
-                        description="Allow or prevent user from logging in"
-                        disabled={isLoading}
-                      />
-                      {fieldState.invalid && (
-                        <FieldError errors={[fieldState.error]} />
-                      )}
-                    </Field>
-                  )}
-                />
-
-                {userId && (
-                  <div className="flex flex-col gap-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={handlePasswordReset}
-                      disabled={isLoading}
-                    >
-                      Send Password Reset Email
-                    </Button>
-                    {!selectedUser?.emailVerified && (
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={handleSendVerificationEmail}
+                  <Controller
+                    name="role"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel>Role</FieldLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
                           disabled={isLoading}
                         >
-                          Send Verification Email
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={handleMarkAsVerified}
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {USER_ROLES.map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name="orgId"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel>Organization</FieldLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || "none"}
                           disabled={isLoading}
                         >
-                          Mark as Verified
-                        </Button>
-                      </div>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select organization" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {orgOptions.map((org) => (
+                              <SelectItem key={org.value} value={org.value}>
+                                {org.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name="image"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel htmlFor="form-image">Avatar URL</FieldLabel>
+                        <Input
+                          {...field}
+                          id="form-image"
+                          aria-invalid={fieldState.invalid}
+                          placeholder="https://..."
+                          disabled={isLoading}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  <Controller
+                    name="isActive"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field
+                        orientation="horizontal"
+                        data-invalid={fieldState.invalid}
+                      >
+                        <CheckboxCard
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          title="Account Active"
+                          description="Allow or prevent user from logging in"
+                          disabled={isLoading}
+                        />
+                        {fieldState.invalid && (
+                          <FieldError errors={[fieldState.error]} />
+                        )}
+                      </Field>
+                    )}
+                  />
+
+                  {userId && (
+                    <div className="flex flex-col gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={handlePasswordReset}
+                        disabled={isLoading}
+                      >
+                        Send Password Reset Email
+                      </Button>
+                      {!selectedUser?.emailVerified && (
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={handleSendVerificationEmail}
+                            disabled={isLoading}
+                          >
+                            Send Verification Email
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={handleMarkAsVerified}
+                            disabled={isLoading}
+                          >
+                            Mark as Verified
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <LoadingButton
+                      title="Update"
+                      isLoading={isLoading}
+                      stretch
+                    />
+                    {userId && (
+                      <DeleteConfirmationDialog
+                        type="user"
+                        entityName={form.getValues("name") || "this user"}
+                        onDelete={handleDelete}
+                      />
                     )}
                   </div>
-                )}
-
-                <div className="flex gap-2">
-                  <LoadingButton title="Update" isLoading={isLoading} stretch />
-                  {userId && (
-                    <DeleteConfirmationDialog
-                      type="user"
-                      entityName={form.getValues("name") || "this user"}
-                      onDelete={handleDelete}
-                    />
-                  )}
-                </div>
-              </form>
-            </ScrollArea>
-          </TabsContent>
-
-          {userId && (
-            <TabsContent value="sessions" className="flex-1 min-h-0">
-              <ScrollArea className="h-[75vh] lg:h-[65vh] pr-4">
-                <UserSessionsList userId={userId} />
+                </form>
               </ScrollArea>
             </TabsContent>
+          </Activity>
+
+          {userId && (
+            <Activity mode={activeTab === "sessions" ? "visible" : "hidden"}>
+              <TabsContent value="sessions" className="flex-1 min-h-0">
+                <ScrollArea className="h-[75vh] lg:h-[65vh] pr-4">
+                  <UserSessionsList userId={userId} />
+                </ScrollArea>
+              </TabsContent>
+            </Activity>
           )}
         </Tabs>
       </DialogContent>

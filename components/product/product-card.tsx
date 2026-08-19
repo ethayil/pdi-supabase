@@ -8,7 +8,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, ViewTransition } from "react";
 import { toast } from "sonner";
 import type { Category, Product } from "@/app/generated/prisma/client";
 import { Badge } from "@/components/ui/badge";
@@ -106,13 +106,19 @@ export function ProductCard({
       <CardContent className="p-0 m-0">
         <div className="relative overflow-hidden">
           <ImageZoom>
-            <Image
-              src={product.imgUrl || "/placeholder.svg"}
-              alt={product.name}
-              width={400}
-              height={500}
-              className="w-full h-56 object-cover transition-transform scale-105 group-hover:scale-100"
-            />
+            <ViewTransition
+              name={`product-img-${product.id}`}
+              share="morph"
+              default="none"
+            >
+              <Image
+                src={product.imgUrl || "/placeholder.svg"}
+                alt={product.name}
+                width={400}
+                height={500}
+                className="w-full h-56 object-cover transition-transform scale-105 group-hover:scale-100"
+              />
+            </ViewTransition>
           </ImageZoom>
           <Badge className="absolute top-2 right-2" variant="secondary">
             {product.category?.name || "Unknown"}
@@ -130,7 +136,7 @@ export function ProductCard({
                 {product.name}
               </h3>
             </TooltipTrigger>
-            <TooltipContent className="max-w-[280px] text-xs leading-normal">
+            <TooltipContent className="max-w-70 text-xs leading-normal">
               {product.name}
             </TooltipContent>
           </Tooltip>

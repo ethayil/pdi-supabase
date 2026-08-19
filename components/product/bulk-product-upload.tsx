@@ -3,7 +3,7 @@
 import { DownloadIcon, FileIcon, UploadIcon } from "lucide-react";
 import * as motion from "motion/react-client";
 import Papa from "papaparse";
-import { useRef, useState } from "react";
+import { Activity, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -461,6 +461,7 @@ export default function BulkProductUpload({
   organizationId: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("create");
 
   useRegisterAction({
     id: "bulk-upload",
@@ -486,17 +487,21 @@ export default function BulkProductUpload({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="create" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="create">Bulk Add</TabsTrigger>
             <TabsTrigger value="update">Bulk Update</TabsTrigger>
           </TabsList>
-          <TabsContent value="create">
-            <BulkTab mode="create" organizationId={organizationId} />
-          </TabsContent>
-          <TabsContent value="update">
-            <BulkTab mode="update" organizationId={organizationId} />
-          </TabsContent>
+          <Activity mode={activeTab === "create" ? "visible" : "hidden"}>
+            <TabsContent value="create">
+              <BulkTab mode="create" organizationId={organizationId} />
+            </TabsContent>
+          </Activity>
+          <Activity mode={activeTab === "update" ? "visible" : "hidden"}>
+            <TabsContent value="update">
+              <BulkTab mode="update" organizationId={organizationId} />
+            </TabsContent>
+          </Activity>
         </Tabs>
       </DialogContent>
     </Dialog>
