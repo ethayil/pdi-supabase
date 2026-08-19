@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getUninvoicedOrders } from "@/data/invoices";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, isUkCountry } from "@/lib/utils";
+import { weightFormat } from "@/utils/weight-format";
 
 interface AddOrderDialogProps {
   open: boolean;
@@ -105,33 +106,38 @@ export function AddOrderDialog({
                   <SelectValue placeholder="Choose an order" />
                 </SelectTrigger>
                 <SelectContent alignItemWithTrigger={false}>
-                  {uninvoicedOrders.map((order) => (
-                    <SelectItem key={order.id} value={order.id}>
-                      <div className="flex flex-col text-left py-1 w-full whitespace-normal">
-                        <span className="font-semibold text-sm block">
-                          {order.reference} - {order.fullname}
-                        </span>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {order.poRef && (
-                            <span className="text-xs text-muted-foreground">
-                              PO: {order.poRef}
-                            </span>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            Price:{" "}
-                            {formatCurrency(
-                              (order.courierCost || 0) +
-                                (order.courierVAT || 0),
-                            )}
+                  {uninvoicedOrders.map((order) => {
+                    const isUk = isUkCountry(order.country);
+                    const cost = order.courierCost || 0;
+                    const vat = isUk ? order.courierVAT || 0 : 0;
+
+                    return (
+                      <SelectItem key={order.id} value={order.id}>
+                        <div className="flex flex-col text-left py-1 w-full whitespace-normal">
+                          <span className="font-semibold text-sm block">
+                            {order.reference} - {order.fullname} ({order.country || "N/A"})
                           </span>
-                          <StatusBadge
-                            status={order.status}
-                            className="h-4 px-1.5 text-[9px]"
-                          />
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            {order.poRef && (
+                              <span className="text-xs text-muted-foreground">
+                                PO: {order.poRef}
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              Weight: {weightFormat(order.weight)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              Price: {formatCurrency(cost + vat)}
+                            </span>
+                            <StatusBadge
+                              status={order.status}
+                              className="h-4 px-1.5 text-[9px]"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </SelectItem>
-                  ))}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             )}

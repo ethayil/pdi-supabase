@@ -1,18 +1,33 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Order, OrderItem, Product } from "@/app/generated/prisma/client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PopoverContent } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { formattedDate } from "@/utils/formatted-date";
+import {
+  calculateShippingCost,
+  getCountryZone,
+  getZoneName,
+} from "@/utils/tariff-utils";
 import { weightFormat } from "@/utils/weight-format";
+import { ChargeBadge } from "./charge-badge";
 
 type OrderWItem = Order & {
   orderItems?: (OrderItem & { product: Product | null })[];
+  charges?: {
+    id: string;
+    chargeType: string;
+    description?: string | null;
+    cost?: number | null;
+    vat?: number | null;
+    chargeDate?: Date | string | null;
+  }[];
 };
 
 interface OrderPopoverContentProps {
@@ -24,13 +39,24 @@ export function OrderPopoverContent({
   order,
   organizationId,
 }: OrderPopoverContentProps) {
+  const orderCharges = order.charges || [];
+  const zone = getCountryZone(order.country);
+  const zoneName = getZoneName(order.country);
+  const calculatedCost =
+    zone > 0 && (order.weight ?? 0) > 0
+      ? calculateShippingCost(order.weight || 0, zone)
+      : 0;
+
   return (
     <PopoverContent side="bottom" align="start">
-      <div className="flex items-center justify-between">
-        <p className="font-semibold text-sm flex items-center gap-2">
-          {order.reference}
+      <div className="flex items-center justify-between gap-2">
+        <div className="font-semibold text-sm flex items-center gap-1.5 flex-wrap">
+          <span>{order.reference}</span>
           <StatusBadge status={order.status} />
-        </p>
+          {orderCharges.map((charge) => (
+            <ChargeBadge key={charge.id || charge.chargeType} charge={charge} />
+          ))}
+        </div>
         <a
           href={`/${organizationId}/admin/orders/${order.id}`}
           target="_blank"
@@ -48,6 +74,23 @@ export function OrderPopoverContent({
           <PopoverOrderText title="Company" text={order.company} />
         )}
         <PopoverOrderText title="Country" text={order.country} />
+        {zoneName && (
+          <PopoverOrderText title="Zone">
+            <Badge
+              variant="secondary"
+              className="font-mono text-[10px] px-1 py-0 h-4"
+            >
+              {zoneName}
+            </Badge>
+          </PopoverOrderText>
+        )}
+        {calculatedCost > 0 && (
+          <PopoverOrderText title="Auto-Calc Price">
+            <span className="font-mono font-bold text-primary">
+              {formatCurrency(calculatedCost)}
+            </span>
+          </PopoverOrderText>
+        )}
         <PopoverOrderText
           title="Delivery"
           text={formattedDate(order.deliveryDate, "short")}
@@ -92,7 +135,7 @@ const PopoverOrderText = ({
   children,
 }: {
   title: string;
-  text: string;
+  text?: string;
   xsTitle?: boolean;
   children?: ReactNode;
 }) => {

@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
-import type { InvoiceCharge, Order } from "@/app/generated/prisma/client";
+import type { InvoiceCharge, Order, OrderStatus } from "@/app/generated/prisma/client";
 import type { TransactionClient } from "@/app/generated/prisma/internal/prismaNamespace";
-import type { InvoiceWhereInput } from "@/app/generated/prisma/models";
+import type { InvoiceWhereInput, OrderWhereInput } from "@/app/generated/prisma/models";
 import { requireGlobalAdmin } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
+import { isUkCountry } from "@/lib/utils";
 import type { InvoiceStatus } from "@/types/globals";
 
 export type InvoiceWCharges = InvoiceCharge & {
@@ -70,7 +71,9 @@ async function calculateAndWriteInvoiceTotals(
         subtotalCost += order.invoiceCost;
       } else {
         if (order.courierCost) subtotalCost += order.courierCost;
-        if (order.courierVAT) vatCost += order.courierVAT;
+        if (order.courierVAT && isUkCountry(order.country)) {
+          vatCost += order.courierVAT;
+        }
       }
       if (order.weight) totalWeight += order.weight;
       if (order.totalPackages) totalPackages += order.totalPackages;
@@ -253,6 +256,16 @@ async function fetchInvoiceDetailsDbData({ invoiceId }: { invoiceId: string }) {
           include: {
             items: {
               include: { product: true },
+            },
+            charges: {
+              select: {
+                id: true,
+                chargeType: true,
+                description: true,
+                cost: true,
+                vat: true,
+                chargeDate: true,
+              },
             },
           },
         },
@@ -456,18 +469,67 @@ export async function updateOrderInvoiceCost({
   }
 }
 
-export async function getUninvoicedOrders({ orgId }: { orgId: string }) {
+export async function getUninvoicedOrders(params?: {
+  orgId?: string;
+  status?: OrderStatus | string;
+  deliveredOnly?: boolean;
+  search?: string;
+}) {
   try {
     await requireGlobalAdmin();
+    const orgId = params?.orgId;
+    const status = params?.status;
+    const deliveredOnly = params?.deliveredOnly;
+    const search = params?.search;
+
+    const where: OrderWhereInput = {
+      invoiceId: null,
+    };
+
+    if (orgId && orgId !== "all") {
+      where.orgId = orgId;
+    }
+
+    if (deliveredOnly) {
+      where.status = "delivered";
+    } else if (status && status !== "all") {
+      where.status = status as OrderStatus;
+    } else {
+      where.status = {
+        in: ["processing", "shipped", "delivered"],
+      };
+    }
+
+    if (search) {
+      where.OR = [
+        { reference: { contains: search, mode: "insensitive" } },
+        { fullname: { contains: search, mode: "insensitive" } },
+        { poRef: { contains: search, mode: "insensitive" } },
+        { company: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
     return await prisma.order.findMany({
-      where: {
-        orgId,
-        invoiceId: null,
-        status: {
-          in: ["processing", "shipped", "delivered"],
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        charges: {
+          select: {
+            id: true,
+            chargeType: true,
+            description: true,
+            cost: true,
+            vat: true,
+            chargeDate: true,
+          },
         },
       },
-      orderBy: { createdAt: "desc" },
     });
   } catch (error) {
     console.error("Error in getUninvoicedOrders:", error);
@@ -529,7 +591,9 @@ export async function createInvoice(args: {
           subtotalCost += order.invoiceCost;
         } else {
           if (order.courierCost) subtotalCost += order.courierCost;
-          if (order.courierVAT) vatCost += order.courierVAT;
+          if (order.courierVAT && isUkCountry(order.country)) {
+            vatCost += order.courierVAT;
+          }
         }
         if (order.weight) totalWeight += order.weight;
         if (order.totalPackages) totalPackages += order.totalPackages;
@@ -721,5 +785,57 @@ export async function updateInvoiceDetails({
     throw error instanceof Error
       ? error
       : new Error("Failed to update invoice details");
+  }
+}
+
+export async function getOrderInvoicingAndCharges(params: { orderId: string }) {
+  try {
+    await requireGlobalAdmin();
+    const order = await prisma.order.findUnique({
+      where: { id: params.orderId },
+      select: {
+        id: true,
+        invoiceId: true,
+        invoice: {
+          select: {
+            id: true,
+            reference: true,
+            status: true,
+            invoiceDate: true,
+            totalCost: true,
+            vatCost: true,
+            subtotalCost: true,
+            orgId: true,
+          },
+        },
+        charges: {
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            invoiceId: true,
+            chargeType: true,
+            description: true,
+            cost: true,
+            vat: true,
+            chargeDate: true,
+            invoice: {
+              select: {
+                id: true,
+                reference: true,
+                status: true,
+                invoiceDate: true,
+                totalCost: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return order;
+  } catch (error) {
+    console.error("Error in getOrderInvoicingAndCharges:", error);
+    throw error instanceof Error
+      ? error
+      : new Error("Failed to load order invoicing and charges");
   }
 }

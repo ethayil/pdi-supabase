@@ -85,9 +85,9 @@ export default function OrgsHeader({
 
       <ButtonGroup>
         <SwitchField
-          id="unread-filter"
-          label="Unread only"
-          mobileLabel="Unread"
+          id="active-filter"
+          label="Active only"
+          mobileLabel="Active"
           checked={isActive}
           onCheckedChange={(checked) =>
             setParams({ isActive: checked, currentPage: 1 })

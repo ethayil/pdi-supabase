@@ -34,6 +34,7 @@ import {
 } from "@/data/invoices";
 import { searchOrdersByRef } from "@/data/orders";
 import type { InvoiceChargeType } from "@/types/globals";
+import { ChargeBadge } from "./charge-badge";
 
 const chargeTypes: { value: InvoiceChargeType; label: string }[] = [
   { value: "ddp", label: "DDP" },
@@ -42,6 +43,17 @@ const chargeTypes: { value: InvoiceChargeType; label: string }[] = [
   { value: "refund", label: "Refund" },
   { value: "other", label: "Other" },
 ];
+
+export type SearchOrder = Order & {
+  charges?: {
+    id: string;
+    chargeType: string;
+    description?: string | null;
+    cost?: number | null;
+    vat?: number | null;
+    chargeDate?: Date | string | null;
+  }[];
+};
 
 interface AddChargeDialogProps {
   invoiceId: string;
@@ -59,7 +71,7 @@ export function AddChargeDialog({
   editCharge,
 }: AddChargeDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<SearchOrder | null>(null);
   const [chargeType, setChargeType] = useState<InvoiceChargeType>("ddp");
   const [description, setDescription] = useState("");
   const [cost, setCost] = useState("0");
@@ -67,7 +79,7 @@ export function AddChargeDialog({
   const [chargeDate, setChargeDate] = useState(
     new Date().toISOString().split("T")[0],
   );
-  const [searchResults, setSearchResults] = useState<Order[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchOrder[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -120,7 +132,7 @@ export function AddChargeDialog({
     }
   }, [editCharge, open]);
 
-  const handleSelectOrder = (order: Order | null) => {
+  const handleSelectOrder = (order: SearchOrder | null) => {
     setSelectedOrder(order);
     setSearchTerm(""); // Clear search after selection
     if (chargeType !== "other") {
@@ -132,8 +144,13 @@ export function AddChargeDialog({
   };
 
   const handleSubmit = async () => {
-    if (!description.trim()) {
-      toast.error("Please enter a description");
+    if (
+      !editCharge &&
+      chargeType === "ddp" &&
+      selectedOrder &&
+      selectedOrder.charges?.some((c) => c.chargeType === "ddp")
+    ) {
+      toast.error(`Order ${selectedOrder.reference} already has a DDP charge!`);
       return;
     }
 
@@ -254,11 +271,14 @@ export function AddChargeDialog({
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      <div className="space-x-2">
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
                         <StatusBadge
                           status={selectedOrder.status}
                           className="capitalize"
                         />
+                        {(selectedOrder.charges || []).map((c) => (
+                          <ChargeBadge key={c.id || c.chargeType} charge={c} />
+                        ))}
                         {selectedOrder.invoiceId && (
                           <Badge variant="secondary" className="text-xs">
                             Invoiced
@@ -307,17 +327,20 @@ export function AddChargeDialog({
                                 {order.country}
                               </p>
                             </div>
-                            <div className="space-x-2">
-                              <StatusBadge
-                                status={order.status}
-                                className="capitalize"
-                              />
-                              {order.invoiceId && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Invoiced
-                                </Badge>
-                              )}
-                            </div>
+                             <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                               <StatusBadge
+                                 status={order.status}
+                                 className="capitalize"
+                               />
+                               {(order.charges || []).map((c) => (
+                                 <ChargeBadge key={c.id || c.chargeType} charge={c} />
+                               ))}
+                               {order.invoiceId && (
+                                 <Badge variant="secondary" className="text-xs">
+                                   Invoiced
+                                 </Badge>
+                               )}
+                             </div>
                           </div>
                         </button>
                       ))}

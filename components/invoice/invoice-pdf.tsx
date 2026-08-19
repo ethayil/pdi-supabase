@@ -279,11 +279,13 @@ interface InvoicePDFProps {
   charges: InvoiceWCharges[];
 }
 
-// react-pdf needs an absolute HTTP URL to fetch images client-side
+import path from "path";
+
+// react-pdf needs absolute URL client-side or filesystem path server-side
 const LOGO_URL =
   typeof window !== "undefined"
     ? `${window.location.origin}/epp-logo.png`
-    : "http://localhost:3000/epp-logo.png";
+    : path.join(process.cwd(), "public", "epp-logo.png");
 
 export function InvoicePDF({
   invoice,
@@ -379,141 +381,165 @@ export function InvoicePDF({
         </View>
 
         {/* ── Unified Items Table ───────────────────────────────────────── */}
-        {items.length > 0 && (
-          <View style={s.table}>
-            {/* Header */}
-            <View style={s.tableHeader}>
-              <Text style={[s.thCell, s.u1]}>#</Text>
-              <Text style={[s.thCell, s.u2]}>Date</Text>
-              <Text style={[s.thCell, s.u3]}>Order Ref</Text>
-              <Text style={[s.thCell, s.u6]}>Pcs</Text>
-              <Text style={[s.thCell, s.u7]}>Wgt(Kgs)</Text>
-              <Text style={[s.thCell, s.u5]}>Consignee</Text>
-              <Text style={[s.thCell, s.u8]}>Signed By</Text>
-              <Text style={[s.thCell, s.u9]}>Amount</Text>
-              <Text style={[s.thCell, s.u10]}>VAT</Text>
-            </View>
-            {/* Rows */}
-            {items.map((item, i) => {
-              const isEven = i % 2 !== 0;
-              if (item.type === "order") {
-                const order = item.order;
-                return (
-                  <View
-                    key={`order-${order.id}`}
-                    style={[s.tableRow, isEven ? s.tableRowAlt : {}]}
-                    wrap={false}
-                  >
-                    <Text style={[s.tdCell, s.u1]}>{i + 1}</Text>
-                    <Text style={[s.tdCell, s.u2]}>
-                      {fmtTableDate(order.createdAt)}
-                    </Text>
-                    <View style={s.u3}>
-                      <Text style={s.tdCell}>{order.reference}</Text>
-                      {order.poRef && (
-                        <Text
-                          style={[
-                            s.tdCell,
-                            { color: MID_GREY, fontSize: 7.5, marginTop: 1 },
-                          ]}
-                        >
-                          PO: {order.poRef}
-                        </Text>
-                      )}
-                    </View>
-                    <Text style={[s.tdCell, s.u6]}>
-                      {order.totalPackages ?? 1}
-                    </Text>
-                    <Text style={[s.tdCell, s.u7]}>
-                      {order.weight
-                        ? `${(order.weight / 1000).toFixed(2)}`
-                        : "0.00"}
-                    </Text>
-                    <View style={s.u5}>
-                      <Text style={s.tdCell}>{order.fullname}</Text>
-                      {order.country && (
-                        <Text
-                          style={[
-                            s.tdCell,
-                            { color: BLUE, fontFamily: "Helvetica-Bold" },
-                          ]}
-                        >
-                          {order.country}
-                        </Text>
-                      )}
-                      <Text
-                        style={[
-                          s.tdCell,
-                          { color: MID_GREY, fontSize: 7.5, marginTop: 1 },
-                        ]}
+        {items.length > 0 &&
+          (() => {
+            const showVatColumn = (invoice.vatCost || 0) > 0;
+            const u9Style = showVatColumn ? s.u9 : { ...s.u9, width: "14%" };
+
+            return (
+              <View style={s.table}>
+                {/* Header */}
+                <View style={s.tableHeader}>
+                  <Text style={[s.thCell, s.u1]}>#</Text>
+                  <Text style={[s.thCell, s.u2]}>Date</Text>
+                  <Text style={[s.thCell, s.u3]}>Order Ref</Text>
+                  <Text style={[s.thCell, s.u6]}>Pcs</Text>
+                  <Text style={[s.thCell, s.u7]}>Wgt(Kgs)</Text>
+                  <Text style={[s.thCell, s.u5]}>Consignee</Text>
+                  <Text style={[s.thCell, s.u8]}>Signed By</Text>
+                  <Text style={[s.thCell, u9Style]}>Amount</Text>
+                  {showVatColumn && <Text style={[s.thCell, s.u10]}>VAT</Text>}
+                </View>
+                {/* Rows */}
+                {items.map((item, i) => {
+                  const isEven = i % 2 !== 0;
+                  if (item.type === "order") {
+                    const order = item.order;
+                    return (
+                      <View
+                        key={`order-${order.id}`}
+                        style={[s.tableRow, isEven ? s.tableRowAlt : {}]}
+                        wrap={false}
                       >
-                        {order.description || "Printed Matter"}
-                      </Text>
-                    </View>
-                    <View style={s.u8}>
-                      <Text style={s.tdCell}>{order.signedBy || "-"}</Text>
-                      {order.deliveredAt && (
-                        <Text
-                          style={[
-                            s.tdCell,
-                            {
-                              fontFamily: "Helvetica-Oblique",
-                              color: MID_GREY,
-                              marginTop: 1,
-                            },
-                          ]}
-                        >
-                          {fmtTableDate(order.deliveredAt)}
+                        <Text style={[s.tdCell, s.u1]}>{i + 1}</Text>
+                        <Text style={[s.tdCell, s.u2]}>
+                          {fmtTableDate(order.createdAt)}
                         </Text>
-                      )}
-                    </View>
-                    <Text style={[s.tdCell, s.u9]}>
-                      {fmt(order.invoiceCost ?? order.courierCost ?? 0)}
-                    </Text>
-                    <Text style={[s.tdCell, s.u10]}>
-                      {fmt(order.courierVAT ?? 0)}
-                    </Text>
-                  </View>
-                );
-              } else {
-                const charge = item.charge;
-                return (
-                  <View
-                    key={`charge-${charge.id}`}
-                    style={[s.tableRow, isEven ? s.tableRowAlt : {}]}
-                    wrap={false}
-                  >
-                    <Text style={[s.tdCell, s.u1]}>{i + 1}</Text>
-                    <Text style={[s.tdCell, s.u2]}>
-                      {fmtTableDate(charge.chargeDate)}
-                    </Text>
-                    <View style={s.u3}>
-                      <Text style={s.tdCell}>
-                        {charge.order?.reference || "-"}
-                      </Text>
-                      {charge.order?.poRef && (
-                        <Text
-                          style={[
-                            s.tdCell,
-                            { color: MID_GREY, fontSize: 7.5, marginTop: 1 },
-                          ]}
-                        >
-                          PO: {charge.order?.poRef}
+                        <View style={s.u3}>
+                          <Text style={s.tdCell}>{order.reference}</Text>
+                          {order.poRef && (
+                            <Text
+                              style={[
+                                s.tdCell,
+                                {
+                                  color: MID_GREY,
+                                  fontSize: 7.5,
+                                  marginTop: 1,
+                                },
+                              ]}
+                            >
+                              PO: {order.poRef}
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={[s.tdCell, s.u6]}>
+                          {order.totalPackages ?? 1}
                         </Text>
-                      )}
-                    </View>
-                    <Text style={[s.tdCell, s.u6]}>-</Text>
-                    <Text style={[s.tdCell, s.u7]}>-</Text>
-                    <Text style={[s.tdCell, s.u5]}>{charge.description}</Text>
-                    <Text style={[s.tdCell, s.u8]}>-</Text>
-                    <Text style={[s.tdCell, s.u9]}>{fmt(charge.cost)}</Text>
-                    <Text style={[s.tdCell, s.u10]}>{fmt(charge.vat)}</Text>
-                  </View>
-                );
-              }
-            })}
-          </View>
-        )}
+                        <Text style={[s.tdCell, s.u7]}>
+                          {order.weight
+                            ? `${(order.weight / 1000).toFixed(2)}`
+                            : "0.00"}
+                        </Text>
+                        <View style={s.u5}>
+                          <Text style={s.tdCell}>{order.fullname}</Text>
+                          {order.country && (
+                            <Text
+                              style={[
+                                s.tdCell,
+                                { color: BLUE, fontFamily: "Helvetica-Bold" },
+                              ]}
+                            >
+                              {order.country}
+                            </Text>
+                          )}
+                          <Text
+                            style={[
+                              s.tdCell,
+                              { color: MID_GREY, fontSize: 7.5, marginTop: 1 },
+                            ]}
+                          >
+                            {order.description || "Printed Matter"}
+                          </Text>
+                        </View>
+                        <View style={s.u8}>
+                          <Text style={s.tdCell}>{order.signedBy || "-"}</Text>
+                          {order.deliveredAt && (
+                            <Text
+                              style={[
+                                s.tdCell,
+                                {
+                                  fontFamily: "Helvetica-Oblique",
+                                  color: MID_GREY,
+                                  marginTop: 1,
+                                },
+                              ]}
+                            >
+                              {fmtTableDate(order.deliveredAt)}
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={[s.tdCell, u9Style]}>
+                          {fmt(order.invoiceCost ?? order.courierCost ?? 0)}
+                        </Text>
+                        {showVatColumn && (
+                          <Text style={[s.tdCell, s.u10]}>
+                            {fmt(order.courierVAT ?? 0)}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  } else {
+                    const charge = item.charge;
+                    return (
+                      <View
+                        key={`charge-${charge.id}`}
+                        style={[s.tableRow, isEven ? s.tableRowAlt : {}]}
+                        wrap={false}
+                      >
+                        <Text style={[s.tdCell, s.u1]}>{i + 1}</Text>
+                        <Text style={[s.tdCell, s.u2]}>
+                          {fmtTableDate(charge.chargeDate)}
+                        </Text>
+                        <View style={s.u3}>
+                          <Text style={s.tdCell}>
+                            {charge.order?.reference || "-"}
+                          </Text>
+                          {charge.order?.poRef && (
+                            <Text
+                              style={[
+                                s.tdCell,
+                                {
+                                  color: MID_GREY,
+                                  fontSize: 7.5,
+                                  marginTop: 1,
+                                },
+                              ]}
+                            >
+                              PO: {charge.order?.poRef}
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={[s.tdCell, s.u6]}>-</Text>
+                        <Text style={[s.tdCell, s.u7]}>-</Text>
+                        <Text style={[s.tdCell, s.u5]}>
+                          {charge.description}
+                        </Text>
+                        <Text style={[s.tdCell, s.u8]}>-</Text>
+                        <Text style={[s.tdCell, u9Style]}>
+                          {fmt(charge.cost)}
+                        </Text>
+                        {showVatColumn && (
+                          <Text style={[s.tdCell, s.u10]}>
+                            {fmt(charge.vat)}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  }
+                })}
+              </View>
+            );
+          })()}
 
         {/* ── Totals ────────────────────────────────────────────────────── */}
         <View style={s.totalsWrapper}>
@@ -522,10 +548,12 @@ export function InvoicePDF({
               <Text style={s.totalsLabel}>Subtotal:</Text>
               <Text style={s.totalsValue}>{fmt(invoice.subtotalCost)}</Text>
             </View>
-            <View style={s.totalsRow}>
-              <Text style={s.totalsLabel}>VAT:</Text>
-              <Text style={s.totalsValue}>{fmt(invoice.vatCost)}</Text>
-            </View>
+            {invoice.vatCost > 0 && (
+              <View style={s.totalsRow}>
+                <Text style={s.totalsLabel}>VAT:</Text>
+                <Text style={s.totalsValue}>{fmt(invoice.vatCost)}</Text>
+              </View>
+            )}
             <View style={s.totalsDivider} />
             <View style={s.totalsRow}>
               <Text style={s.totalsFinalLabel}>Total Due GBP:</Text>

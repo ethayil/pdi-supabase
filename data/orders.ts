@@ -1201,6 +1201,18 @@ export async function searchOrdersByRef({
       },
       take: 10,
       orderBy: { createdAt: "desc" },
+      include: {
+        charges: {
+          select: {
+            id: true,
+            chargeType: true,
+            description: true,
+            cost: true,
+            vat: true,
+            chargeDate: true,
+          },
+        },
+      },
     });
   } catch (error) {
     console.error("Error searching orders by ref:", error);

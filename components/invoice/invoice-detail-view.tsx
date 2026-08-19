@@ -3,6 +3,8 @@
 import {
   BadgePoundSterlingIcon,
   Check,
+  Download,
+  Eye,
   FileDown,
   InfoIcon,
   Loader2,
@@ -44,7 +46,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -60,9 +66,11 @@ import { updateOrderDescription, updateOrderPoRef } from "@/data/orders";
 import { formatCurrency } from "@/lib/utils";
 import { useOrganizationStore } from "@/store/use-organization-store";
 import { formattedDate } from "@/utils/formatted-date";
+import { weightFormat } from "@/utils/weight-format";
 import { StatusBadge } from "../ui/status-badge";
 import { AddChargeDialog } from "./add-charge-dialog";
 import { AddOrderDialog } from "./add-order-dialog";
+import { ChargeBadge } from "./charge-badge";
 import { InvoiceChargesCard } from "./invoice-charges-card";
 import { InvoicePDF } from "./invoice-pdf";
 import { OrderPopoverContent } from "./order-popover-content";
@@ -240,23 +248,50 @@ export function InvoiceDetailView({
   const { organizations } = useOrganizationStore();
   const organization = organizations.find((o) => o.id === invoice.orgId);
 
-  const handleGeneratePDF = async () => {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const getPdfBlobUrl = async () => {
+    const { pdf } = await import("@react-pdf/renderer");
+    const blob = await pdf(
+      <InvoicePDF
+        invoice={invoice}
+        organization={organization || null}
+        orders={orders}
+        charges={charges}
+      />,
+    ).toBlob();
+    return URL.createObjectURL(blob);
+  };
+
+  const handleViewPDF = async () => {
+    setIsGeneratingPdf(true);
     try {
-      const { pdf } = await import("@react-pdf/renderer");
-      const blob = await pdf(
-        <InvoicePDF
-          invoice={invoice}
-          organization={organization || null}
-          orders={orders}
-          charges={charges}
-        />,
-      ).toBlob();
-      const url = URL.createObjectURL(blob);
+      const url = await getPdfBlobUrl();
       window.open(url, "_blank");
     } catch (error) {
-      console.log(error);
-
+      console.error(error);
       toast.error("Failed to generate PDF");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const url = await getPdfBlobUrl();
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${invoice.reference}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -388,10 +423,42 @@ export function InvoiceDetailView({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="outline" onClick={handleGeneratePDF}>
-              <FileDown className="size-4" />
-              Generate PDF
-            </Button>
+            <Popover>
+              <PopoverTrigger
+                render={<Button variant="outline" disabled={isGeneratingPdf} />}
+              >
+                {isGeneratingPdf ? (
+                  <Loader2 className="size-4 animate-spin mr-1.5" />
+                ) : (
+                  <FileDown className="size-4 mr-1.5" />
+                )}
+                Invoice PDF
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-40 p-1">
+                <div className="flex flex-col gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="justify-start font-normal text-xs h-8 gap-2"
+                    onClick={handleViewPDF}
+                    disabled={isGeneratingPdf}
+                  >
+                    <Eye className="size-3.5" />
+                    View PDF
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="justify-start font-normal text-xs h-8 gap-2"
+                    onClick={handleDownloadPDF}
+                    disabled={isGeneratingPdf}
+                  >
+                    <Download className="size-3.5" />
+                    Download PDF
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </DashboardHeader>
@@ -439,169 +506,182 @@ export function InvoiceDetailView({
                         className="flex-1 border p-2 rounded-md hover:bg-primary/10 transition-colors duration-300"
                       >
                         <div className="flex justify-between items-center gap-2 w-full">
-                           {/* Order info with popover */}
-                           <div className="flex-1 text-left flex flex-col justify-start">
-                             <Popover>
-                               <PopoverTrigger className="text-left cursor-pointer hover:text-primary transition-colors inline-block w-fit font-semibold text-sm truncate">
-                                 {order.reference}
-                               </PopoverTrigger>
-                               <OrderPopoverContent
-                                 order={order}
-                                 organizationId={organizationId}
-                               />
-                             </Popover>
-                             <p className="text-xs text-muted-foreground">
-                               {order.fullname}
-                             </p>
-                             <p className="text-xs text-muted-foreground">
-                               {order.country}
-                             </p>
-                             {editingOrderPoOrderId === order.id ? (
-                               <div className="flex items-center gap-1 mt-1">
-                                 <span className="text-xs font-semibold text-muted-foreground mr-1">PO:</span>
-                                 <Input
-                                   type="text"
-                                   value={orderPoInput}
-                                   disabled={isPending}
-                                   onChange={(e) =>
-                                     setOrderPoInput(e.target.value)
-                                   }
-                                   onKeyDown={(e) => {
-                                     if (e.key === "Enter")
-                                       handleSaveOrderPo(order.id);
-                                     if (e.key === "Escape")
-                                       setEditingOrderPoOrderId(null);
-                                   }}
-                                   placeholder="None"
-                                   className="h-6 w-32 text-xs"
-                                   autoFocus
-                                 />
-                                 <Button
-                                   size="icon-sm"
-                                   variant="default"
-                                   disabled={isPending}
-                                   onClick={() =>
-                                     handleSaveOrderPo(order.id)
-                                   }
-                                   className="h-6 w-6"
-                                 >
-                                   <Check className="size-3" />
-                                 </Button>
-                                 <Button
-                                   size="icon-sm"
-                                   variant="ghost"
-                                   disabled={isPending}
-                                   onClick={() =>
-                                     setEditingOrderPoOrderId(null)
-                                   }
-                                   className="h-6 w-6"
-                                 >
-                                   <X className="size-3" />
-                                 </Button>
-                               </div>
-                             ) : order.poRef ? (
-                               <div className="flex items-center gap-1.5 mt-0.5 group/po w-fit">
-                                 <p className="text-xs font-semibold text-muted-foreground">
-                                   PO: {order.poRef}
-                                 </p>
-                                 <Button
-                                   size="icon-sm"
-                                   variant="ghost"
-                                   title="Edit PO Number"
-                                   disabled={isPending}
-                                   onClick={() => {
-                                     setEditingOrderPoOrderId(order.id);
-                                     setOrderPoInput(order.poRef || "");
-                                   }}
-                                   className="h-4 w-4 opacity-0 group-hover/po:opacity-100 transition-opacity p-0 flex items-center justify-center"
-                                 >
-                                   <PencilLine className="size-2.5 text-muted-foreground" />
-                                 </Button>
-                               </div>
-                             ) : (
-                               <div className="flex items-center gap-1.5 mt-0.5 group/po w-fit">
-                                 <p className="text-xs text-muted-foreground italic">
-                                   No PO Number
-                                 </p>
-                                 <Button
-                                   size="icon-sm"
-                                   variant="ghost"
-                                   title="Add PO Number"
-                                   disabled={isPending}
-                                   onClick={() => {
-                                     setEditingOrderPoOrderId(order.id);
-                                     setOrderPoInput("");
-                                   }}
-                                   className="h-4 w-4 opacity-0 group-hover/po:opacity-100 transition-opacity p-0 flex items-center justify-center"
-                                 >
-                                   <PencilLine className="size-2.5 text-muted-foreground" />
-                                 </Button>
-                               </div>
-                             )}
-                             {editingDescriptionOrderId === order.id ? (
-                               <div className="flex items-center gap-1 mt-1">
-                                 <span className="text-[11px] text-muted-foreground italic mr-1">Description:</span>
-                                 <Input
-                                   type="text"
-                                   value={descriptionInput}
-                                   disabled={isPending}
-                                   onChange={(e) =>
-                                     setDescriptionInput(e.target.value)
-                                   }
-                                   onKeyDown={(e) => {
-                                     if (e.key === "Enter")
-                                       handleSaveDescription(order.id);
-                                     if (e.key === "Escape")
-                                       setEditingDescriptionOrderId(null);
-                                   }}
-                                   placeholder="Printed Matter"
-                                   className="h-6 w-32 text-xs"
-                                   autoFocus
-                                 />
-                                 <Button
-                                   size="icon-sm"
-                                   variant="default"
-                                   disabled={isPending}
-                                   onClick={() =>
-                                     handleSaveDescription(order.id)
-                                   }
-                                   className="h-6 w-6"
-                                 >
-                                   <Check className="size-3" />
-                                 </Button>
-                                 <Button
-                                   size="icon-sm"
-                                   variant="ghost"
-                                   disabled={isPending}
-                                   onClick={() =>
-                                     setEditingDescriptionOrderId(null)
-                                   }
-                                   className="h-6 w-6"
-                                 >
-                                   <X className="size-3" />
-                                 </Button>
-                               </div>
-                             ) : (
-                               <div className="flex items-center gap-1 mt-0.5 group/desc w-fit">
-                                 <p className="text-[11px] text-muted-foreground italic">
-                                   Description: {order.description || "Printed Matter"}
-                                 </p>
-                                 <Button
-                                   size="icon-sm"
-                                   variant="ghost"
-                                   title="Edit description"
-                                   disabled={isPending}
-                                   onClick={() => {
-                                     setEditingDescriptionOrderId(order.id);
-                                     setDescriptionInput(order.description || "Printed Matter");
-                                   }}
-                                   className="h-4 w-4 opacity-0 group-hover/desc:opacity-100 transition-opacity p-0 flex items-center justify-center"
-                                 >
-                                   <PencilLine className="size-2.5 text-muted-foreground" />
-                                 </Button>
-                               </div>
-                             )}
-                           </div>
+                          {/* Order info with popover */}
+                          <div className="flex-1 text-left flex flex-col justify-start">
+                            <div className="flex items-center gap-1.5">
+                              <Popover>
+                                <PopoverTrigger className="text-left cursor-pointer hover:text-primary transition-colors inline-block w-fit font-semibold text-sm truncate">
+                                  {order.reference}
+                                </PopoverTrigger>
+                                <OrderPopoverContent
+                                  order={order}
+                                  organizationId={organizationId}
+                                />
+                              </Popover>
+                              {charges
+                                .filter((c) => c.orderId === order.id)
+                                .map((charge) => (
+                                  <ChargeBadge
+                                    key={charge.id}
+                                    charge={charge}
+                                  />
+                                ))}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {order.fullname}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {order.country}
+                            </p>
+                            {editingOrderPoOrderId === order.id ? (
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-xs font-semibold text-muted-foreground mr-1">
+                                  PO:
+                                </span>
+                                <Input
+                                  type="text"
+                                  value={orderPoInput}
+                                  disabled={isPending}
+                                  onChange={(e) =>
+                                    setOrderPoInput(e.target.value)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter")
+                                      handleSaveOrderPo(order.id);
+                                    if (e.key === "Escape")
+                                      setEditingOrderPoOrderId(null);
+                                  }}
+                                  placeholder="None"
+                                  className="h-6 w-32 text-xs"
+                                  autoFocus
+                                />
+                                <Button
+                                  size="icon-sm"
+                                  variant="default"
+                                  disabled={isPending}
+                                  onClick={() => handleSaveOrderPo(order.id)}
+                                  className="h-6 w-6"
+                                >
+                                  <Check className="size-3" />
+                                </Button>
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  disabled={isPending}
+                                  onClick={() => setEditingOrderPoOrderId(null)}
+                                  className="h-6 w-6"
+                                >
+                                  <X className="size-3" />
+                                </Button>
+                              </div>
+                            ) : order.poRef ? (
+                              <div className="flex items-center gap-1.5 mt-0.5 group/po w-fit">
+                                <p className="text-xs font-semibold text-muted-foreground">
+                                  PO: {order.poRef}
+                                </p>
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  title="Edit PO Number"
+                                  disabled={isPending}
+                                  onClick={() => {
+                                    setEditingOrderPoOrderId(order.id);
+                                    setOrderPoInput(order.poRef || "");
+                                  }}
+                                  className="h-4 w-4 opacity-0 group-hover/po:opacity-100 transition-opacity p-0 flex items-center justify-center"
+                                >
+                                  <PencilLine className="size-2.5 text-muted-foreground" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 mt-0.5 group/po w-fit">
+                                <p className="text-xs text-muted-foreground italic">
+                                  No PO Number
+                                </p>
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  title="Add PO Number"
+                                  disabled={isPending}
+                                  onClick={() => {
+                                    setEditingOrderPoOrderId(order.id);
+                                    setOrderPoInput("");
+                                  }}
+                                  className="h-4 w-4 opacity-0 group-hover/po:opacity-100 transition-opacity p-0 flex items-center justify-center"
+                                >
+                                  <PencilLine className="size-2.5 text-muted-foreground" />
+                                </Button>
+                              </div>
+                            )}
+                            {editingDescriptionOrderId === order.id ? (
+                              <div className="flex items-center gap-1 mt-1">
+                                <span className="text-[11px] text-muted-foreground italic mr-1">
+                                  Description:
+                                </span>
+                                <Input
+                                  type="text"
+                                  value={descriptionInput}
+                                  disabled={isPending}
+                                  onChange={(e) =>
+                                    setDescriptionInput(e.target.value)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter")
+                                      handleSaveDescription(order.id);
+                                    if (e.key === "Escape")
+                                      setEditingDescriptionOrderId(null);
+                                  }}
+                                  placeholder="Printed Matter"
+                                  className="h-6 w-32 text-xs"
+                                  autoFocus
+                                />
+                                <Button
+                                  size="icon-sm"
+                                  variant="default"
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    handleSaveDescription(order.id)
+                                  }
+                                  className="h-6 w-6"
+                                >
+                                  <Check className="size-3" />
+                                </Button>
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    setEditingDescriptionOrderId(null)
+                                  }
+                                  className="h-6 w-6"
+                                >
+                                  <X className="size-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 mt-0.5 group/desc w-fit">
+                                <p className="text-[11px] text-muted-foreground italic">
+                                  Description:{" "}
+                                  {order.description || "Printed Matter"}
+                                </p>
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  title="Edit description"
+                                  disabled={isPending}
+                                  onClick={() => {
+                                    setEditingDescriptionOrderId(order.id);
+                                    setDescriptionInput(
+                                      order.description || "Printed Matter",
+                                    );
+                                  }}
+                                  className="h-4 w-4 opacity-0 group-hover/desc:opacity-100 transition-opacity p-0 flex items-center justify-center"
+                                >
+                                  <PencilLine className="size-2.5 text-muted-foreground" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                           <div className="flex-1">
                             {order.courier && (
                               <>
@@ -813,7 +893,7 @@ export function InvoiceDetailView({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total Weight:</span>
-                    <span>{invoice.totalWeight}gm</span>
+                    <span>{weightFormat(invoice.totalWeight)}</span>
                   </div>
                   {invoice.poNumber && (
                     <div className="flex justify-between">
@@ -856,10 +936,12 @@ export function InvoiceDetailView({
                     <span>Subtotal:</span>
                     <span>{formatCurrency(invoice.subtotalCost)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>VAT:</span>
-                    <span>{formatCurrency(invoice.vatCost)}</span>
-                  </div>
+                  {invoice.vatCost > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>VAT:</span>
+                      <span>{formatCurrency(invoice.vatCost)}</span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>

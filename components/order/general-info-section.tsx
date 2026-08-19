@@ -29,7 +29,6 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { GlowingIcon } from "@/components/ui/glowing-icon";
-import { InfoTooltip } from "@/components/ui/info-tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -41,11 +40,7 @@ import type { OrderWithFullDetails } from "@/data/orders";
 import { updateOrder } from "@/data/orders";
 import { cn } from "@/lib/utils";
 import { formattedDate } from "@/utils/formatted-date";
-import {
-  calculateShippingCost,
-  getCountryZone,
-  getZoneName,
-} from "@/utils/tariff-utils";
+import { getZoneName } from "@/utils/tariff-utils";
 import { weightFormat } from "@/utils/weight-format";
 import OrderGridTextBox from "./order-grid-textbox";
 
@@ -112,18 +107,6 @@ export function GeneralInfoSection({
       toast.error("Failed to update general info");
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleAutoCalcPrice = () => {
-    const zone = getCountryZone(order.country);
-    const calculatedCost =
-      zone > 0 && formData.weight > 0
-        ? calculateShippingCost(formData.weight, zone)
-        : 0;
-
-    if (calculatedCost > 0) {
-      setFormData({ ...formData, courierCost: calculatedCost });
     }
   };
 
@@ -452,27 +435,6 @@ export function GeneralInfoSection({
                     className="text-sm"
                   />
                 </div>
-                {zoneName && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
-                      Auto-Calc price
-                      <InfoTooltip
-                        text="Calculate price based on weight and country zone"
-                        side="top"
-                      />
-                    </p>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={isSaving}
-                      className="text-xs"
-                      onClick={handleAutoCalcPrice}
-                    >
-                      Calculate
-                    </Button>
-                  </div>
-                )}
               </form>
             </motion.div>
           ) : (

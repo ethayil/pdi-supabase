@@ -7,6 +7,7 @@ import * as motion from "motion/react-client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Order } from "@/app/generated/prisma/client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -23,17 +24,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { createInvoice, getUninvoicedOrders } from "@/data/invoices";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, isUkCountry } from "@/lib/utils";
 import { formattedDate } from "@/utils/formatted-date";
+import { weightFormat } from "@/utils/weight-format";
 
 interface CreateInvoiceDialogProps {
   organizationId: string;
+  initialSelectedOrders?: string[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function CreateInvoiceDialog({
   organizationId,
+  initialSelectedOrders = [],
   open,
   onOpenChange,
 }: CreateInvoiceDialogProps) {
@@ -48,9 +52,17 @@ export function CreateInvoiceDialog({
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const initialOrdersKey = initialSelectedOrders.join(",");
+
   // Load uninvoiced orders when dialog opens
+  // biome-ignore lint/correctness/useExhaustiveDependencies: initialOrdersKey stringified value is used in place of initialSelectedOrders array reference to prevent infinite re-render loops
   useEffect(() => {
     if (open) {
+      if (initialSelectedOrders.length > 0) {
+        setSelectedOrders(initialSelectedOrders);
+      } else {
+        setSelectedOrders([]);
+      }
       setIsLoadingOrders(true);
       setUninvoicedOrders(null);
       getUninvoicedOrders({ orgId: organizationId })
@@ -65,7 +77,7 @@ export function CreateInvoiceDialog({
           setIsLoadingOrders(false);
         });
     }
-  }, [open, organizationId]);
+  }, [open, organizationId, initialOrdersKey]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -104,6 +116,8 @@ export function CreateInvoiceDialog({
     );
   };
 
+  const displayedOrders = uninvoicedOrders;
+
   // Calculate totals from selected orders
   const selectedOrdersData = uninvoicedOrders?.filter((order) =>
     selectedOrders.includes(order.id),
@@ -114,11 +128,15 @@ export function CreateInvoiceDialog({
       (sum, order) => sum + (order.courierCost || 0),
       0,
     ) || 0;
+
   const totalVAT =
-    selectedOrdersData?.reduce(
-      (sum, order) => sum + (order.courierVAT || 0),
-      0,
-    ) || 0;
+    selectedOrdersData?.reduce((sum, order) => {
+      if (isUkCountry(order.country)) {
+        return sum + (order.courierVAT || 0);
+      }
+      return sum;
+    }, 0) || 0;
+
   const grandTotal = totalCourierCost + totalVAT;
 
   // Auto-calculate due date (+30 days from today)
@@ -173,18 +191,21 @@ export function CreateInvoiceDialog({
 
           {/* Select Orders */}
           <div className="grid gap-2">
-            <div className="flex gap-2 items-center">
-              <Label>Select Orders</Label>
-              <span className="text-xs text-muted-foreground font-normal">
-                Optional — leave empty for DDP charges/refunds
-              </span>
+            <div className="flex gap-2 items-center justify-between">
+              <div className="flex gap-2 items-center">
+                <Label>Select Orders</Label>
+                <span className="text-xs text-muted-foreground font-normal">
+                  Optional — leave empty for DDP charges/refunds
+                </span>
+              </div>
             </div>
-            <ScrollArea className="h-[300px] border rounded-md p-4">
-              {isLoadingOrders || !uninvoicedOrders ? (
+
+            <ScrollArea className="h-75 border rounded-md p-4">
+              {isLoadingOrders || !displayedOrders ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
-              ) : uninvoicedOrders.length === 0 ? (
+              ) : displayedOrders.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   No uninvoiced orders available
                 </p>
@@ -195,50 +216,55 @@ export function CreateInvoiceDialog({
                   transition={{ duration: 0.3, delay: 0.1 }}
                   className="space-y-2"
                 >
-                  {uninvoicedOrders.map((order, index) => (
-                    <motion.div
-                      key={order.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.2, delay: index * 0.03 }}
-                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md transition-colors"
-                    >
-                      <Checkbox
-                        id={order.id}
-                        checked={selectedOrders.includes(order.id)}
-                        disabled={isSubmitting}
-                        onCheckedChange={() => toggleOrder(order.id)}
-                      />
-                      <label
-                        htmlFor={order.id}
-                        className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  {displayedOrders.map((order, index) => {
+                    const isUk = isUkCountry(order.country);
+                    const cost = order.courierCost || 0;
+                    const vat = isUk ? order.courierVAT || 0 : 0;
+
+                    return (
+                      <motion.div
+                        key={order.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: index * 0.03 }}
+                        className="flex items-center space-x-3 p-2 hover:bg-accent rounded-md transition-colors border border-transparent hover:border-border"
                       >
-                        <div className="flex flex-col text-left py-0.5">
-                          <span className="font-semibold text-sm">
-                            {order.reference} - {order.fullname}
-                          </span>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap font-normal">
-                            {order.poRef && (
-                              <span className="text-xs text-muted-foreground">
-                                PO: {order.poRef}
+                        <Checkbox
+                          id={order.id}
+                          checked={selectedOrders.includes(order.id)}
+                          disabled={isSubmitting}
+                          onCheckedChange={() => toggleOrder(order.id)}
+                        />
+                        <label
+                          htmlFor={order.id}
+                          className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          <div className="flex flex-col text-left py-0.5 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-sm">
+                                {order.reference} - {order.fullname}
                               </span>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              Price:{" "}
-                              {formatCurrency(
-                                (order.courierCost || 0) +
-                                  (order.courierVAT || 0),
-                              )}
-                            </span>
-                            <StatusBadge
-                              status={order.status}
-                              className="h-4 px-1.5 text-[9px]"
-                            />
+                              <Badge
+                                variant={isUk ? "default" : "secondary"}
+                                className="text-[10px] h-4 px-1.5"
+                              >
+                                {order.country || "N/A"}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 flex-wrap font-normal text-xs text-muted-foreground">
+                              {order.poRef && <span>PO: {order.poRef}</span>}
+                              <span>Weight: {weightFormat(order.weight)}</span>
+                              <span>Price: {formatCurrency(cost + vat)}</span>
+                              <StatusBadge
+                                status={order.status}
+                                className="h-4 px-1.5 text-[9px]"
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </label>
-                    </motion.div>
-                  ))}
+                        </label>
+                      </motion.div>
+                    );
+                  })}
                 </motion.div>
               )}
             </ScrollArea>
@@ -259,10 +285,12 @@ export function CreateInvoiceDialog({
                   <span>Subtotal:</span>
                   <span>{formatCurrency(totalCourierCost)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>VAT:</span>
-                  <span>{formatCurrency(totalVAT)}</span>
-                </div>
+                {totalVAT > 0 && (
+                  <div className="flex justify-between">
+                    <span>VAT:</span>
+                    <span>{formatCurrency(totalVAT)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-semibold text-base">
                   <span>Total:</span>
                   <span>{formatCurrency(grandTotal)}</span>

@@ -5,6 +5,8 @@ import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
+  type OnChangeFn,
+  type RowSelectionState,
   useReactTable,
   type VisibilityState,
 } from "@tanstack/react-table";
@@ -28,6 +30,8 @@ interface DataTableProps<TData = any, TValue = any> {
   visibleColumns?: VisibilityState;
   hideHeader?: boolean;
   enableRowSelection?: boolean;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
   loading?: boolean;
 }
 
@@ -39,13 +43,19 @@ export function DataTable<TData, TValue>({
   visibleColumns,
   hideHeader,
   enableRowSelection = false,
+  rowSelection,
+  onRowSelectionChange,
   loading = false,
 }: DataTableProps<TData, TValue>) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     visibleColumns ?? {},
   );
 
-  const [rowSelection, setRowSelection] = useState({});
+  const [internalRowSelection, setInternalRowSelection] =
+    useState<RowSelectionState>({});
+  const activeRowSelection = rowSelection ?? internalRowSelection;
+  const handleRowSelectionChange =
+    onRowSelectionChange ?? setInternalRowSelection;
 
   const table = useReactTable({
     data,
@@ -58,12 +68,12 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: handleRowSelectionChange,
 
     manualPagination: true,
     state: {
       columnVisibility,
-      rowSelection,
+      rowSelection: activeRowSelection,
     },
   });
 

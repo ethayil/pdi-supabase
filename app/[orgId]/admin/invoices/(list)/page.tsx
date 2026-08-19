@@ -3,8 +3,13 @@ import type { Metadata } from "next";
 import type { SearchParams } from "nuqs/server";
 import { DashboardHeader } from "@/components/dashboard-header";
 import InvoicesHeader from "@/components/invoice/invoices-header";
-import { InvoicesTableWrapper } from "@/components/invoice/invoices-table-wrapper";
-import { getInvoiceCount, getPaginatedInvoices } from "@/data/invoices";
+import { InvoicesViewTabs } from "@/components/invoice/invoices-view-tabs";
+import type { UninvoicedOrder } from "@/components/invoice/uninvoiced-orders-columns";
+import {
+  getInvoiceCount,
+  getPaginatedInvoices,
+  getUninvoicedOrders,
+} from "@/data/invoices";
 import { loadInvoiceParams } from "@/lib/nuqs/invoice-params";
 import type { Params } from "@/types/globals";
 
@@ -24,6 +29,8 @@ export default async function AdminInvoicesPage({
   const { currentPage, entriesPerPage, start, end, status } =
     await loadInvoiceParams(searchParams);
 
+  const uninvoicedOrders = (await getUninvoicedOrders()) as UninvoicedOrder[];
+
   const invoices = await getPaginatedInvoices({
     orgId,
     status,
@@ -42,7 +49,7 @@ export default async function AdminInvoicesPage({
 
   const totalPages = Math.ceil(totalCount / entriesPerPage);
 
-  const initialData = {
+  const initialInvoicesData = {
     data: invoices,
     totalPages,
     totalCount,
@@ -60,9 +67,10 @@ export default async function AdminInvoicesPage({
         transition={{ duration: 0.5 }}
         className="flex-1 overflow-hidden"
       >
-        <InvoicesTableWrapper
+        <InvoicesViewTabs
           organizationId={orgId}
-          initialData={initialData}
+          uninvoicedOrders={uninvoicedOrders}
+          initialInvoicesData={initialInvoicesData}
         />
       </motion.div>
     </>

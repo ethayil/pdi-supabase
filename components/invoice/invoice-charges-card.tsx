@@ -3,13 +3,13 @@
 import { Edit2Icon, Plus, ReceiptText, Trash2 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import * as motion from "motion/react-client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { InvoiceWCharges } from "@/data/invoices";
 import { formatCurrency } from "@/lib/utils";
 import { formattedDate } from "@/utils/formatted-date";
+import { ChargeBadge } from "./charge-badge";
 
 interface InvoiceChargesCardProps {
   charges: InvoiceWCharges[];
@@ -61,13 +61,13 @@ export function InvoiceChargesCard({
                 className="border rounded-md p-2 flex items-center justify-between hover:bg-primary/10 transition-colors duration-300"
               >
                 <div>
-                  <Badge variant="outline" className="capitalize mb-1">
-                    {charge.chargeType.replace(/_/g, " ")}
-                  </Badge>
-                  <p className="text-sm">{charge.description}</p>
+                  <div className="mb-1">
+                    <ChargeBadge charge={charge} />
+                  </div>
+                  <p className="text-sm font-medium">{charge.description}</p>
                   <p className="text-xs text-muted-foreground">
                     {formattedDate(charge.chargeDate, "short")}
-                    {charge.order && ` • ${charge.order.reference}`}
+                    {charge.order && ` • Order: ${charge.order.reference}`}
                   </p>
                 </div>
                 <div className="text-right flex gap-2 items-center">

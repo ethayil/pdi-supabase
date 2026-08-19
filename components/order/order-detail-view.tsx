@@ -25,6 +25,7 @@ import { AddressSection } from "./address-section";
 import { BoxLabelsPDF } from "./box-labels-pdf";
 import { EmailNotificationDialog } from "./email-notification-dialog";
 import { GeneralInfoSection } from "./general-info-section";
+import { OrderBillingSection } from "./order-billing-section";
 import { OrderItemsSection } from "./order-items-section";
 import { OrderNotesSection } from "./order-notes-section";
 import { TrackingSection } from "./tracking-section";
@@ -263,6 +264,15 @@ export function OrderDetailView({
               orgId={order.orgId}
               isAdmin={isAdmin}
             />
+          </motion.div>
+
+          {/* Billing & Charges (Superadmin On-Demand) */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, delay: 0.5 }}
+          >
+            <OrderBillingSection orderId={order.id} orgId={order.orgId} />
           </motion.div>
         </div>
       </main>

@@ -14,9 +14,27 @@ export function getErrorMessage(error: unknown): string {
   return "An unknown error occurred";
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null | undefined): string {
+  const num = typeof amount === "number" ? amount : amount ? Number(amount) : 0;
+  const validNum = Number.isNaN(num) ? 0 : num;
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "GBP",
-  }).format(amount);
+  }).format(validNum);
 }
+
+export function isUkCountry(country?: string | null): boolean {
+  if (!country) return false;
+  const c = country.trim().toUpperCase();
+  return (
+    c === "UK" ||
+    c === "UNITED KINGDOM" ||
+    c === "GB" ||
+    c === "GREAT BRITAIN" ||
+    c === "ENGLAND" ||
+    c === "WALES" ||
+    c === "SCOTLAND" ||
+    c === "NORTHERN IRELAND"
+  );
+}
+

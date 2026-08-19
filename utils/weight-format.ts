@@ -1,6 +1,7 @@
-export function weightFormat(grams: number): string {
+export function weightFormat(grams?: number | null): string {
+  if (!grams || grams === 0) return "0g";
   if (grams >= 1000) {
     return `${(grams / 1000).toFixed(2)}Kg`;
   }
-  return `${grams.toFixed(2)}g`;
+  return `${Math.round(grams)}g`;
 }
