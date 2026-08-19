@@ -81,7 +81,7 @@ export function NotificationsView({
   return (
     <div className="flex-1 flex flex-col bg-muted/10 overflow-hidden">
       <DashboardHeader title="Notifications" sticky>
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div>
           <SwitchField
             id="unread-filter"
             label="Unread only"
@@ -89,20 +89,18 @@ export function NotificationsView({
             checked={unreadOnly}
             onCheckedChange={setUnreadOnly}
           />
-
-          {unreadCount > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              className="h-8 text-xs font-semibold hover:bg-primary/10 hover:text-primary transition-colors rounded-full shrink-0"
-            >
-              <CheckCheck className="w-3.5 h-3.5 mr-1.5" />
-              <span className="hidden sm:inline">Mark all read</span>
-              <span className="sm:hidden">Mark read</span>
-            </Button>
-          )}
         </div>
+
+        <Button
+          variant="outline"
+          onClick={handleMarkAllAsRead}
+          disabled={unreadCount === 0}
+          className="shrink-0"
+        >
+          <CheckCheck className="size-4 mr-1.5" />
+          <span className="hidden sm:inline">Mark all read</span>
+          <span className="sm:hidden">Mark read</span>
+        </Button>
       </DashboardHeader>
 
       <div className="flex-1 flex flex-col p-4 md:p-6 w-full overflow-hidden">

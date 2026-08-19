@@ -79,8 +79,6 @@ export default function InvoicesHeader({
 
       <Button
         variant="default"
-        size="sm"
-        className="h-8"
         onClick={() => setShowCreateDialog(true)}
       >
         <Plus className="size-4 mr-2" />

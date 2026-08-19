@@ -58,22 +58,12 @@ export function AdminNotificationsView({
         sticky
       >
         <div className="flex items-center gap-2">
-          <Button
-            variant="hero"
-            size="sm"
-            onClick={() => setSendMessageOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <SendIcon className="size-4" />{" "}
+          <Button onClick={() => setSendMessageOpen(true)}>
+            <SendIcon className="size-4 mr-1.5" />
             <span className="hidden sm:inline">Send</span> Message
           </Button>
-          <Button
-            variant="hero"
-            size="sm"
-            onClick={() => setCreateBannerOpen(true)}
-            className="flex items-center gap-2 border-primary/20 hover:bg-primary/5"
-          >
-            <BellIcon className="size-4" />{" "}
+          <Button variant="outline" onClick={() => setCreateBannerOpen(true)}>
+            <BellIcon className="size-4 mr-1.5" />
             <span className="hidden sm:inline">New</span> Banner
           </Button>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { Bell } from "lucide-react";
+import { Bell, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -112,11 +112,11 @@ export function NotificationCenter() {
           <h4 className="font-semibold text-sm">Notifications</h4>
           {unreadCount > 0 && (
             <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs h-7 px-2"
+              variant="outline"
+              size="xs"
               onClick={handleMarkAllAsRead}
             >
+              <CheckCheck className="size-3 mr-1" />
               Mark all as read
             </Button>
           )}

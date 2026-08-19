@@ -74,7 +74,7 @@ export function BannerNotification({ orgId }: BannerNotificationProps) {
             <CarouselItem key={banner.id}>
               <div
                 className={cn(
-                  "flex items-center justify-between px-12 py-2.5 min-h-[44px] relative transition-colors duration-500",
+                  "flex items-center justify-between px-12 py-2.5 min-h-11 relative transition-colors duration-500",
                   BANNER_THEMES[banner.variant] || BANNER_THEMES.midnight,
                 )}
               >
@@ -85,15 +85,15 @@ export function BannerNotification({ orgId }: BannerNotificationProps) {
 
                 {banner.dismissible && (
                   <Button
-                    variant="outline"
-                    size="icon-sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-current opacity-40 hover:opacity-100 hover:bg-current/10 transition-all rounded-full z-50"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-current opacity-60 hover:opacity-100 hover:bg-current/10 transition-all z-50"
                     onClick={(e) => {
                       e.stopPropagation();
                       dismissBanner(banner.id);
                     }}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="size-3.5" />
                   </Button>
                 )}
               </div>
@@ -105,26 +105,26 @@ export function BannerNotification({ orgId }: BannerNotificationProps) {
           <>
             <Button
               variant="ghost"
-              size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 transition-opacity duration-300 md:opacity-50 group-hover:opacity-80 hover:opacity-100 opacity-100 size-8 text-current hover:bg-current/5 rounded-md bg-current/20 md:bg-current/10"
+              size="icon-xs"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 transition-opacity duration-300 md:opacity-50 group-hover:opacity-80 hover:opacity-100 opacity-100 text-current hover:bg-current/10 bg-current/10"
               onClick={(e) => {
                 e.stopPropagation();
                 api_carousel?.scrollPrev();
               }}
             >
-              <ChevronLeft className="size-4" />
+              <ChevronLeft className="size-3.5" />
             </Button>
 
             <Button
               variant="ghost"
-              size="icon"
-              className="absolute right-10 top-1/2 -translate-y-1/2 z-20 transition-opacity duration-300 md:opacity-50 group-hover:opacity-80 hover:opacity-100 opacity-100 size-8 text-current hover:bg-current/5 rounded-md bg-current/20 md:bg-current/10"
+              size="icon-xs"
+              className="absolute right-10 top-1/2 -translate-y-1/2 z-20 transition-opacity duration-300 md:opacity-50 group-hover:opacity-80 hover:opacity-100 opacity-100 text-current hover:bg-current/10 bg-current/10"
               onClick={(e) => {
                 e.stopPropagation();
                 api_carousel?.scrollNext();
               }}
             >
-              <ChevronRight className="size-4" />
+              <ChevronRight className="size-3.5" />
             </Button>
 
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 opacity-20 group-hover:opacity-40 flex gap-1 z-20">

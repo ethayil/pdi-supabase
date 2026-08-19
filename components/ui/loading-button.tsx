@@ -7,20 +7,26 @@ export default function LoadingButton({
   isLoading,
   stretch = false,
   type,
+  className,
+  children,
+  ...props
 }: {
-  title: string;
+  title?: string;
   isLoading: boolean;
   stretch?: boolean;
   type?: "button" | "submit" | "reset" | undefined;
-}) {
+  className?: string;
+  children?: React.ReactNode;
+} & React.ComponentPropsWithoutRef<typeof Button>) {
   return (
     <Button
       type={type}
-      className={cn("transition-all ", stretch && "flex-1 w-full")}
+      className={cn("transition-all", stretch && "flex-1 w-full", className)}
       disabled={isLoading}
+      {...props}
     >
-      <Spinner className={cn(isLoading ? "scale-100" : "scale-0")} />
-      {title}
+      {isLoading && <Spinner />}
+      {title || children}
     </Button>
   );
 }
