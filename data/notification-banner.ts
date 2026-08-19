@@ -1,11 +1,11 @@
 "use server";
 
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, revalidatePath, updateTag } from "next/cache";
 import type {
   BannerCreateInput,
   BannerUpdateInput,
 } from "@/app/generated/prisma/models";
-import { getSession, requireGlobalAdmin } from "@/lib/auth/get-session";
+import { requireGlobalAdmin, requireUser } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
 import prisma from "@/lib/prisma";
 
@@ -20,7 +20,7 @@ export async function createBanner(
     });
 
     revalidatePath("/", "layout");
-    revalidateTag(cacheTags.banners, "");
+    updateTag(cacheTags.banners);
     return banner;
   } catch (error) {
     console.error("Failed to create banner:", error);
@@ -37,7 +37,7 @@ export async function removeBanner({ id }: { id: string }) {
     });
 
     revalidatePath("/", "layout");
-    revalidateTag(cacheTags.banners, "");
+    updateTag(cacheTags.banners);
     return { success: true };
   } catch (error) {
     console.error("Failed to remove banner:", error);
@@ -63,7 +63,7 @@ export async function toggleBannerActive({
     });
 
     revalidatePath("/", "layout");
-    revalidateTag(cacheTags.banners, "");
+    updateTag(cacheTags.banners);
     return banner;
   } catch (error) {
     console.error("Failed to toggle banner active state:", error);
@@ -81,7 +81,7 @@ export async function updateBanner(id: string, data: BannerUpdateInput) {
     });
 
     revalidatePath("/", "layout");
-    revalidateTag(cacheTags.banners, "");
+    updateTag(cacheTags.banners);
     return banner;
   } catch (error) {
     console.error("Failed to update banner:", error);
@@ -89,47 +89,37 @@ export async function updateBanner(id: string, data: BannerUpdateInput) {
   }
 }
 
-async function fetchActiveBannersDbData() {
+async function fetchBannersDbData(isActive?: boolean) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.banners);
+
   try {
     return await prisma.banner.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: { updatedAt: "desc" },
+      where: isActive !== undefined ? { isActive } : undefined,
+      orderBy: { createdAt: "desc" },
     });
   } catch (error) {
-    console.error("Error in fetchActiveBannersDbData:", error);
+    console.error("Error in fetchBannersDbData:", error);
     throw error instanceof Error
       ? error
-      : new Error("Failed to fetch active banners from database");
+      : new Error("Failed to fetch banners from database");
   }
 }
 
-const getCachedActiveBannersDbData = unstable_cache(
-  async () => fetchActiveBannersDbData(),
-  ["active-banners-cache"],
-  {
-    revalidate: 60, // Cache active banners for 1 minute
-    tags: [cacheTags.banners],
-  },
-);
-
 export async function getVisibleBanners({ orgId }: { orgId?: string } = {}) {
   try {
-    const sessionResult = await getSession().catch(() => ({ user: null }));
-    const user = sessionResult?.user;
-    const userId = user?.id;
+    const user = await requireUser();
+    const userId = user.id;
     const now = new Date();
 
-    const activeBanners = await getCachedActiveBannersDbData();
+    const activeBanners = await fetchBannersDbData(true);
 
     return activeBanners.filter((b) => {
       // Expiration check
       if (b.expiresAt && b.expiresAt <= now) return false;
 
       if (b.targetType === "all") return true;
-
-      if (!userId) return false;
 
       if (b.targetType === "user" && b.targetId === userId) return true;
       if (b.targetType === "organization" && b.targetId === orgId) return true;
@@ -142,33 +132,11 @@ export async function getVisibleBanners({ orgId }: { orgId?: string } = {}) {
   }
 }
 
-async function fetchAllBannersDbData() {
-  try {
-    return await prisma.banner.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-  } catch (error) {
-    console.error("Error in fetchAllBannersDbData:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to fetch all banners from database");
-  }
-}
-
-const getCachedAllBannersDbData = unstable_cache(
-  async () => fetchAllBannersDbData(),
-  ["all-banners-cache"],
-  {
-    revalidate: 60, // Cache for 1 minute
-    tags: [cacheTags.banners],
-  }
-);
-
 export async function listAllBanners() {
   try {
     await requireGlobalAdmin();
 
-    return await getCachedAllBannersDbData();
+    return await fetchBannersDbData();
   } catch (error) {
     console.error("Failed to list all banners:", error);
     return [];

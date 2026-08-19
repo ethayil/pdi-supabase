@@ -11,6 +11,9 @@ export const cacheTags = {
   organizations: "organizations",
   invoices: "invoices",
   logs: "logs",
+  activityLogs: "activity-logs",
+  productMovements: "product-movements",
+  despatch: "despatch",
 } as const;
 
-export type CacheTag = typeof cacheTags[keyof typeof cacheTags];
+export type CacheTag = (typeof cacheTags)[keyof typeof cacheTags];

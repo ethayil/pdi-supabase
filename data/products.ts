@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, revalidatePath, updateTag } from "next/cache";
 import { after } from "next/server";
 import type {
   ProductUpdateInput,
@@ -26,15 +26,19 @@ async function fetchProductsDbData({
   entriesPerPage,
   categoryId,
   search,
-  stockStatus,
+  stockStatus = "all",
 }: {
   orgId: string;
   currentPage: number;
   entriesPerPage: number;
   categoryId?: string;
   search?: string;
-  stockStatus: string;
+  stockStatus?: string;
 }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.products);
+
   try {
     // Fetch organization settings for threshold
     const org = await prisma.organization.findUnique({
@@ -107,30 +111,6 @@ async function fetchProductsDbData({
   }
 }
 
-const getCachedProductsDbData = unstable_cache(
-  async (
-    orgId: string,
-    currentPage: number,
-    entriesPerPage: number,
-    categoryId?: string,
-    search?: string,
-    stockStatus?: string,
-  ) =>
-    fetchProductsDbData({
-      orgId,
-      currentPage,
-      entriesPerPage,
-      categoryId,
-      search,
-      stockStatus: stockStatus || "all",
-    }),
-  ["products-list-cache"],
-  {
-    revalidate: 20, // Cache for 20 seconds
-    tags: [cacheTags.products],
-  },
-);
-
 export async function getProducts({
   orgId,
   currentPage = 1,
@@ -152,14 +132,14 @@ export async function getProducts({
       };
     }
 
-    return await getCachedProductsDbData(
+    return await fetchProductsDbData({
       orgId,
       currentPage,
       entriesPerPage,
       categoryId,
       search,
       stockStatus,
-    );
+    });
   } catch (error) {
     console.error("Database error in getProducts:", error);
     return {
@@ -205,8 +185,7 @@ export async function createProduct(values: {
   isActive: boolean;
 }) {
   try {
-    const user = await requireGlobalAdmin();
-    const userId = user.id;
+    const { id: userId } = await requireGlobalAdmin();
 
     // Check organization exists
     const org = await prisma.organization.findUnique({
@@ -273,7 +252,7 @@ export async function createProduct(values: {
     });
 
     revalidatePath(`/${values.orgId}/admin/products`);
-    revalidateTag(cacheTags.products, "");
+    updateTag(cacheTags.products);
 
     return { success: true, product };
   } catch (error) {
@@ -297,8 +276,7 @@ export async function updateProduct(values: {
   isActive: boolean;
 }) {
   try {
-    const user = await requireGlobalAdmin();
-    const userId = user.id;
+    const { id: userId } = await requireGlobalAdmin();
 
     // Check organization exists
     const org = await prisma.organization.findUnique({
@@ -383,7 +361,7 @@ export async function updateProduct(values: {
     });
 
     revalidatePath(`/${values.orgId}/admin/products`);
-    revalidateTag(cacheTags.products, "");
+    updateTag(cacheTags.products);
 
     return { success: true, product };
   } catch (error) {
@@ -396,8 +374,7 @@ export async function updateProduct(values: {
 
 export async function deleteProduct({ id }: { id: string }) {
   try {
-    const user = await requireGlobalAdmin();
-    const userId = user.id;
+    const { id: userId } = await requireGlobalAdmin();
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -418,8 +395,7 @@ export async function deleteProduct({ id }: { id: string }) {
           action: "delete",
           entityType: "product",
           entityId: id,
-          description:
-            `Deleted product "${product.name}" (SKU: ${product.sku})`,
+          description: `Deleted product "${product.name}" (SKU: ${product.sku})`,
         });
       } catch (err) {
         console.error("Error logging product deletion in background:", err);
@@ -427,7 +403,7 @@ export async function deleteProduct({ id }: { id: string }) {
     });
 
     revalidatePath(`/${product.orgId}/admin/products`);
-    revalidateTag(cacheTags.products, "");
+    updateTag(cacheTags.products);
 
     return { success: true };
   } catch (error) {
@@ -455,8 +431,7 @@ export async function bulkCreateProducts({
   }[];
 }) {
   try {
-    const user = await requireGlobalAdmin();
-    const userId = user.id;
+    const { id: userId } = await requireGlobalAdmin();
 
     const results = [];
 
@@ -555,15 +530,14 @@ export async function bulkCreateProducts({
           row: rowNum,
           sku: row.sku,
           success: false,
-          error: err instanceof Error
-            ? err.message
-            : "Failed to create product",
+          error:
+            err instanceof Error ? err.message : "Failed to create product",
         });
       }
     }
 
     revalidatePath(`/${orgId}/admin/products`);
-    revalidateTag(cacheTags.products, "");
+    updateTag(cacheTags.products);
 
     return results;
   } catch (error) {
@@ -589,8 +563,7 @@ export async function bulkUpdateProducts({
   }[];
 }) {
   try {
-    const user = await requireGlobalAdmin();
-    const userId = user.id;
+    const { id: userId } = await requireGlobalAdmin();
 
     const results = [];
 
@@ -664,8 +637,7 @@ export async function bulkUpdateProducts({
           action: "update",
           entityType: "product",
           entityId: existingProduct.id,
-          description:
-            `Bulk Updated product "${product.name}" (SKU: ${product.sku})`,
+          description: `Bulk Updated product "${product.name}" (SKU: ${product.sku})`,
         });
 
         // Log movement if quantity changed
@@ -692,47 +664,18 @@ export async function bulkUpdateProducts({
           row: rowNum,
           sku: row.sku,
           success: false,
-          error: err instanceof Error
-            ? err.message
-            : "Failed to update product",
+          error:
+            err instanceof Error ? err.message : "Failed to update product",
         });
       }
     }
 
     revalidatePath(`/${orgId}/admin/products`);
-    revalidateTag(cacheTags.products, "");
+    updateTag(cacheTags.products);
 
     return results;
   } catch (error) {
     console.error("Error in bulkUpdateProducts:", error);
     throw error;
-  }
-}
-
-export async function getAvailableProducts({ orgId }: { orgId: string }) {
-  try {
-    await requireUser();
-
-    const products = await prisma.product.findMany({
-      where: {
-        orgId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        sku: true,
-        imgUrl: true,
-        quantity: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    return products;
-  } catch (error) {
-    console.error("Database error in getAvailableProducts:", error);
-    return [];
   }
 }

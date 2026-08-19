@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, revalidatePath, updateTag } from "next/cache";
 import { after } from "next/server";
 import type {
   Order,
@@ -309,11 +309,11 @@ export async function createOrder(args: {
 
     revalidatePath(`/${args.orgId}/orders`);
     revalidatePath(`/${args.orgId}/products`);
-    revalidateTag(cacheTags.dashboard, "");
-    revalidateTag(cacheTags.products, "");
-    revalidateTag(cacheTags.orders, "");
-    revalidateTag(cacheTags.adminOrders, "");
-    revalidateTag(cacheTags.addresses, "");
+    updateTag(cacheTags.dashboard);
+    updateTag(cacheTags.products);
+    updateTag(cacheTags.orders);
+    updateTag(cacheTags.adminOrders);
+    updateTag(cacheTags.addresses);
 
     return { success: true, orderId: result.id };
   } catch (error) {
@@ -325,31 +325,64 @@ export async function createOrder(args: {
 async function fetchOrdersDbData({
   orgId,
   userId,
+  filterUserId,
   isAdmin,
+  currentPage = 1,
+  entriesPerPage = 20,
 }: {
   orgId: string;
   userId: string;
+  filterUserId?: string;
   isAdmin: boolean;
+  currentPage?: number;
+  entriesPerPage?: number;
 }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.orders);
+
   try {
-    return await prisma.order.findMany({
-      where: {
-        orgId,
-        ...(isAdmin ? {} : { userId }),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        user: true,
-        organization: true,
-        items: {
-          include: {
-            product: true,
+    const where: OrderWhereInput = {
+      orgId,
+      ...(isAdmin
+        ? filterUserId && filterUserId !== "all"
+          ? { userId: filterUserId }
+          : {}
+        : { userId }),
+    };
+
+    const skip = (currentPage - 1) * entriesPerPage;
+    const take = entriesPerPage;
+
+    const [totalCount, orders] = await Promise.all([
+      prisma.order.count({ where }),
+      prisma.order.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          user: true,
+          organization: true,
+          items: {
+            include: {
+              product: true,
+            },
           },
         },
-      },
-    });
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+    return {
+      success: true,
+      data: orders,
+      totalPages,
+      totalCount,
+    };
   } catch (error) {
     console.error("Error in fetchOrdersDbData:", error);
     throw error instanceof Error
@@ -358,27 +391,46 @@ async function fetchOrdersDbData({
   }
 }
 
-const getCachedOrdersDbData = unstable_cache(
-  async (orgId: string, userId: string, isAdmin: boolean) =>
-    fetchOrdersDbData({ orgId, userId, isAdmin }),
-  ["normal-orders-cache"],
-  {
-    revalidate: 60, // Cache for 1 minute
-    tags: [cacheTags.orders],
-  },
-);
-
-export async function getOrders({ orgId }: { orgId: string }) {
+export async function getOrders({
+  orgId,
+  currentPage = 1,
+  entriesPerPage = 20,
+  filterUserId,
+}: {
+  orgId: string;
+  currentPage?: number;
+  entriesPerPage?: number;
+  filterUserId?: string;
+}) {
   try {
     const user = await requireUser({ shouldThrow: false });
-    if (!user) return [];
+    if (!user) {
+      return {
+        success: false,
+        data: [],
+        totalPages: 0,
+        totalCount: 0,
+      };
+    }
 
     const isAdmin = user.role === "admin" || user.role === "orgAdmin";
 
-    return await getCachedOrdersDbData(orgId, user.id, isAdmin);
+    return await fetchOrdersDbData({
+      orgId,
+      userId: user.id,
+      filterUserId,
+      isAdmin,
+      currentPage,
+      entriesPerPage,
+    });
   } catch (error) {
     console.error("Error in getOrders:", error);
-    return [];
+    return {
+      success: false,
+      data: [],
+      totalPages: 0,
+      totalCount: 0,
+    };
   }
 }
 
@@ -564,10 +616,10 @@ export async function updateOrder(args: {
 
     await prisma.order.update({ where: { id, orgId }, data });
     revalidatePath(`/${orgId}/orders/${id}`);
-    revalidateTag(cacheTags.dashboard, "");
-    revalidateTag(cacheTags.products, "");
-    revalidateTag(cacheTags.orders, "");
-    revalidateTag(cacheTags.adminOrders, "");
+    updateTag(cacheTags.dashboard);
+    updateTag(cacheTags.products);
+    updateTag(cacheTags.orders);
+    updateTag(cacheTags.adminOrders);
     return { success: true };
   } catch (error) {
     console.error("Error in updateOrder:", error);
@@ -636,10 +688,10 @@ export async function updateOrderTracking(args: {
     });
 
     revalidatePath(`/${orgId}/orders/${orderId}`);
-    revalidateTag(cacheTags.dashboard, "");
-    revalidateTag(cacheTags.products, "");
-    revalidateTag(cacheTags.orders, "");
-    revalidateTag(cacheTags.adminOrders, "");
+    updateTag(cacheTags.dashboard);
+    updateTag(cacheTags.products);
+    updateTag(cacheTags.orders);
+    updateTag(cacheTags.adminOrders);
     return { success: true };
   } catch (error) {
     console.error("Error in updateOrderTracking:", error);
@@ -771,10 +823,10 @@ export async function updateOrderItem({
     ]);
 
     revalidatePath(`/${orgId}/orders/${orderId}`);
-    revalidateTag(cacheTags.dashboard, "");
-    revalidateTag(cacheTags.products, "");
-    revalidateTag(cacheTags.orders, "");
-    revalidateTag(cacheTags.adminOrders, "");
+    updateTag(cacheTags.dashboard);
+    updateTag(cacheTags.products);
+    updateTag(cacheTags.orders);
+    updateTag(cacheTags.adminOrders);
     return { success: true };
   } catch (error) {
     throw error instanceof Error ? error : new Error("Failed to update item");
@@ -837,10 +889,10 @@ export async function addOrderItem({
     ]);
 
     revalidatePath(`/${orgId}/orders/${orderId}`);
-    revalidateTag(cacheTags.dashboard, "");
-    revalidateTag(cacheTags.products, "");
-    revalidateTag(cacheTags.orders, "");
-    revalidateTag(cacheTags.adminOrders, "");
+    updateTag(cacheTags.dashboard);
+    updateTag(cacheTags.products);
+    updateTag(cacheTags.orders);
+    updateTag(cacheTags.adminOrders);
     return { success: true };
   } catch (error) {
     throw error instanceof Error ? error : new Error("Failed to add item");
@@ -894,10 +946,10 @@ export async function removeOrderItem({
     ]);
 
     revalidatePath(`/${orgId}/orders/${orderId}`);
-    revalidateTag(cacheTags.dashboard, "");
-    revalidateTag(cacheTags.products, "");
-    revalidateTag(cacheTags.orders, "");
-    revalidateTag(cacheTags.adminOrders, "");
+    updateTag(cacheTags.dashboard);
+    updateTag(cacheTags.products);
+    updateTag(cacheTags.orders);
+    updateTag(cacheTags.adminOrders);
     return { success: true };
   } catch (error) {
     throw error instanceof Error ? error : new Error("Failed to remove item");
@@ -1028,6 +1080,10 @@ async function fetchAdminOrdersDbData({
   fullname?: string;
   postcode?: string;
 }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.adminOrders);
+
   try {
     const where: OrderWhereInput = {};
 
@@ -1086,6 +1142,16 @@ async function fetchAdminOrdersDbData({
         orderBy: { createdAt: "desc" },
         include: {
           user: true,
+          charges: {
+            select: {
+              id: true,
+              chargeType: true,
+              description: true,
+              cost: true,
+              vat: true,
+              chargeDate: true,
+            },
+          },
         },
       }),
     ]);
@@ -1106,40 +1172,6 @@ async function fetchAdminOrdersDbData({
   }
 }
 
-const getCachedAdminOrdersDbData = unstable_cache(
-  async (
-    orgId: string,
-    currentPage: number,
-    entriesPerPage: number,
-    status?: string,
-    search?: string,
-    startDate?: number,
-    endDate?: number,
-    courier?: string,
-    reference?: string,
-    fullname?: string,
-    postcode?: string,
-  ) =>
-    fetchAdminOrdersDbData({
-      orgId,
-      currentPage,
-      entriesPerPage,
-      status,
-      search,
-      startDate,
-      endDate,
-      courier,
-      reference,
-      fullname,
-      postcode,
-    }),
-  ["admin-orders-cache"],
-  {
-    revalidate: 20, // Cache for 20 seconds
-    tags: [cacheTags.adminOrders],
-  },
-);
-
 export async function getAdminOrders({
   orgId,
   currentPage = 1,
@@ -1156,7 +1188,7 @@ export async function getAdminOrders({
   try {
     await requireGlobalAdmin();
 
-    return await getCachedAdminOrdersDbData(
+    return await fetchAdminOrdersDbData({
       orgId,
       currentPage,
       entriesPerPage,
@@ -1168,7 +1200,7 @@ export async function getAdminOrders({
       reference,
       fullname,
       postcode,
-    );
+    });
   } catch (error) {
     console.error("Database error in getAdminOrders:", error);
     return {
@@ -1191,29 +1223,13 @@ export async function searchOrdersByRef({
   try {
     await requireUser();
 
-    return await prisma.order.findMany({
-      where: {
-        orgId,
-        reference: {
-          contains: searchTerm,
-          mode: "insensitive",
-        },
-      },
-      take: 10,
-      orderBy: { createdAt: "desc" },
-      include: {
-        charges: {
-          select: {
-            id: true,
-            chargeType: true,
-            description: true,
-            cost: true,
-            vat: true,
-            chargeDate: true,
-          },
-        },
-      },
+    const res = await fetchAdminOrdersDbData({
+      orgId,
+      reference: searchTerm,
+      currentPage: 1,
+      entriesPerPage: 10,
     });
+    return res.data;
   } catch (error) {
     console.error("Error searching orders by ref:", error);
     return [];
@@ -1244,7 +1260,7 @@ export async function updateOrderDescription({
     if (order.invoiceId) {
       revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
     }
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in updateOrderDescription:", error);
@@ -1278,7 +1294,7 @@ export async function updateOrderPoRef({
     if (order.invoiceId) {
       revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
     }
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in updateOrderPoRef:", error);

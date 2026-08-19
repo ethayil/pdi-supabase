@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag, unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, updateTag } from "next/cache";
 import { after } from "next/server";
 import type { NotificationType } from "@/app/generated/prisma/client";
 import { requireGlobalAdmin, requireUser } from "@/lib/auth/get-session";
@@ -35,7 +35,7 @@ export async function createNotification(params: {
         isRead: false,
       },
     });
-    revalidateTag(cacheTags.notifications, "");
+    updateTag(cacheTags.notifications);
     return notification.id;
   } catch (error) {
     console.error("Failed to create notification:", error);
@@ -50,6 +50,10 @@ async function fetchNotificationsDbData({
   userId: string;
   limit: number;
 }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.notifications);
+
   try {
     return await prisma.notification.findMany({
       where: { userId },
@@ -64,16 +68,6 @@ async function fetchNotificationsDbData({
   }
 }
 
-const getCachedNotificationsDbData = unstable_cache(
-  async (userId: string, limit: number) =>
-    fetchNotificationsDbData({ userId, limit }),
-  ["user-notifications-cache"],
-  {
-    revalidate: 30, // Cache for 30 seconds
-    tags: [cacheTags.notifications],
-  }
-);
-
 export async function getNotifications({
   limit = 20,
 }: {
@@ -82,7 +76,7 @@ export async function getNotifications({
   try {
     const user = await requireUser();
 
-    return await getCachedNotificationsDbData(user.id, limit);
+    return await fetchNotificationsDbData({ userId: user.id, limit });
   } catch (error) {
     console.error("Failed to get notifications:", error);
     return [];
@@ -90,6 +84,10 @@ export async function getNotifications({
 }
 
 async function fetchUnreadCountDbData({ userId }: { userId: string }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.notifications);
+
   try {
     return await prisma.notification.count({
       where: { userId, isRead: false },
@@ -102,20 +100,11 @@ async function fetchUnreadCountDbData({ userId }: { userId: string }) {
   }
 }
 
-const getCachedUnreadCountDbData = unstable_cache(
-  async (userId: string) => fetchUnreadCountDbData({ userId }),
-  ["user-unread-notifications-count-cache"],
-  {
-    revalidate: 30, // Cache for 30 seconds
-    tags: [cacheTags.notifications],
-  }
-);
-
 export async function getUnreadCount() {
   try {
     const user = await requireUser();
 
-    return await getCachedUnreadCountDbData(user.id);
+    return await fetchUnreadCountDbData({ userId: user.id });
   } catch (error) {
     console.error("Failed to get unread count:", error);
     return 0;
@@ -139,7 +128,7 @@ export async function markAsRead({ id }: { id: string }) {
       data: { isRead: true },
     });
 
-    revalidateTag(cacheTags.notifications, "");
+    updateTag(cacheTags.notifications);
     return { success: true };
   } catch (error) {
     console.error("Failed to mark notification as read:", error);
@@ -156,7 +145,7 @@ export async function markAllAsRead() {
       data: { isRead: true },
     });
 
-    revalidateTag(cacheTags.notifications, "");
+    updateTag(cacheTags.notifications);
     return { success: true };
   } catch (error) {
     console.error("Failed to mark all notifications as read:", error);
@@ -230,7 +219,7 @@ export async function sendCustomMessage(args: {
               });
             }),
           );
-          revalidateTag(cacheTags.notifications, "");
+          updateTag(cacheTags.notifications);
         }
 
         if (args.sendEmail) {

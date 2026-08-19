@@ -1,6 +1,6 @@
 "use server";
 
-import { unstable_cache } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import type { OrderStatus } from "@/app/generated/prisma/enums";
 import { getSession } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
@@ -23,6 +23,10 @@ async function fetchDashboardDbData({
   userId: string;
   role: "globalAdmin" | "admin" | "user";
 }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.dashboard);
+
   try {
     const isAdmin = role === "admin" || role === "globalAdmin";
     const isGlobalAdmin = role === "globalAdmin";
@@ -221,19 +225,6 @@ async function fetchDashboardDbData({
   }
 }
 
-const getCachedDbData = unstable_cache(
-  async (
-    orgId: string,
-    userId: string,
-    role: "globalAdmin" | "admin" | "user",
-  ) => fetchDashboardDbData({ orgId, userId, role }),
-  ["dashboard-db-data"],
-  {
-    revalidate: 120, // Cache for 120 seconds (2 minutes)
-    tags: [cacheTags.dashboard],
-  },
-);
-
 export async function getDashboardData({ orgId }: { orgId: string }) {
   try {
     const { user } = await getSession();
@@ -241,14 +232,14 @@ export async function getDashboardData({ orgId }: { orgId: string }) {
       return null;
     }
 
-    const role = user.role === "admin"
-      ? "globalAdmin"
-      : user.role === "orgAdmin"
-      ? "admin"
-      : "user";
+    const role =
+      user.role === "admin"
+        ? "globalAdmin"
+        : user.role === "orgAdmin"
+        ? "admin"
+        : "user";
 
-    // Call the cached database query, scoped automatically by Next.js per parameters
-    return await getCachedDbData(orgId, user.id, role);
+    return await fetchDashboardDbData({ orgId, userId: user.id, role });
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
     return null;

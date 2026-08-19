@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, revalidatePath, updateTag } from "next/cache";
 import type { InvoiceCharge, Order, OrderStatus } from "@/app/generated/prisma/client";
 import type { TransactionClient } from "@/app/generated/prisma/internal/prismaNamespace";
 import type { InvoiceWhereInput, OrderWhereInput } from "@/app/generated/prisma/models";
@@ -125,6 +125,10 @@ async function fetchPaginatedInvoicesDbData({
   currentPage: number;
   pageSize: number;
 }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.invoices);
+
   try {
     const where: InvoiceWhereInput = { orgId };
     if (status && status !== "all") {
@@ -162,30 +166,6 @@ async function fetchPaginatedInvoicesDbData({
   }
 }
 
-const getCachedPaginatedInvoicesDbData = unstable_cache(
-  async (
-    orgId: string,
-    status: string | undefined,
-    dateFrom: number | undefined,
-    dateTo: number | undefined,
-    currentPage: number,
-    pageSize: number,
-  ) =>
-    fetchPaginatedInvoicesDbData({
-      orgId,
-      status,
-      dateFrom,
-      dateTo,
-      currentPage,
-      pageSize,
-    }),
-  ["invoices-list-cache"],
-  {
-    revalidate: 20, // Cache for 20 seconds
-    tags: [cacheTags.invoices],
-  },
-);
-
 export async function getPaginatedInvoices({
   orgId,
   status,
@@ -203,14 +183,14 @@ export async function getPaginatedInvoices({
 }) {
   try {
     await requireGlobalAdmin();
-    return await getCachedPaginatedInvoicesDbData(
+    return await fetchPaginatedInvoicesDbData({
       orgId,
       status,
       dateFrom,
       dateTo,
       currentPage,
       pageSize,
-    );
+    });
   } catch (error) {
     console.error("Database error in getPaginatedInvoices:", error);
     return [];
@@ -248,6 +228,10 @@ export async function getInvoiceCount({
 }
 
 async function fetchInvoiceDetailsDbData({ invoiceId }: { invoiceId: string }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.invoices);
+
   try {
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
@@ -290,19 +274,10 @@ async function fetchInvoiceDetailsDbData({ invoiceId }: { invoiceId: string }) {
   }
 }
 
-const getCachedInvoiceDetailsDbData = unstable_cache(
-  async (invoiceId: string) => fetchInvoiceDetailsDbData({ invoiceId }),
-  ["invoice-details-cache"],
-  {
-    revalidate: 20, // Cache for 20 seconds
-    tags: [cacheTags.invoices],
-  },
-);
-
 export async function getInvoiceDetails({ invoiceId }: { invoiceId: string }) {
   try {
     await requireGlobalAdmin();
-    return await getCachedInvoiceDetailsDbData(invoiceId);
+    return await fetchInvoiceDetailsDbData({ invoiceId });
   } catch (error) {
     console.error("Database error in getInvoiceDetails:", error);
     return null;
@@ -328,7 +303,7 @@ export async function updateInvoiceStatus({
       },
     });
     revalidatePath(`/${invoice.orgId}/admin/invoices/${invoiceId}`);
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in updateInvoiceStatus:", error);
@@ -354,7 +329,7 @@ export async function removeInvoiceCharge({ chargeId }: { chargeId: string }) {
     });
 
     revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in removeInvoiceCharge:", error);
@@ -388,7 +363,7 @@ export async function addOrderToInvoice({
     });
 
     revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in addOrderToInvoice:", error);
@@ -422,7 +397,7 @@ export async function removeOrderFromInvoice({
     });
 
     revalidatePath(`/${order.orgId}/admin/invoices/${invoiceId}`);
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in removeOrderFromInvoice:", error);
@@ -459,7 +434,7 @@ export async function updateOrderInvoiceCost({
     if (order.invoiceId) {
       revalidatePath(`/${order.orgId}/admin/invoices/${order.invoiceId}`);
     }
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in updateOrderInvoiceCost:", error);
@@ -641,7 +616,7 @@ export async function createInvoice(args: {
     });
 
     revalidatePath(`/${args.orgId}/admin/invoices`);
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return invoiceId;
   } catch (error) {
     console.error("Error in createInvoice:", error);
@@ -699,7 +674,7 @@ export async function addInvoiceCharge(args: {
     });
 
     revalidatePath(`/${invoice.orgId}/admin/invoices/${args.invoiceId}`);
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return chargeId;
   } catch (error) {
     console.error("Error in addInvoiceCharge:", error);
@@ -746,7 +721,7 @@ export async function updateInvoiceCharge(args: {
     });
 
     revalidatePath(`/${charge.orgId}/admin/invoices/${charge.invoiceId}`);
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in updateInvoiceCharge:", error);
@@ -778,7 +753,7 @@ export async function updateInvoiceDetails({
       },
     });
     revalidatePath(`/${invoice.orgId}/admin/invoices/${invoiceId}`);
-    revalidateTag(cacheTags.invoices, "");
+    updateTag(cacheTags.invoices);
     return { success: true };
   } catch (error) {
     console.error("Error in updateInvoiceDetails:", error);

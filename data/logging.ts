@@ -1,6 +1,6 @@
 "use server";
 
-import { unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, updateTag } from "next/cache";
 import type {
   ActivityAction,
   MovementType,
@@ -49,9 +49,10 @@ export async function logActivity(params: {
         entityType: params.entityType,
         entityId: params.entityId,
         description: params.description,
-        changes: params.changes ? (params.changes) : undefined,
+        changes: params.changes ? params.changes : undefined,
       },
     });
+    updateTag(cacheTags.activityLogs);
     return log.id;
   } catch (error) {
     console.error("Failed to log activity:", error);
@@ -89,6 +90,7 @@ export async function logProductMovement(params: {
         relatedOrderId: params.relatedOrderId || null,
       },
     });
+    updateTag(cacheTags.productMovements);
     return movement.id;
   } catch (error) {
     console.error("Failed to log product movement:", error);
@@ -115,6 +117,10 @@ async function fetchLogsDbData({
   startDate?: number;
   endDate?: number;
 }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.activityLogs);
+
   try {
     const where: ActivityLogWhereInput = {};
     if (orgId && orgId !== "all") where.orgId = orgId;
@@ -165,7 +171,8 @@ async function fetchLogsDbData({
     const mappedLogs = logs.map((log) => ({
       ...log,
       userName: log.user?.name ?? (log.systemSource ? "System" : "Unknown User"),
-      userEmail: log.user?.email ??
+      userEmail:
+        log.user?.email ??
         (log.systemSource ? `Source: ${log.systemSource}` : "Unknown Email"),
       orgName: log.organization?.name ?? "System",
     }));
@@ -184,34 +191,6 @@ async function fetchLogsDbData({
   }
 }
 
-const getCachedLogsDbData = unstable_cache(
-  async (
-    orgId: string | undefined,
-    currentPage: number,
-    entriesPerPage: number,
-    userSearch?: string,
-    messageSearch?: string,
-    entityType?: string,
-    startDate?: number,
-    endDate?: number,
-  ) =>
-    fetchLogsDbData({
-      orgId,
-      currentPage,
-      entriesPerPage,
-      userSearch,
-      messageSearch,
-      entityType,
-      startDate,
-      endDate,
-    }),
-  ["activity-logs-cache"],
-  {
-    revalidate: 10, // Cache for 10 seconds
-    tags: [cacheTags.logs],
-  },
-);
-
 export async function getLogs({
   orgId,
   currentPage = 1,
@@ -225,7 +204,7 @@ export async function getLogs({
   try {
     await requireGlobalAdmin();
 
-    return await getCachedLogsDbData(
+    return await fetchLogsDbData({
       orgId,
       currentPage,
       entriesPerPage,
@@ -234,7 +213,7 @@ export async function getLogs({
       entityType,
       startDate,
       endDate,
-    );
+    });
   } catch (error) {
     console.error("Failed to get logs:", error);
     return {
@@ -247,9 +226,15 @@ export async function getLogs({
   }
 }
 
-async function fetchProductMovementsDbData(
-  { productId }: { productId: string },
-) {
+async function fetchProductMovementsDbData({
+  productId,
+}: {
+  productId: string;
+}) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.productMovements);
+
   try {
     const movements = await prisma.productMovement.findMany({
       where: { productId },
@@ -279,15 +264,6 @@ async function fetchProductMovementsDbData(
   }
 }
 
-const getCachedProductMovementsDbData = unstable_cache(
-  async (productId: string) => fetchProductMovementsDbData({ productId }),
-  ["product-movements-cache"],
-  {
-    revalidate: 10, // Cache for 10 seconds
-    tags: [cacheTags.logs],
-  },
-);
-
 export async function getProductMovements({
   productId,
 }: {
@@ -295,7 +271,7 @@ export async function getProductMovements({
 }) {
   try {
     await requireGlobalAdmin();
-    return await getCachedProductMovementsDbData(productId);
+    return await fetchProductMovementsDbData({ productId });
   } catch (error) {
     console.error("Failed to get product movements:", error);
     return {

@@ -1,6 +1,6 @@
 "use server";
 
-import { unstable_cache } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import type { Order, Prisma, User } from "@/app/generated/prisma/client";
 import { requireGlobalAdmin } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
@@ -29,6 +29,10 @@ async function fetchDespatchOrdersDbData(
   entriesPerPage: number = 20,
   urgency: "all" | "overdue" | "due_today" | "due_soon" | "upcoming" = "all",
 ): Promise<DespatchOrdersResponse> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.despatch);
+
   try {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -138,20 +142,6 @@ async function fetchDespatchOrdersDbData(
   }
 }
 
-const getCachedDespatchOrders = unstable_cache(
-  async (
-    orgId?: string,
-    currentPage?: number,
-    entriesPerPage?: number,
-    urgency?: "all" | "overdue" | "due_today" | "due_soon" | "upcoming",
-  ) => fetchDespatchOrdersDbData(orgId, currentPage, entriesPerPage, urgency),
-  ["despatch-orders-cache"],
-  {
-    revalidate: 20,
-    tags: [cacheTags.adminOrders],
-  },
-);
-
 export async function getDespatchOrders({
   orgId,
   currentPage = 1,
@@ -165,7 +155,7 @@ export async function getDespatchOrders({
 } = {}) {
   try {
     await requireGlobalAdmin();
-    return await getCachedDespatchOrders(
+    return await fetchDespatchOrdersDbData(
       orgId,
       currentPage,
       entriesPerPage,

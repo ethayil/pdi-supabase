@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, revalidatePath, updateTag } from "next/cache";
 import type { CategoryWhereInput } from "@/app/generated/prisma/models";
 import { requireGlobalAdmin, requireUser } from "@/lib/auth/get-session";
 import { cacheTags } from "@/lib/cache-tags";
@@ -12,21 +12,31 @@ interface GetCategoriesArgs {
   currentPage?: number;
   entriesPerPage?: number;
   query?: string;
+  isActive?: boolean;
 }
 
 async function fetchCategoriesDbData({
   orgId,
-  currentPage,
-  entriesPerPage,
+  currentPage = 1,
+  entriesPerPage = 20,
   query,
+  isActive,
 }: {
   orgId: string;
-  currentPage: number;
-  entriesPerPage: number;
+  currentPage?: number;
+  entriesPerPage?: number;
   query?: string;
+  isActive?: boolean;
 }) {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(cacheTags.categories);
+
   try {
-    const whereClause: CategoryWhereInput = { orgId };
+    const whereClause: CategoryWhereInput = {
+      orgId,
+      isActive: isActive !== undefined ? (isActive ? true : undefined) : undefined,
+    };
 
     if (query) {
       whereClause.name = {
@@ -42,8 +52,8 @@ async function fetchCategoriesDbData({
       prisma.category.count({ where: whereClause }),
       prisma.category.findMany({
         where: whereClause,
-        skip: skip,
-        take: take,
+        skip,
+        take,
         orderBy: { name: "asc" },
       }),
     ]);
@@ -64,29 +74,15 @@ async function fetchCategoriesDbData({
   }
 }
 
-const getCachedCategoriesDbData = unstable_cache(
-  async (
-    orgId: string,
-    currentPage: number,
-    entriesPerPage: number,
-    query?: string,
-  ) =>
-    fetchCategoriesDbData({ orgId, currentPage, entriesPerPage, query }),
-  ["categories-list-cache"],
-  {
-    revalidate: 20, // Cache categories list for 20 seconds
-    tags: [cacheTags.categories],
-  },
-);
-
 export async function getCategories({
   orgId,
   currentPage = 1,
   entriesPerPage = 20,
   query,
+  isActive,
 }: GetCategoriesArgs = {}) {
   try {
-    await requireGlobalAdmin();
+    await requireUser();
 
     if (!orgId || orgId === "all") {
       return {
@@ -97,7 +93,13 @@ export async function getCategories({
       };
     }
 
-    return await getCachedCategoriesDbData(orgId, currentPage, entriesPerPage, query);
+    return await fetchCategoriesDbData({
+      orgId,
+      currentPage,
+      entriesPerPage,
+      query,
+      isActive,
+    });
   } catch (error) {
     console.error("Database error in getCategories:", error);
     return {
@@ -110,58 +112,11 @@ export async function getCategories({
   }
 }
 
-async function fetchActiveCategoriesDbData({ orgId }: { orgId: string }) {
-  try {
-    return await prisma.category.findMany({
-      where: { orgId, isActive: true },
-      orderBy: { name: "asc" },
-    });
-  } catch (error) {
-    console.error("Error in fetchActiveCategoriesDbData:", error);
-    throw error instanceof Error
-      ? error
-      : new Error("Failed to fetch active categories from database");
-  }
-}
-
-const getCachedActiveCategoriesDbData = unstable_cache(
-  async (orgId: string) => fetchActiveCategoriesDbData({ orgId }),
-  ["active-categories-cache"],
-  {
-    revalidate: 60, // Cache categories for 1 minute
-    tags: [cacheTags.categories],
-  },
-);
-
-export async function getActiveCategories({ orgId }: { orgId: string }) {
-  try {
-    await requireUser();
-    return await getCachedActiveCategoriesDbData(orgId);
-  } catch (error) {
-    console.error("Database error in getActiveCategories:", error);
-    return [];
-  }
-}
-
-export async function getAllCategories({ orgId }: { orgId: string }) {
-  try {
-    await requireGlobalAdmin();
-
-    return await prisma.category.findMany({
-      where: { orgId },
-      orderBy: { name: "asc" },
-    });
-  } catch (error) {
-    console.error("Database error in getAllCategories:", error);
-    return [];
-  }
-}
-
 export async function getCategoryById({ id }: { id: string }) {
   try {
     if (!id) return null;
 
-    await requireGlobalAdmin();
+    await requireUser();
 
     const category = await prisma.category.findUnique({
       where: { id },
@@ -180,8 +135,7 @@ export async function createCategory(values: {
   isActive?: boolean;
 }) {
   try {
-    const user = await requireGlobalAdmin();
-    const userId = user.id;
+    const { id: userId } = await requireGlobalAdmin();
 
     // Check organization exists
     const org = await prisma.organization.findUnique({
@@ -224,7 +178,7 @@ export async function createCategory(values: {
     });
 
     revalidatePath(`/${values.orgId}/admin/categories`);
-    revalidateTag(cacheTags.categories, "");
+    updateTag(cacheTags.categories);
 
     return { success: true, category };
   } catch (error) {
@@ -242,8 +196,7 @@ export async function updateCategory(values: {
   isActive?: boolean;
 }) {
   try {
-    const user = await requireGlobalAdmin();
-    const userId = user.id;
+    const { id: userId } = await requireGlobalAdmin();
 
     // Check organization exists
     const org = await prisma.organization.findUnique({
@@ -297,7 +250,7 @@ export async function updateCategory(values: {
     });
 
     revalidatePath(`/${values.orgId}/admin/categories`);
-    revalidateTag(cacheTags.categories, "");
+    updateTag(cacheTags.categories);
 
     return { success: true, category };
   } catch (error) {
@@ -310,8 +263,7 @@ export async function updateCategory(values: {
 
 export async function deleteCategory({ id }: { id: string }) {
   try {
-    const user = await requireGlobalAdmin();
-    const userId = user.id;
+    const { id: userId } = await requireGlobalAdmin();
 
     const category = await prisma.category.findUnique({
       where: { id },
@@ -335,7 +287,7 @@ export async function deleteCategory({ id }: { id: string }) {
 
     if (category.orgId) {
       revalidatePath(`/${category.orgId}/admin/categories`);
-      revalidateTag(cacheTags.categories, "");
+      updateTag(cacheTags.categories);
     }
 
     return { success: true };

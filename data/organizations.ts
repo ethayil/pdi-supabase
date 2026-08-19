@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, revalidatePath, updateTag } from "next/cache";
 import type { Organization as PrismaOrganization } from "@/app/generated/prisma/client";
 import type {
   OrganizationCreateInput,
@@ -52,6 +52,10 @@ async function fetchOrganizationsDbData({
   totalPages: number;
   totalCount: number;
 }> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(cacheTags.organizations);
+
   try {
     const where: OrganizationWhereInput = {
       isActive: isActive ? true : undefined,
@@ -98,30 +102,6 @@ async function fetchOrganizationsDbData({
   }
 }
 
-const getCachedOrganizationsDbData = unstable_cache(
-  async (
-    userRole: string,
-    userId: string,
-    currentPage: number,
-    entriesPerPage: number,
-    isActive: boolean,
-    query?: string,
-  ) =>
-    fetchOrganizationsDbData({
-      userRole,
-      userId,
-      currentPage,
-      entriesPerPage,
-      isActive,
-      query,
-    }),
-  ["organizations-list-cache"],
-  {
-    revalidate: 3600, // Cache for 1 hour
-    tags: [cacheTags.organizations],
-  },
-);
-
 export async function getOrganizations({
   currentPage = 1,
   entriesPerPage = 20,
@@ -139,24 +119,53 @@ export async function getOrganizations({
     const user = await requireUser();
 
     if (bypassCache) {
-      return fetchOrganizationsDbData({
-        userRole: user.role ?? "",
-        userId: user.id,
-        currentPage,
-        entriesPerPage,
-        isActive,
-        query,
-      });
+      const where: OrganizationWhereInput = {
+        isActive: isActive ? true : undefined,
+      };
+
+      if (user.role !== "admin") {
+        where.members = {
+          some: {
+            userId: user.id,
+          },
+        };
+      }
+
+      if (query) {
+        where.OR = [
+          { name: { contains: query, mode: "insensitive" } },
+          { slug: { contains: query, mode: "insensitive" } },
+        ];
+      }
+
+      const [totalCount, organizations] = await Promise.all([
+        prisma.organization.count({ where }),
+        prisma.organization.findMany({
+          where,
+          take: entriesPerPage,
+          skip: (currentPage - 1) * entriesPerPage,
+          orderBy: { id: "asc" },
+        }),
+      ]);
+
+      const totalPages = Math.ceil(totalCount / entriesPerPage);
+
+      return {
+        success: true,
+        data: organizations,
+        totalPages,
+        totalCount,
+      };
     }
 
-    return await getCachedOrganizationsDbData(
-      user.role ?? "",
-      user.id,
+    return await fetchOrganizationsDbData({
+      userRole: user.role ?? "",
+      userId: user.id,
       currentPage,
       entriesPerPage,
       isActive,
       query,
-    );
+    });
   } catch (error) {
     console.error("Database error in getOrganizations:", error);
 
@@ -170,10 +179,12 @@ export async function getOrganizations({
   }
 }
 
-export async function getOrganizationById({ id }: { id: string }) {
-  try {
-    await requireGlobalAdmin();
+async function fetchOrganizationByIdDbData({ id }: { id: string }) {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(cacheTags.organizations);
 
+  try {
     const organization = await prisma.organization.findUnique({
       where: { id },
     });
@@ -196,7 +207,20 @@ export async function getOrganizationById({ id }: { id: string }) {
       },
     };
   } catch (error) {
-    console.error("Database error in getOrganization:", error);
+    console.error("Error in fetchOrganizationByIdDbData:", error);
+    return {
+      success: false,
+      organization: null,
+    };
+  }
+}
+
+export async function getOrganizationById({ id }: { id: string }) {
+  try {
+    await requireGlobalAdmin();
+    return await fetchOrganizationByIdDbData({ id });
+  } catch (error) {
+    console.error("Database error in getOrganizationById:", error);
 
     return {
       success: false,
@@ -260,7 +284,7 @@ export async function createOrganization(
       description: `Created organization "${data.name}"`,
     });
 
-    revalidateTag(cacheTags.organizations, "");
+    updateTag(cacheTags.organizations);
     return org.id;
   } catch (error) {
     console.error("Error in createOrganization:", error);
@@ -293,7 +317,7 @@ export async function updateOrganization(
       throw new Error("Organization not found");
     }
 
-    const updated = await prisma.organization.update({
+    await prisma.organization.update({
       where: { id },
       data: {
         ...rest,
@@ -323,7 +347,7 @@ export async function updateOrganization(
     });
 
     revalidatePath("/[orgId]/admin/orgs");
-    revalidateTag(cacheTags.organizations, "");
+    updateTag(cacheTags.organizations);
 
     return { success: true };
   } catch (error) {
@@ -351,7 +375,7 @@ export async function deleteOrganization({ id }: { id: string }) {
       description: `Deleted organization "${deleted.name}"`,
     });
 
-    revalidateTag(cacheTags.organizations, "");
+    updateTag(cacheTags.organizations);
     return { success: true };
   } catch (error) {
     console.error("Error in deleteOrganization:", error);

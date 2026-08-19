@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { cacheLife, cacheTag, revalidatePath, updateTag } from "next/cache";
 import { headers } from "next/headers";
 import type { Member, User } from "@/app/generated/prisma/client";
 import type {
@@ -36,6 +36,10 @@ async function fetchUsersDbData({
   entriesPerPage: number;
   userType: string;
 }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.users);
+
   try {
     let whereClause: UserWhereInput = {};
 
@@ -101,20 +105,6 @@ async function fetchUsersDbData({
   }
 }
 
-const getCachedUsersDbData = unstable_cache(
-  async (
-    orgId: string | undefined,
-    currentPage: number,
-    entriesPerPage: number,
-    userType: string,
-  ) => fetchUsersDbData({ orgId, currentPage, entriesPerPage, userType }),
-  ["users-list-cache"],
-  {
-    revalidate: 20, // Cache for 20 seconds
-    tags: [cacheTags.users],
-  },
-);
-
 export async function getUsers({
   orgId,
   currentPage = 1,
@@ -124,12 +114,12 @@ export async function getUsers({
   try {
     await requireGlobalAdmin();
 
-    return await getCachedUsersDbData(
+    return await fetchUsersDbData({
       orgId,
       currentPage,
       entriesPerPage,
       userType,
-    );
+    });
   } catch (error) {
     console.error("Database error in getUsers:", error);
 
@@ -234,9 +224,10 @@ export async function updateUser(data: {
           image: data.image === null ? undefined : data.image,
           emailVerified: data.emailVerified,
           banned: data.isActive !== undefined ? !data.isActive : undefined,
-          banReason: data.isActive === false
-            ? "Deactivated by administrator"
-            : undefined,
+          banReason:
+            data.isActive === false
+              ? "Deactivated by administrator"
+              : undefined,
         },
       },
       headers: await headers(),
@@ -271,9 +262,10 @@ export async function updateUser(data: {
     }
 
     // Log Activity
-    const loggedOrgId = data.orgId !== undefined && data.orgId !== "none"
-      ? data.orgId
-      : dbUser.members?.[0]?.organizationId || null;
+    const loggedOrgId =
+      data.orgId !== undefined && data.orgId !== "none"
+        ? data.orgId
+        : dbUser.members?.[0]?.organizationId || null;
 
     await logActivity({
       orgId: loggedOrgId,
@@ -283,27 +275,31 @@ export async function updateUser(data: {
       entityId: data.id,
       description: `Updated user "${dbUser.name || data.id}"`,
       changes: {
-        name: data.name !== undefined
-          ? { from: dbUser.name, to: data.name }
-          : undefined,
-        role: data.role !== undefined
-          ? { from: dbUser.role, to: data.role }
-          : undefined,
-        orgId: data.orgId !== undefined
-          ? {
-            from: dbUser.members?.[0]?.organizationId ?? "none",
-            to: data.orgId,
-          }
-          : undefined,
-        isActive: data.isActive !== undefined
-          ? { from: !dbUser.banned, to: data.isActive }
-          : undefined,
+        name:
+          data.name !== undefined
+            ? { from: dbUser.name, to: data.name }
+            : undefined,
+        role:
+          data.role !== undefined
+            ? { from: dbUser.role, to: data.role }
+            : undefined,
+        orgId:
+          data.orgId !== undefined
+            ? {
+                from: dbUser.members?.[0]?.organizationId ?? "none",
+                to: data.orgId,
+              }
+            : undefined,
+        isActive:
+          data.isActive !== undefined
+            ? { from: !dbUser.banned, to: data.isActive }
+            : undefined,
       },
     });
 
     revalidatePath("/[orgId]/admin/users");
-    revalidateTag(cacheTags.users, "");
-    revalidateTag(cacheTags.organizations, "");
+    updateTag(cacheTags.users);
+    updateTag(cacheTags.organizations);
 
     return {
       success: true,
@@ -315,6 +311,10 @@ export async function updateUser(data: {
 }
 
 async function fetchOrgUsersDbData({ orgId }: { orgId: string }) {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag(cacheTags.users);
+
   try {
     const members = await prisma.member.findMany({
       where: { organizationId: orgId },
@@ -341,20 +341,11 @@ async function fetchOrgUsersDbData({ orgId }: { orgId: string }) {
   }
 }
 
-const getCachedOrgUsersDbData = unstable_cache(
-  async (orgId: string) => fetchOrgUsersDbData({ orgId }),
-  ["org-users-cache"],
-  {
-    revalidate: 120, // Cache for 2 minutes
-    tags: [cacheTags.users],
-  },
-);
-
 export async function getOrgUsers({ orgId }: { orgId: string }) {
   try {
     await requireAdmin();
 
-    return await getCachedOrgUsersDbData(orgId);
+    return await fetchOrgUsersDbData({ orgId });
   } catch (error) {
     console.error("Database error in getOrgUsers:", error);
     return [];
@@ -384,7 +375,6 @@ export async function getOrgMembersWithStats({ orgId }: { orgId: string }) {
 }
 
 export async function revalidateUsersCache() {
-  revalidateTag(cacheTags.users, "");
+  updateTag(cacheTags.users);
   revalidatePath("/[orgId]/admin/users", "layout");
 }
-
